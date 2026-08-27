@@ -11,7 +11,7 @@ services:
     environment:
       - APP_ENV=production
       - DEBUG=false
-      - DATABASE_URL=sqlite:///./data/ifnmg_assistente.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/ifnmg_assistente.db}
       - ALLOWED_ORIGINS=http://localhost:3000
     volumes:
       - ./backend/data:/app/data

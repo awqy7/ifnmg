@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    ALLOWED_ORIGIN_REGEX: str = r"https://.*\.vercel\.app"
 
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440

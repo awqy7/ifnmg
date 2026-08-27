@@ -62,6 +62,45 @@ Acesse no navegador:
 - **Aplicação Web**: `http://localhost:3000`
 - **Documentação da API (Swagger)**: `http://localhost:8000/api/docs`
 
+### 2. Deploy (Vercel + Supabase + Render)
+
+O sistema usa **3 serviços**:
+
+| Serviço | O que roda | Host |
+|---|---|---|
+| Frontend (Next.js) | Interface web (porta 3000) | **Vercel** |
+| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Render** |
+| Banco de dados | PostgreSQL | **Supabase** |
+
+> ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
+
+#### a) Supabase (banco)
+
+1. Crie o projeto (região `us-east-2`).
+2. Em **Project Settings → Database → Connection string**, copie a string do **Pooler** (não a "Direct connection" — ela é IPv6-only).
+3. Use o formato:
+   `postgresql+psycopg://postgres.<PROJECT_REF>:<SENHA>@aws-0-<REGIAO>.pooler.supabase.com:5432/postgres?sslmode=require`
+
+#### b) Render (backend)
+
+1. GitHub → **New Web Service** → repo `awqy7/ifnmg`.
+2. **Root Directory**: `backend`
+3. **Build Command**: `pip install -r requirements.txt`
+4. **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Adicione as env vars:
+   - `APP_ENV=production`
+   - `DATABASE_URL` (string do pooler acima — troque SENHA pela senha real do banco)
+   - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (ou deixe padrão; domínios `*.vercel.app` já são aceitos)
+   - `GROQ_API_KEY`, `SECRET_KEY` etc. conforme necessário
+
+#### c) Vercel (frontend)
+
+1. Importe o repo `awqy7/ifnmg`.
+2. **Root Directory**: `frontend` ← **importante, senão dá erro 404**
+3. Adicione a env var de build:
+   - `NEXT_PUBLIC_API_URL=https://SEU-BACKEND.onrender.com` (URL do Render)
+4. **Deploy**. 
+
 ---
 
 ## 🔒 Segurança e Privacidade
