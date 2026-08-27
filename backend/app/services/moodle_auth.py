@@ -39,13 +39,27 @@ class MoodleAuthService:
     async def login(self, username: str, password: str) -> Optional[Dict]:
         """
         Autentica no Moodle Virtual2 IFNMG.
-        1. Tenta login direto via HTTP (rápido, ~200ms)
-        2. Se falhar por renderização JS, tenta via Playwright headless
+        1. Login via REST API oficial (login/token.php) — o mesmo usado pelo
+           app móvel do Moodle. Rápido e confiável, não passa pela verificação
+           anti-bot do formulário HTML de login (que pode bloquear/estranglar
+           IPs de servidores/datacenter).
+        2. Login direto via HTTP (cookie/sessão) — útil para scraping HTML.
+        3. Fallback Playwright headless.
         """
         username = username.strip()
         password = password.strip()
 
-        # Método 1: Login HTTP Direto
+        # Método 1: REST API oficial (token)
+        try:
+            logger.info("Tentando login via REST API (token.php)...")
+            session = await self._token_login(username, password)
+            if session:
+                logger.info("✅ Login via REST API realizado com sucesso!")
+                return session
+        except Exception as e:
+            logger.warning(f"Login REST falhou: {e}. Tentando login HTTP direto...")
+
+        # Método 2: Login HTTP Direto
         try:
             logger.info("Tentando login HTTP direto no Moodle")
             session = await self._http_login(username, password)
@@ -55,7 +69,7 @@ class MoodleAuthService:
         except Exception as e:
             logger.warning(f"Login HTTP direto falhou: {e}. Tentando fallback Playwright...")
 
-        # Método 2: Fallback Playwright
+        # Método 3: Fallback Playwright
         try:
             logger.info("Tentando login via Playwright headless...")
             session = await self._playwright_login(username, password)
@@ -66,6 +80,67 @@ class MoodleAuthService:
             logger.error(f"Fallback Playwright também falhou: {e}", exc_info=True)
 
         return None
+
+    async def _token_login(self, username: str, password: str) -> Optional[Dict]:
+        """
+        Login via REST API oficial do Moodle (login/token.php + webservice
+        moodle_mobile_app). Retorna um token válido em JSON rápido e sem
+        verificação anti-bot do formulário HTML.
+        """
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, timeout=20.0) as client:
+            try:
+                resp = await client.post(
+                    f"{MOODLE_BASE}/login/token.php",
+                    data={
+                        "username": username,
+                        "password": password,
+                        "service": "moodle_mobile_app",
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"token.php: erro de conexão: {e}")
+                return None
+
+            if resp.status_code != 200:
+                logger.warning(f"token.php retornou status {resp.status_code}")
+                return None
+
+            try:
+                data = resp.json()
+            except Exception:
+                logger.warning("token.php não retornou JSON válido")
+                return None
+
+        token = data.get("token")
+        if not token:
+            logger.warning(f"token.php sem token: {data.get('error') or data}")
+            return None
+
+        # Nome completo do aluno via web service (best-effort, não bloqueia login)
+        student_name = None
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                info = await client.post(
+                    f"{MOODLE_BASE}/webservice/rest/server.php",
+                    data={
+                        "wstoken": token,
+                        "wsfunction": "core_webservice_get_site_info",
+                        "moodlewsrestformat": "json",
+                    },
+                )
+                info_data = info.json()
+                if not (isinstance(info_data, dict) and info_data.get("exception")):
+                    student_name = info_data.get("fullname")
+        except Exception:
+            pass
+
+        return {
+            "moodle_token": token,
+            "privatetoken": data.get("privatetoken"),
+            "user_name": student_name or f"Aluno {username}",
+            "logged_at": datetime.utcnow().isoformat(),
+            "base_url": MOODLE_BASE,
+        }
 
     async def _http_login(self, username: str, password: str) -> Optional[Dict]:
         """Login direto via HTTP Session."""
@@ -248,7 +323,7 @@ class MoodleAuthService:
     async def get_moodle_token(self, username: str, password: str) -> Optional[str]:
         """Tenta obter token da API REST do Moodle se disponível."""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(headers=DEFAULT_HEADERS, timeout=10.0) as client:
                 resp = await client.post(
                     f"{MOODLE_BASE}/login/token.php",
                     data={

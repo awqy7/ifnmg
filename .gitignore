@@ -1,6 +1,7 @@
 # Ambientes virtuais e dependências
 backend/venv/
 backend/.env
+backend/.env.*
 backend/.secret_key
 backend/encryption.key
 backend/*.db

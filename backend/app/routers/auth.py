@@ -147,8 +147,8 @@ async def moodle_login(
         user.moodle_connected = True
         db.commit()
 
-    # Tenta obter token da API REST em background
-    moodle_token = await moodle_auth_service.get_moodle_token(username, password)
+    # Tenta obter token da API REST (via sessão do login ou novo request)
+    moodle_token = session_data.get("moodle_token") or await moodle_auth_service.get_moodle_token(username, password)
     if moodle_token:
         existing_keys = {}
         if user.ai_api_keys_enc:

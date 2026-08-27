@@ -341,7 +341,7 @@ async def sync_moodle_for_user(user_id: str):
             user.moodle_session_cookies = crypto_service.encrypt_json(session_data)
             user.moodle_connected = True
 
-        moodle_token = await moodle_auth_service.get_moodle_token(username, password)
+        moodle_token = session_data.get("moodle_token") or await moodle_auth_service.get_moodle_token(username, password)
 
         # Guarda token p/ uso futuro
         if moodle_token:

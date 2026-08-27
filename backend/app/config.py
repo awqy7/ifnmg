@@ -66,6 +66,11 @@ class Settings(BaseSettings):
 
     def model_post_init(self, __context):
         if not self.SECRET_KEY:
+            if self.APP_ENV == "production":
+                raise RuntimeError(
+                    "SECRET_KEY é obrigatória em produção (defina no Render). "
+                    "Sem ela os JWT mudam a cada restart e as sessões caem."
+                )
             object.__setattr__(self, 'SECRET_KEY', _get_or_create_secret_key())
 
     @property
@@ -73,10 +78,20 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
 
     def get_fernet(self) -> Fernet:
-        """Retorna instância do Fernet para criptografia."""
-        key_file = BASE_DIR / "encryption.key"
+        """Retorna instância do Fernet para criptografia.
+
+        Em produção o ENCRYPTION_KEY precisa ser fixa (definida no Render),
+        senão os dados criptografados no banco (credenciais do Moodle) ficam
+        indecifráveis após cada restart/redeploy.
+        """
         if self.ENCRYPTION_KEY:
             return Fernet(self.ENCRYPTION_KEY.encode())
+        if self.APP_ENV == "production":
+            raise RuntimeError(
+                "ENCRYPTION_KEY é obrigatória em produção (defina no Render). "
+                "Sem ela as credenciais criptografadas no banco ficam ilegíveis."
+            )
+        key_file = BASE_DIR / "encryption.key"
         if key_file.exists():
             return Fernet(key_file.read_bytes())
         key = Fernet.generate_key()
