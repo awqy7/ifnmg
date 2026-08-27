@@ -1,0 +1,114 @@
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey
+from sqlalchemy.orm import relationship
+from app.database import Base
+
+
+def gen_uuid():
+    return str(uuid.uuid4())
+
+
+class Course(Base):
+    """Disciplina/Curso do Moodle."""
+    __tablename__ = "courses"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    moodle_id = Column(Integer, nullable=False)
+    name = Column(String(500), nullable=False)
+    short_name = Column(String(100))
+    teacher = Column(String(200))
+    color = Column(String(7), default="#6366f1")  # Cor hex para UI
+    progress = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    raw_data = Column(JSON)  # Dados extras do Moodle
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    activities = relationship("Activity", back_populates="course", cascade="all, delete-orphan")
+    materials = relationship("Material", back_populates="course", cascade="all, delete-orphan")
+    grades = relationship("Grade", back_populates="course", cascade="all, delete-orphan")
+
+
+class Activity(Base):
+    """Tarefa, quiz, fórum ou outra atividade do Moodle."""
+    __tablename__ = "activities"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
+    moodle_id = Column(String)
+    title = Column(String(500), nullable=False)
+    activity_type = Column(String(50))  # assignment, quiz, forum, resource, url, page
+    description = Column(Text)
+    due_date = Column(DateTime, nullable=True)
+    status = Column(String(20), default="pending")  # pending, submitted, late, graded, closed
+    grade = Column(Float, nullable=True)
+    max_grade = Column(Float, nullable=True)
+    url = Column(String(1000))
+    is_new = Column(Boolean, default=True)  # Para notificações
+    notified = Column(Boolean, default=False)
+    notified_thresholds = Column(JSON, default=dict)  # {"7d": true, "3d": false...} lembretes já enviados
+    raw_data = Column(JSON)
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    course = relationship("Course", back_populates="activities")
+
+
+class Material(Base):
+    """Material/recurso de um curso."""
+    __tablename__ = "materials"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
+    moodle_id = Column(String)
+    title = Column(String(500), nullable=False)
+    material_type = Column(String(50))  # pdf, video, page, link, file
+    url = Column(String(1000))
+    content_text = Column(Text, nullable=True)  # Texto extraído (para IA)
+    topic_name = Column(String(500))  # Nome do tópico/semana
+    topic_number = Column(Integer)
+    file_size = Column(Integer, nullable=True)
+    is_new = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    course = relationship("Course", back_populates="materials")
+
+
+class Grade(Base):
+    """Nota de uma atividade."""
+    __tablename__ = "grades"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
+    item_name = Column(String(500))
+    grade = Column(Float, nullable=True)
+    max_grade = Column(Float, nullable=True)
+    percentage = Column(Float, nullable=True)
+    feedback = Column(Text, nullable=True)
+    graded_at = Column(DateTime, nullable=True)
+    notified = Column(Boolean, default=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    course = relationship("Course", back_populates="grades")
+
+
+class CalendarEvent(Base):
+    """Evento do calendário do Moodle."""
+    __tablename__ = "calendar_events"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    moodle_id = Column(String)
+    title = Column(String(500), nullable=False)
+    description = Column(Text)
+    event_type = Column(String(50))  # assignment, course, site, user
+    course_name = Column(String(500))
+    start_date = Column(DateTime)
+    end_date = Column(DateTime, nullable=True)
+    url = Column(String(1000))
+    created_at = Column(DateTime, default=datetime.utcnow)

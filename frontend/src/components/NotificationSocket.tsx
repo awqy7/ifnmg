@@ -1,0 +1,106 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Bell, X } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Toast {
+  id: number;
+  title: string;
+  message: string;
+}
+
+/**
+ * Conecta ao WebSocket /ws do backend quando há usuário logado.
+ * Recebe notificações em tempo real, mostra toast e dispara
+ * o evento 'notif-refresh' para o TopBar atualizar o contador.
+ */
+export default function NotificationSocket() {
+  const { user, loading } = useAuth();
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    let closed = false;
+
+    const connect = () => {
+      if (closed) return;
+      const token = api.getToken();
+      if (!token) return;
+
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(token)}`;
+
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "notification" && data.data) {
+              const notif = data.data;
+              const id = Date.now() + Math.random();
+              setToasts((prev) => [...prev.slice(-2), {
+                id,
+                title: notif.title || "Notificação",
+                message: notif.message || "",
+              }]);
+              // auto-dismiss em 6s
+              setTimeout(() => {
+                setToasts((prev) => prev.filter((t) => t.id !== id));
+              }, 6000);
+              window.dispatchEvent(new CustomEvent("notif-refresh"));
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          if (!closed) {
+            reconnectTimer.current = setTimeout(connect, 15000);
+          }
+        };
+      } catch {}
+    };
+
+    connect();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      wsRef.current?.close();
+    };
+  }, [user, loading]);
+
+  if (!user || toasts.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-5 right-5 z-[100] space-y-2 max-w-sm">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className="flex items-start gap-3 p-4 rounded-2xl bg-[#1c1c2e] border border-indigo-500/40 shadow-2xl shadow-indigo-950/50 animate-in"
+        >
+          <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 shrink-0">
+            <Bell className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="text-xs font-bold text-white truncate">{toast.title}</h4>
+            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{toast.message}</p>
+          </div>
+          <button
+            onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+            className="text-gray-500 hover:text-white transition shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
