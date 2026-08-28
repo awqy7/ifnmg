@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Settings,
@@ -10,8 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Trash2,
-  Key,
   Shield,
 } from "lucide-react";
 import { moodleApi, chatApi, notificationsApi } from "@/lib/api";
@@ -26,7 +24,6 @@ export default function SettingsView() {
   const [moodleMessage, setMoodleMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // AI Config
-  const [providers, setProviders] = useState<any[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("groq");
   const [apiKey, setApiKey] = useState("");
   const [savingAI, setSavingAI] = useState(false);
@@ -42,10 +39,6 @@ export default function SettingsView() {
     grade_released: true,
     daily_briefing: true,
   });
-
-  useEffect(() => {
-    chatApi.getProviders().then(setProviders).catch(() => {});
-  }, []);
 
   const handleSaveMoodle = async (e: React.FormEvent) => {
     e.preventDefault();

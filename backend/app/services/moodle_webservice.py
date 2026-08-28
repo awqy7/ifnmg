@@ -3,7 +3,9 @@ Cliente oficial da API REST do Moodle (webservice moodle_mobile_app).
 Retorna JSON estruturado — muito mais confiável que scraping HTML.
 Usado como fonte primária; o scraper HTML é apenas fallback.
 """
+import html
 import logging
+import re
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
 
@@ -19,7 +21,39 @@ ACTIVITY_MODNAMES = {
 # modnames que contam como MATERIAL
 MATERIAL_MODNAMES = {
     "resource", "folder", "url", "page", "book", "glossary", "wiki", "imscp",
+    "label", "lti", "subsection",
 }
+
+# Plugins conhecidos do Moodle. Módulos instalados pelo campus que não estejam
+# nestas listas também são preservados como materiais em vez de desaparecerem.
+INSTANCE_FUNCTIONS = {
+    "resource": "mod_resource_get_resources_by_courses",
+    "folder": "mod_folder_get_folders_by_courses",
+    "url": "mod_url_get_urls_by_courses",
+    "page": "mod_page_get_pages_by_courses",
+    "book": "mod_book_get_books_by_courses",
+    "label": "mod_label_get_labels_by_courses",
+    "lesson": "mod_lesson_get_lessons_by_courses",
+    "choice": "mod_choice_get_choices_by_courses",
+    "feedback": "mod_feedback_get_feedbacks_by_courses",
+    "glossary": "mod_glossary_get_glossaries_by_courses",
+    "wiki": "mod_wiki_get_wikis_by_courses",
+    "scorm": "mod_scorm_get_scorms_by_courses",
+    "h5pactivity": "mod_h5pactivity_get_h5pactivities_by_courses",
+}
+
+
+def clean_moodle_text(value: Any, limit: int = 15_000) -> str:
+    """Converte HTML do Moodle em texto legível sem apagar quebras úteis."""
+    if not value:
+        return ""
+    text = html.unescape(str(value))
+    text = re.sub(r"<(br|/p|/div|/li|/h[1-6])\b[^>]*>", "\n", text, flags=re.I)
+    text = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[ \t\r\f\v]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text).strip()
+    return text[:limit]
 
 
 class MoodleWebService:
@@ -115,6 +149,29 @@ class MoodleWebService:
             logger.warning(f"get_forums({courseid}): {e}")
             return []
 
+    async def get_module_instances(self, modname: str, courseid: int) -> List[Dict]:
+        """Busca detalhes opcionais de um tipo de módulo.
+
+        Nem todo plugin está habilitado no webservice do Virtual2. Por isso uma
+        função ausente é tratada como ausência de enriquecimento, sem derrubar o
+        restante da disciplina.
+        """
+        wsfunction = INSTANCE_FUNCTIONS.get(modname)
+        if not wsfunction:
+            return []
+        try:
+            data = await self._call(wsfunction, {"courseids[0]": courseid})
+        except Exception as exc:
+            logger.debug("%s indisponível no curso %s: %s", wsfunction, courseid, exc)
+            return []
+        if not isinstance(data, dict):
+            return data if isinstance(data, list) else []
+        # Cada endpoint usa uma chave plural própria (pages, books, urls...).
+        for value in data.values():
+            if isinstance(value, list):
+                return value
+        return []
+
     # ─── Notas ───────────────────────────────────────────────────
 
     async def get_grade_items(self, courseid: int) -> List[Dict]:
@@ -198,6 +255,7 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
     due_dates: Dict[int, datetime] = {}
     descriptions: Dict[int, str] = {}
     assignment_files: Dict[int, List[Dict]] = {}
+    instance_details: Dict[int, Dict] = {}
 
     try:
         assignments = await ws.get_assignments(moodle_course_id)
@@ -208,11 +266,9 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 due_dates[cmid] = d
             intro = a.get("intro") or ""
             if intro:
-                import re as _re
-                text = _re.sub(r"<[^>]+>", " ", intro)
-                text = _re.sub(r"\s+", " ", text).strip()
+                text = clean_moodle_text(intro, 15_000)
                 if text:
-                    descriptions[cmid] = text[:2000]
+                    descriptions[cmid] = text
             if cmid:
                 assignment_files[cmid] = [
                     {
@@ -260,6 +316,14 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
     except Exception as e:
         logger.warning(f"[collect] quizzes curso {moodle_course_id}: {e}")
 
+    # Enriquece páginas, livros, pastas, labels e plugins que trazem o conteúdo
+    # em endpoints separados de core_course_get_contents.
+    for modname in INSTANCE_FUNCTIONS:
+        for detail in await ws.get_module_instances(modname, moodle_course_id):
+            cmid = detail.get("coursemodule") or detail.get("cmid")
+            if cmid:
+                instance_details[int(cmid)] = detail
+
     # Estrutura completa do curso
     sections = await ws.get_course_contents(moodle_course_id)
 
@@ -267,18 +331,33 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
         topic_name = section.get("name") or f"Tópico {sec_idx + 1}"
         modules = section.get("modules", [])
 
+        section_summary = clean_moodle_text(section.get("summary"))
+        if section_summary:
+            materials.append({
+                "moodle_id": f"section-{section.get('id', sec_idx)}",
+                "title": topic_name,
+                "type": "section_summary",
+                "url": "",
+                "description": section_summary,
+                "topic_name": topic_name,
+                "topic_number": sec_idx,
+                "files": [],
+            })
+
         for mod in modules:
             cmid = mod.get("id")
             modname = mod.get("modname", "")
             title = (mod.get("name") or "").strip()
             url = mod.get("url") or ""
-            description = descriptions.get(cmid, "") or (mod.get("description") or "")
+            detail = instance_details.get(int(cmid), {}) if cmid else {}
+            description = (
+                descriptions.get(cmid, "")
+                or clean_moodle_text(detail.get("content") or detail.get("intro"))
+                or clean_moodle_text(mod.get("description"))
+            )
 
             # limpa html da description do módulo
-            if "<" in description:
-                import re as _re
-                plain = _re.sub(r"<[^>]+>", " ", description)
-                description = _re.sub(r"\s+", " ", plain).strip()[:2000]
+            description = clean_moodle_text(description)
 
             sub_status = submission_map.get(cmid)
             completed = sub_status == "submitted"
@@ -295,7 +374,37 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 "is_completed": completed,
                 "submission_status": sub_status,
                 "files": assignment_files.get(cmid, []),
+                "availability": mod.get("availabilityinfo") or "",
+                "visible": mod.get("visible", 1),
             }
+
+            # Conteúdos podem aparecer em vários campos dependendo do plugin.
+            module_files = []
+            for content in (mod.get("contents") or []):
+                if content.get("type") == "file" and content.get("fileurl"):
+                    module_files.append({
+                        "filename": content.get("filename", ""),
+                        "filesize": content.get("filesize", 0),
+                        "fileurl": content.get("fileurl", ""),
+                        "mimetype": content.get("mimetype", ""),
+                    })
+            for field in ("contentfiles", "introfiles", "packagefile"):
+                values = detail.get(field) or []
+                if isinstance(values, dict):
+                    values = [values]
+                for content in values:
+                    if isinstance(content, dict) and content.get("fileurl"):
+                        module_files.append({
+                            "filename": content.get("filename", ""),
+                            "filesize": content.get("filesize", 0),
+                            "fileurl": content.get("fileurl", ""),
+                            "mimetype": content.get("mimetype", ""),
+                        })
+            seen_file_urls = set()
+            item["files"] = [
+                f for f in (item["files"] + module_files)
+                if f.get("fileurl") and not (f["fileurl"] in seen_file_urls or seen_file_urls.add(f["fileurl"]))
+            ]
 
             if modname in ACTIVITY_MODNAMES:
                 # Ignora fóruns genéricos de avisos (não são atividades a entregar)
@@ -310,18 +419,9 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 if is_announcement:
                     continue
                 activities[str(cmid)] = item
-            elif modname in MATERIAL_MODNAMES:
-                # Coleta metadados de arquivos dentro do módulo
-                files_meta = []
-                for content in mod.get("contents", []) or []:
-                    if content.get("type") == "file":
-                        files_meta.append({
-                            "filename": content.get("filename", ""),
-                            "filesize": content.get("filesize", 0),
-                            "fileurl": content.get("fileurl", ""),
-                            "mimetype": content.get("mimetype", ""),
-                        })
-                item["files"] = files_meta
+            else:
+                # Todo módulo visível que não exige entrega continua sendo
+                # conhecimento útil (inclusive plugins locais desconhecidos).
                 materials.append(item)
 
     return {

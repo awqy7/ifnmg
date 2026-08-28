@@ -5,9 +5,7 @@ import { ViewType } from "./Dashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Sparkles,
-  Calendar,
   Clock,
-  CheckCircle2,
   AlertTriangle,
   BookOpen,
   ArrowRight,

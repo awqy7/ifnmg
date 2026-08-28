@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
@@ -15,6 +14,7 @@ import StudyToolsView from "@/components/study/StudyToolsView";
 import SettingsView from "@/components/settings/SettingsView";
 import ActivityModal from "@/components/activities/ActivityModal";
 import NotificationSocket from "@/components/NotificationSocket";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 
 export type ViewType =
   | "home"
@@ -28,7 +28,6 @@ export type ViewType =
   | "configuracoes";
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -92,8 +91,8 @@ export default function Dashboard() {
           onNavigate={handleNavigate}
           onOpenActivity={openActivityModal}
         />
-        <main className="flex-1 overflow-y-auto overscroll-contain">
-          <div className="max-w-7xl mx-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto overscroll-contain pb-20 lg:pb-0">
+          <div className="max-w-7xl mx-auto p-3 sm:p-4 lg:p-6">
             {viewMap[currentView]}
           </div>
         </main>
@@ -108,6 +107,12 @@ export default function Dashboard() {
 
       {/* WebSocket: notificações em tempo real + toasts */}
       <NotificationSocket />
+
+      <MobileBottomNav
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        onOpenMenu={() => setMobileMenuOpen(true)}
+      />
     </div>
   );
 }

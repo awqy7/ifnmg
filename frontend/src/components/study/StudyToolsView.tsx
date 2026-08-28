@@ -5,7 +5,6 @@ import {
   Sparkles,
   Layers,
   HelpCircle,
-  FileText,
   RotateCw,
   CheckCircle2,
   XCircle,

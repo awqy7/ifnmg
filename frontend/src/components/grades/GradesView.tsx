@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GraduationCap, Award, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
+import { GraduationCap, TrendingUp } from "lucide-react";
 import { gradesApi } from "@/lib/api";
 
 export default function GradesView() {

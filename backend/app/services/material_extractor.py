@@ -6,6 +6,8 @@ Baixa arquivos via webservice/pluginfile.php e extrai texto
 import io
 import logging
 import re
+import zipfile
+from html import unescape
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -78,11 +80,9 @@ def extract_text_from_bytes(filename: str, mimetype: str, data: bytes) -> str:
     if any(name.endswith(ext) for ext in (".html", ".htm")) or "html" in mime:
         return _clean_html(data.decode("utf-8", errors="ignore"))
 
-    # pptx/docx/xlsx: extração leve de XML compartilhado
+    # Office/OpenDocument: extração leve do XML interno, sem executar macros.
     if name.endswith(".docx") or "wordprocessingml" in mime:
         try:
-            from PyPDF2 import PdfReader  # noqa: F401 (mantém import estável)
-            import zipfile
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
                 paras = re.findall(r"<w:p[\s>][\s\S]*?</w:p>", xml)
@@ -94,6 +94,65 @@ def extract_text_from_bytes(filename: str, mimetype: str, data: bytes) -> str:
                 return "\n".join(out)
         except Exception as e:
             logger.debug(f"docx extract falhou: {e}")
+        return ""
+
+    if name.endswith(".pptx") or "presentationml" in mime:
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                slide_names = sorted(
+                    (item for item in z.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", item)),
+                    key=lambda item: int(re.search(r"\d+", item).group()),
+                )
+                slides = []
+                for index, item in enumerate(slide_names[:100], start=1):
+                    xml = z.read(item).decode("utf-8", errors="ignore")
+                    texts = [unescape(value) for value in re.findall(r"<a:t[^>]*>(.*?)</a:t>", xml)]
+                    if texts:
+                        slides.append(f"Slide {index}: " + " ".join(texts))
+                return "\n".join(slides)
+        except Exception as e:
+            logger.debug("pptx extract falhou: %s", e)
+        return ""
+
+    if name.endswith(".xlsx") or "spreadsheetml" in mime:
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                shared = []
+                if "xl/sharedStrings.xml" in z.namelist():
+                    shared_xml = z.read("xl/sharedStrings.xml").decode("utf-8", errors="ignore")
+                    for block in re.findall(r"<si[\s>][\s\S]*?</si>", shared_xml):
+                        shared.append("".join(re.findall(r"<t[^>]*>(.*?)</t>", block)))
+                rows = []
+                sheet_names = sorted(item for item in z.namelist() if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", item))
+                for sheet_index, item in enumerate(sheet_names[:30], start=1):
+                    xml = z.read(item).decode("utf-8", errors="ignore")
+                    rows.append(f"Planilha {sheet_index}:")
+                    for row in re.findall(r"<row[\s>][\s\S]*?</row>", xml)[:500]:
+                        values = []
+                        for cell in re.findall(r"<c[\s>][\s\S]*?</c>", row):
+                            raw = re.search(r"<v>(.*?)</v>", cell)
+                            if not raw:
+                                continue
+                            value = raw.group(1)
+                            if 't="s"' in cell:
+                                try:
+                                    value = shared[int(value)]
+                                except (ValueError, IndexError):
+                                    pass
+                            values.append(unescape(value))
+                        if values:
+                            rows.append(" | ".join(values))
+                return "\n".join(rows)
+        except Exception as e:
+            logger.debug("xlsx extract falhou: %s", e)
+        return ""
+
+    if name.endswith((".odt", ".ods", ".odp")) or "opendocument" in mime:
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                return _clean_html(z.read("content.xml").decode("utf-8", errors="ignore"))
+        except Exception as e:
+            logger.debug("OpenDocument extract falhou: %s", e)
         return ""
 
     return ""

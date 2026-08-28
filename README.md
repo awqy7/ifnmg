@@ -41,7 +41,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS, Lucide Icons, Date-fns
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS, Lucide Icons, Date-fns
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy, APScheduler, LiteLLM, Playwright, PyWebPush, Passlib/Bcrypt
 - **Banco de Dados**: SQLite (desenvolvimento) / PostgreSQL (produção)
 - **IA**: Google Gemini 1.5 Flash (Gratuito por padrão), Groq, OpenAI GPT-4o Mini, Claude 3, Ollama
@@ -134,4 +134,19 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
 
 - **Criptografia ponta a ponta de credenciais**: As senhas do Virtual2 nunca são expostas nem salvas em texto puro.
 - **Autenticação JWT**: Sessões seguras com tokens criptografados.
-- **Opção de exclusão total**: É possível desvincular as credenciais e apagar todos os dados a qualquer momento na aba Configurações.
+- **Desvinculação de credenciais**: É possível remover a conexão e as credenciais do Virtual2 pela API de Configurações.
+
+## ✅ Validação
+
+```bash
+# Backend (testes unitários)
+cd backend && ./venv/bin/python -m unittest discover -s tests -v
+
+# Frontend (qualidade, tipos e build de produção)
+cd frontend && npm run lint && npm run build
+```
+
+O smoke test responsivo em `frontend/tests/mobile_viewport_smoke.py` valida as
+larguras 320, 375 e 430 px e um telefone em paisagem contra um `next start`
+local. O teste integrado `backend/tests/live_virtual2_smoke.py` usa somente as
+credenciais já criptografadas no banco e imprime apenas contagens agregadas.

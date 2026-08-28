@@ -19,6 +19,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  min-width: 320px;
 }
 
 /* Evita o auto-zoom do iOS Safari em inputs e selects no mobile */
@@ -27,6 +28,51 @@ body {
   select,
   textarea {
     font-size: 16px;
+  }
+
+  button,
+  a,
+  select {
+    touch-action: manipulation;
+  }
+
+  h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Telefones estreitos: preserva ações essenciais sem estourar o cabeçalho. */
+@media (max-width: 380px) {
+  .mobile-brand {
+    display: none;
+  }
+}
+
+@media (max-width: 350px) {
+  .mobile-ai-action {
+    display: none;
+  }
+}
+
+/* Em paisagem baixa, o drawer e o chat usam toda a altura disponível. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .mobile-bottom-nav span {
+    display: none;
+  }
+
+  .mobile-bottom-nav button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

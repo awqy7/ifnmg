@@ -5,7 +5,6 @@ import {
   X,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   FileText,
   Sparkles,
   ExternalLink,
@@ -13,7 +12,6 @@ import {
   Bot,
   Loader2,
   Calendar,
-  HelpCircle,
   Award,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";

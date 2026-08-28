@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/dashboard/Dashboard";
 import LoginPage from "@/components/auth/LoginPage";
 
 export default function Home() {
   const { user, loading } = useAuth();
-  const router = useRouter();
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center">

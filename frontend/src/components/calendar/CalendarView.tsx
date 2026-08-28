@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, Sparkles } from "lucide-react";
+import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { calendarApi } from "@/lib/api";
 
 interface CalendarViewProps {

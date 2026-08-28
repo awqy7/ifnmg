@@ -32,7 +32,6 @@ export default function NotificationSocket() {
       const token = api.getToken();
       if (!token) return;
 
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
       const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(token)}`;
 
@@ -80,7 +79,7 @@ export default function NotificationSocket() {
   if (!user || toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[100] space-y-2 max-w-sm">
+    <div className="fixed bottom-20 lg:bottom-5 right-3 sm:right-5 z-[100] space-y-2 max-w-[calc(100vw-1.5rem)] sm:max-w-sm">
       {toasts.map((toast) => (
         <div
           key={toast.id}

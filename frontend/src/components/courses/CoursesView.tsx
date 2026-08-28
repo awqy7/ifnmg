@@ -6,10 +6,8 @@ import {
   User,
   FileText,
   Sparkles,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
-  FolderOpen,
   Download,
 } from "lucide-react";
 import { coursesApi } from "@/lib/api";
@@ -31,8 +29,15 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
       const crs = await coursesApi.list();
       setCourses(crs);
       if (crs.length > 0) {
-        // Expand first course
-        toggleExpand(crs[0].id);
+        const firstId = crs[0].id;
+        setExpandedCourse(firstId);
+        setLoadingMaterials((prev) => ({ ...prev, [firstId]: true }));
+        try {
+          const mats = await coursesApi.getMaterials(firstId);
+          setCourseMaterials((prev) => ({ ...prev, [firstId]: mats }));
+        } finally {
+          setLoadingMaterials((prev) => ({ ...prev, [firstId]: false }));
+        }
       }
     } catch {}
     setLoading(false);

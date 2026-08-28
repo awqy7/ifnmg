@@ -2,15 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  MessageSquare,
   Sparkles,
   Send,
   Plus,
   Bot,
   User as UserIcon,
-  BookOpen,
   Loader2,
-  Trash2,
 } from "lucide-react";
 import { chatApi, coursesApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -41,14 +38,13 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    coursesApi.list().then(setCourses).catch(() => {});
-    loadSessions();
-  }, [selectedCourse]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+  const selectSession = useCallback(async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    try {
+      const msgs = await chatApi.getMessages(sessionId);
+      setMessages(msgs);
+    } catch {}
+  }, []);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -61,16 +57,19 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
         return cur;
       });
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse]);
+  }, [selectedCourse, selectSession]);
 
-  const selectSession = async (sessionId: string) => {
-    setCurrentSessionId(sessionId);
-    try {
-      const msgs = await chatApi.getMessages(sessionId);
-      setMessages(msgs);
-    } catch {}
-  };
+  useEffect(() => {
+    coursesApi.list().then(setCourses).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
 
   const handleNewSession = async () => {
     try {
@@ -136,9 +135,9 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
   ];
 
   return (
-    <div className="h-[calc(100vh-6.5rem)] supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
+    <div className="h-[calc(100vh-10rem)] supports-[height:100dvh]:h-[calc(100dvh-10rem)] min-h-[30rem] md:h-[calc(100vh-6.5rem)] md:supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-2xl sm:rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
       {/* Sidebar: Sessions & Course Selection */}
-      <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-r border-white/10 p-4 flex flex-col justify-between shrink-0 max-h-40 md:max-h-none overflow-y-auto md:overflow-hidden">
+      <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-b md:border-b-0 md:border-r border-white/10 p-3 sm:p-4 flex flex-col justify-between shrink-0 max-h-36 sm:max-h-40 md:max-h-none overflow-y-auto md:overflow-hidden">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">

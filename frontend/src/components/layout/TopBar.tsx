@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ViewType } from "@/components/dashboard/Dashboard";
 import {
@@ -91,6 +91,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
 
     poll();
     return () => { active = false; };
+    // O texto de progresso é saída deste polling, não um gatilho para reiniciá-lo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncing]);
 
   const handleSync = async () => {
@@ -143,7 +145,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
 
   return (
     <header className="sticky top-0 z-30 bg-[#13131c]/80 backdrop-blur-md border-b border-white/10 pt-[env(safe-area-inset-top)]">
-      <div className="px-4 lg:px-6 h-16 flex items-center justify-between">
+      <div className="px-3 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onMenuToggle}
@@ -152,7 +154,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="sm:hidden flex items-center gap-2 min-w-0">
+          <div className="mobile-brand sm:hidden flex items-center gap-2 min-w-0">
             <GraduationCap className="w-5 h-5 text-indigo-400 shrink-0" />
             <span className="text-sm font-bold text-white truncate">
               IFNMG <span className="text-indigo-400 font-medium">Assistente</span>
@@ -199,7 +201,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
           {/* AI Tutor Quick Access */}
           <button
             onClick={() => onNavigate("chat")}
-            className={`${
+            className={`mobile-ai-action ${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
             } items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/40 hover:to-purple-600/40 border border-indigo-500/30 text-xs font-medium text-indigo-300 transition`}
           >

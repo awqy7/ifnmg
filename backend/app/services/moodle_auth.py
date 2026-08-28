@@ -311,6 +311,19 @@ class MoodleAuthService:
     async def validate_session(self, session_data: dict) -> bool:
         """Verifica se a sessão Moodle ainda está ativa."""
         try:
+            token = session_data.get("moodle_token")
+            if token:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(
+                        f"{MOODLE_BASE}/webservice/rest/server.php",
+                        data={
+                            "wstoken": token,
+                            "wsfunction": "core_webservice_get_site_info",
+                            "moodlewsrestformat": "json",
+                        },
+                    )
+                    data = response.json()
+                    return response.status_code == 200 and not data.get("exception") and bool(data.get("userid"))
             async with self.build_httpx_client(session_data) as client:
                 resp = await client.get(f"{MOODLE_BASE}/my/")
                 if "login" in str(resp.url):

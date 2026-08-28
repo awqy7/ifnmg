@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Plus, Trash2, Calendar, BookOpen, MapPin } from "lucide-react";
+import { Clock, Plus, Trash2, MapPin } from "lucide-react";
 import { scheduleApi, coursesApi } from "@/lib/api";
 
 export default function ScheduleView() {
   const [schedule, setSchedule] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form State
@@ -19,7 +18,6 @@ export default function ScheduleView() {
   const [room, setRoom] = useState("");
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [sched, crs] = await Promise.all([
         scheduleApi.get(),
@@ -28,7 +26,6 @@ export default function ScheduleView() {
       setSchedule(sched);
       setCourses(crs);
     } catch {}
-    setLoading(false);
   };
 
   useEffect(() => {

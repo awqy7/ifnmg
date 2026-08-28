@@ -193,8 +193,11 @@ async def _sync_materials(
         # Extração de texto: só quando ainda não tem conteúdo
         if extract_text and not material.content_text:
             text_parts = []
+            description = (mat_data.get("description") or "").strip()
+            if description:
+                text_parts.append(description)
             if files_meta:
-                for fmeta in files_meta[:3]:  # máx 3 arquivos/módulo
+                for fmeta in files_meta[:8]:  # cobre pastas/listas sem explodir memória
                     txt = await extract_material_content(
                         ws=ws,
                         client=client,
@@ -204,10 +207,8 @@ async def _sync_materials(
                     )
                     if txt:
                         text_parts.append(txt)
-                    if sum(len(t) for t in text_parts) > 12000:
+                    if sum(len(t) for t in text_parts) > 14000:
                         break
-            elif mat_data.get("description"):
-                text_parts.append(mat_data["description"])
 
             if text_parts:
                 material.content_text = "\n\n".join(text_parts)[:15000]
