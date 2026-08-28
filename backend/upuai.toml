@@ -1,0 +1,10 @@
+#:schema https://upuai.com.br/schemas/upuai-toml-v1.json
+
+# IFNMG Assistente — backend FastAPI na Upuai Cloud (PaaS brasileira, IP no BR).
+
+[build]
+builder = "railpack"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+healthCheckPath = "/api/health"

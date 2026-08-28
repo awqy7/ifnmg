@@ -62,19 +62,17 @@ Acesse no navegador:
 - **Aplicação Web**: `http://localhost:3000`
 - **Documentação da API (Swagger)**: `http://localhost:8000/api/docs`
 
-### 2. Deploy (Vercel + Supabase + Render)
+### 2. Deploy (Vercel + Supabase + Upuai)
 
 O sistema usa **3 serviços**:
 
 | Serviço | O que roda | Host |
 |---|---|---|
 | Frontend (Next.js) | Interface web (porta 3000) | **Vercel** |
-| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Google Cloud Run (São Paulo)** |
+| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Upuai Cloud (Brasil)** |
 | Banco de dados | PostgreSQL | **Supabase** |
 
-> ⚠️ **O backend precisa rodar com IP brasileiro.** O Moodle do Virtual2 (`virtual2.ifnmg.edu.br`) bloqueia autenticação vinda de datacenters estrangeiros — por isso o **Render (EUA) não funciona** para o login. A solução gratuita é o **Cloud Run na região `southamerica-east1` (São Paulo)**.
-> ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
-
+> ⚠️ **O backend precisa rodar com IP brasileiro.** O Moodle do Virtual2 (`virtual2.ifnmg.edu.br`) bloqueia autenticação vinda de IPs estrangeiros/datacenters fora do Brasil — por isso o **Render (EUA) não funciona** para o login. Soluções com IP no Brasil: **Upuai Cloud** (PaaS BR, recomendado), Brasa Cloud (beta) ou Google Cloud Run em `southamerica-east1`.
 > ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
 
 #### a) Supabase (banco)
@@ -84,22 +82,31 @@ O sistema usa **3 serviços**:
 3. Use o formato:
    `postgresql+psycopg://postgres.<PROJECT_REF>:<SENHA>@aws-0-<REGIAO>.pooler.supabase.com:5432/postgres?sslmode=require`
 
-#### b) Google Cloud Run (backend — recomendado)
+#### b) Upuai Cloud (backend — recomendado)
 
-Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run** (escala a zero, não cobra).
+PaaS brasileira (datacenter no Brasil → IP brasileiro → passa no Moodle). Igual ao Railway/Render: `git push`, CLI amigável, plano FREE sem cartão.
 
-1. Crie uma conta Google Cloud e um projeto (o free tier do Cloud Run Sul-América não pede cartão).
-2. Instale a CLI: `gcloud auth login` e `gcloud config set project SEU_PROJETO_ID`.
-3. Confira `backend/.env.supabase.bak` (contém `SECRET_KEY`, `ENCRYPTION_KEY`, `DATABASE_URL`).
+1. Crie a conta grátis (sem cartão) em `upuai.com.br`.
+2. Instale a CLI: `brew install saiph-ti/upuai-cli/upuai` (ou binário em `github.com/saiph-ti/upuai-cli/releases`).
+3. `upuai login` (browser OAuth).
 4. Execute:
    ```bash
-   ./deploy/cloud_run.sh
+   ./deploy/upuai.sh
    ```
-5. No final ele exibe a URL `https://ifnmg-backend-....run.app` e instrui a apontar a Vercel para ela.
+   (o script conecta o repo, injeta as env vars do `backend/.env.supabase.bak` e faz o deploy).
+5. O script imprime a URL `*.upuai.com.br` — valide com `curl URL/api/health` e depois aponte a Vercel.
 
-> Formato exigido para o Cloud Run: **Dockerfile** (`backend/Dockerfile`) + build via `gcloud run deploy --source`.
+> O deploy usa `backend/upuai.toml` (build por detecção de FastAPI + health check `/api/health`).
 
-#### c) Render (backend — NÃO recomendado)
+#### c) Google Cloud Run (backend — alternativa)
+
+Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
+
+1. Crie uma conta Google Cloud e um projeto (`gcloud config set project SEU_PROJETO_ID`).
+2. Execute `./deploy/cloud_run.sh` (usa o `backend/Dockerfile`).
+3. Aponte a Vercel para a URL `https://ifnmg-backend-....run.app`.
+
+#### d) Render (backend — NÃO recomendado)
 
 > ⚠️ Bloqueado pelo Moodle (IP nos EUA não autentica no Virtual2). Mantido só como referência.
 
@@ -111,14 +118,14 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run** (escala a 
    - `APP_ENV=production`
    - `DATABASE_URL` (string do pooler acima — troque SENHA pela senha real do banco)
    - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (ou deixe padrão; domínios `*.vercel.app` já são aceitos)
-   - `GROQ_API_KEY`, `SECRET_KEY` etc. conforme necessário
+   - `GROQ_API_KEY`, `SECRET_KEY`, `ENCRYPTION_KEY` etc. conforme necessário
 
-#### d) Vercel (frontend)
+#### e) Vercel (frontend)
 
 1. Importe o repo `awqy7/ifnmg`.
 2. **Root Directory**: `frontend` ← **importante, senão dá erro 404**
 3. Adicione a env var de build:
-   - `NEXT_PUBLIC_API_URL=https://SEU-BACKEND.onrender.com` (URL do Render)
+   - `NEXT_PUBLIC_API_URL=https://SEU-BACKEND.upuai.com.br` (URL do Upuai)
 4. **Deploy**. 
 
 ---
