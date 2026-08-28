@@ -139,7 +139,7 @@ export default function ScheduleView() {
 
                         <button
                           onClick={() => handleDeleteSlot(slot.id)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition shrink-0"
+                          className="p-2 md:p-1.5 rounded-lg text-red-400/70 md:text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition shrink-0"
                           title="Remover da grade"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

@@ -7,10 +7,27 @@
   --foreground: #f8fafc;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Evita o auto-zoom do iOS Safari em inputs e selects no mobile */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Custom scrollbars */

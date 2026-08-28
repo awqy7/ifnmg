@@ -72,11 +72,11 @@ export default function GradesView() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-black/20 text-gray-400 uppercase text-[10px] tracking-wider border-b border-white/5">
                     <tr>
-                      <th className="px-5 py-3 font-semibold">Avaliação / Atividade</th>
-                      <th className="px-5 py-3 font-semibold">Nota Obtida</th>
-                      <th className="px-5 py-3 font-semibold">Nota Máxima</th>
-                      <th className="px-5 py-3 font-semibold">Aproveitamento</th>
-                      <th className="px-5 py-3 font-semibold">Feedback do Professor</th>
+                      <th className="px-3 sm:px-5 py-3 font-semibold">Avaliação / Atividade</th>
+                      <th className="px-3 sm:px-5 py-3 font-semibold">Nota Obtida</th>
+                      <th className="px-3 sm:px-5 py-3 font-semibold">Nota Máxima</th>
+                      <th className="px-3 sm:px-5 py-3 font-semibold">Aproveitamento</th>
+                      <th className="px-3 sm:px-5 py-3 font-semibold">Feedback do Professor</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -84,10 +84,10 @@ export default function GradesView() {
                       const hasGrade = grade.grade !== null && grade.grade !== undefined;
                       return (
                         <tr key={grade.id} className="hover:bg-white/5 transition">
-                          <td className="px-5 py-3.5 font-medium text-white max-w-xs truncate">
+                          <td className="px-3 sm:px-5 py-3.5 font-medium text-white max-w-xs truncate">
                             {grade.item_name}
                           </td>
-                          <td className="px-5 py-3.5">
+                          <td className="px-3 sm:px-5 py-3.5">
                             {hasGrade ? (
                               <span className="font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
                                 {grade.grade}
@@ -96,10 +96,10 @@ export default function GradesView() {
                               <span className="text-gray-500">-</span>
                             )}
                           </td>
-                          <td className="px-5 py-3.5 text-gray-400">
+                          <td className="px-3 sm:px-5 py-3.5 text-gray-400">
                             {grade.max_grade !== null ? grade.max_grade : "-"}
                           </td>
-                          <td className="px-5 py-3.5">
+                          <td className="px-3 sm:px-5 py-3.5">
                             {grade.percentage !== null && grade.percentage !== undefined ? (
                               <span className="font-semibold text-emerald-400">
                                 {grade.percentage}%
@@ -108,7 +108,7 @@ export default function GradesView() {
                               <span className="text-gray-500">-</span>
                             )}
                           </td>
-                          <td className="px-5 py-3.5 text-gray-400 italic max-w-sm truncate">
+                          <td className="px-3 sm:px-5 py-3.5 text-gray-400 italic max-w-sm truncate">
                             {grade.feedback || "Sem observações"}
                           </td>
                         </tr>

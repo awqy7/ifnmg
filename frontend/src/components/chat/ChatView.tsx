@@ -136,9 +136,9 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
   ];
 
   return (
-    <div className="h-[calc(100vh-6.5rem)] flex flex-col md:flex-row rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
+    <div className="h-[calc(100vh-6.5rem)] supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
       {/* Sidebar: Sessions & Course Selection */}
-      <div className="w-full md:w-72 bg-[#13131c] border-r border-white/10 p-4 flex flex-col justify-between shrink-0">
+      <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-r border-white/10 p-4 flex flex-col justify-between shrink-0 max-h-40 md:max-h-none overflow-y-auto md:overflow-hidden">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -286,7 +286,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 border-t border-white/10 bg-[#13131c]">
+        <div className="p-4 border-t border-white/10 bg-[#13131c] pb-[max(1rem,env(safe-area-inset-bottom))]">
           <form onSubmit={handleSend} className="flex items-center gap-2">
             <input
               type="text"

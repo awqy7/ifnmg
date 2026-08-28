@@ -104,8 +104,8 @@ export default function ActivityModal({
     new Date(details.due_date) < new Date();
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-[#181826] border border-white/15 rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#181826] border border-white/15 rounded-t-3xl sm:rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         {/* Modal Header */}
         <div className="p-5 border-b border-white/10 flex items-start justify-between gap-4 bg-white/5">
           <div className="min-w-0">
@@ -134,7 +134,7 @@ export default function ActivityModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm text-gray-300">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm text-gray-300">
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3 text-gray-400">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
@@ -312,7 +312,7 @@ export default function ActivityModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-white/10 bg-[#13131c] flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-4 sm:pt-4 border-t border-white/10 bg-[#13131c] flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {openChatWithContext && details?.course_id && (
               <button
