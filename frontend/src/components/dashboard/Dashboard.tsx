@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
@@ -31,33 +31,21 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [chatCourseId, setChatCourseId] = useState<string | undefined>();
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>();
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
-  // Detecta telas < lg para comportar a sidebar como drawer (fechada ao abrir)
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const update = () => {
-      setIsMobile(mq.matches);
-      if (mq.matches) setSidebarOpen(false);
-    };
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
-    if (isMobile) setSidebarOpen(false);
+    setMobileMenuOpen(false);
   };
 
   const openChat = (courseId?: string, prompt?: string) => {
     setChatCourseId(courseId);
     setChatInitialPrompt(prompt);
     setCurrentView("chat");
-    if (isMobile) setSidebarOpen(false);
+    setMobileMenuOpen(false);
   };
 
   const openActivityModal = (activityId: string) => {
@@ -93,13 +81,14 @@ export default function Dashboard() {
         currentView={currentView}
         onNavigate={handleNavigate}
         isOpen={sidebarOpen}
-        isMobile={isMobile}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        mobileOpen={mobileMenuOpen}
+        onToggleDesktop={() => setSidebarOpen((o) => !o)}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
-      <div className={`flex-1 flex flex-col min-w-0 overflow-hidden ${sidebarOpen && isMobile ? "pointer-events-none" : ""}`}>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <TopBar
-          onMenuToggle={() => setSidebarOpen((o) => !o)}
+          onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           onNavigate={handleNavigate}
           onOpenActivity={openActivityModal}
         />

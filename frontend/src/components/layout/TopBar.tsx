@@ -7,6 +7,7 @@ import {
   Bell,
   RefreshCw,
   Menu,
+  GraduationCap,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -147,10 +148,16 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
           <button
             onClick={onMenuToggle}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition lg:hidden shrink-0"
-            aria-label="Abrir menu"
+            aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
+          <div className="sm:hidden flex items-center gap-2 min-w-0">
+            <GraduationCap className="w-5 h-5 text-indigo-400 shrink-0" />
+            <span className="text-sm font-bold text-white truncate">
+              IFNMG <span className="text-indigo-400 font-medium">Assistente</span>
+            </span>
+          </div>
           <div className="hidden sm:block min-w-0">
             <p className="text-xs text-gray-400">Ambiente Acadêmico Conectado</p>
             <div className="flex items-center gap-2">

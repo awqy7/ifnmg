@@ -21,12 +21,24 @@ interface SidebarProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
   isOpen: boolean;
-  isMobile?: boolean;
-  onToggle: () => void;
+  mobileOpen?: boolean;
+  onToggleDesktop: () => void;
+  onCloseMobile: () => void;
 }
 
-export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = false, onToggle }: SidebarProps) {
+export default function Sidebar({
+  currentView,
+  onNavigate,
+  isOpen,
+  mobileOpen = false,
+  onToggleDesktop,
+  onCloseMobile,
+}: SidebarProps) {
   const { user, logout } = useAuth();
+
+  // No mobile o drawer abre sempre com rótulo completo; no desktop o texto
+  // só aparece quando a sidebar está expandida.
+  const showFull = isOpen || mobileOpen;
 
   const menuItems: { id: ViewType; label: string; icon: any; badge?: string }[] = [
     { id: "home", label: "Visão Geral", icon: Home },
@@ -42,22 +54,20 @@ export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = fa
 
   return (
     <>
-      {/* Backdrop no mobile (clica para fechar o drawer) */}
-      {isMobile && isOpen && (
+      {/* Backdrop (mobile): fecha o drawer ao tocar fora */}
+      {mobileOpen && (
         <div
-          onClick={onToggle}
+          onClick={onCloseMobile}
           className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm lg:hidden animate-in fade-in"
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`h-dvh bg-[#13131c] border-r border-white/10 flex flex-col relative z-40 transition-all duration-300 ${
-          isOpen
-            ? "w-64 translate-x-0"
-            : "w-64 -translate-x-full lg:w-20 lg:translate-x-0"
-        } lg:transition-[width] ${
-          isMobile && isOpen ? "shadow-2xl shadow-black/60" : "shadow-none"
+        className={`h-dvh bg-[#13131c] border-r border-white/10 flex flex-col relative z-40 transition-all duration-300 fixed inset-y-0 left-0 w-64 ${
+          mobileOpen ? "translate-x-0 shadow-2xl shadow-black/60" : "-translate-x-full shadow-none"
+        } lg:static lg:translate-x-0 lg:transition-[width] ${
+          isOpen ? "lg:w-64" : "lg:w-20"
         }`}
       >
         {/* Brand Header */}
@@ -66,7 +76,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = fa
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            {isOpen && (
+            {showFull && (
               <div className="truncate">
                 <h1 className="font-bold text-base leading-tight text-white">IFNMG</h1>
                 <p className="text-xs text-indigo-400 font-medium">Assistente IA</p>
@@ -74,14 +84,14 @@ export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = fa
             )}
           </div>
           <button
-            onClick={onToggle}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition lg:hidden"
+            onClick={onCloseMobile}
+            className="p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition lg:hidden"
             title="Fechar menu"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={onToggle}
+            onClick={onToggleDesktop}
             className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition hidden lg:block"
             title={isOpen ? "Recolher menu" : "Expandir menu"}
           >
@@ -97,17 +107,21 @@ export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = fa
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => {
+                  onNavigate(item.id);
+                  if (mobileOpen) onCloseMobile();
+                }}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all relative ${
                   isActive
                     ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
                     : "text-gray-400 hover:text-white hover:bg-white/5"
                 }`}
-                title={!isOpen ? item.label : undefined}
+                title={!showFull ? item.label : undefined}
+                aria-label={item.label}
               >
                 <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-indigo-400" : "text-gray-400"}`} />
-                {isOpen && <span className="truncate">{item.label}</span>}
-                {item.badge && isOpen && (
+                {showFull && <span className="truncate text-left">{item.label}</span>}
+                {item.badge && showFull && (
                   <span className="ml-auto text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                     {item.badge}
                   </span>
@@ -119,17 +133,17 @@ export default function Sidebar({ currentView, onNavigate, isOpen, isMobile = fa
 
         {/* User profile / logout footer */}
         <div className="p-3 border-t border-white/10 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${!isOpen ? "justify-center" : ""}`}>
+          <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${!showFull ? "justify-center" : ""}`}>
             <div className="w-9 h-9 rounded-lg bg-indigo-950 border border-indigo-500/40 flex items-center justify-center font-bold text-sm text-indigo-300 shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
-            {isOpen && (
+            {showFull && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{user?.name || "Estudante"}</p>
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>
             )}
-            {isOpen && (
+            {showFull && (
               <button
                 onClick={logout}
                 className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
