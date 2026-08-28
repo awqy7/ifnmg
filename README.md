@@ -69,8 +69,11 @@ O sistema usa **3 serviços**:
 | Serviço | O que roda | Host |
 |---|---|---|
 | Frontend (Next.js) | Interface web (porta 3000) | **Vercel** |
-| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Render** |
+| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Google Cloud Run (São Paulo)** |
 | Banco de dados | PostgreSQL | **Supabase** |
+
+> ⚠️ **O backend precisa rodar com IP brasileiro.** O Moodle do Virtual2 (`virtual2.ifnmg.edu.br`) bloqueia autenticação vinda de datacenters estrangeiros — por isso o **Render (EUA) não funciona** para o login. A solução gratuita é o **Cloud Run na região `southamerica-east1` (São Paulo)**.
+> ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
 
 > ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
 
@@ -81,7 +84,24 @@ O sistema usa **3 serviços**:
 3. Use o formato:
    `postgresql+psycopg://postgres.<PROJECT_REF>:<SENHA>@aws-0-<REGIAO>.pooler.supabase.com:5432/postgres?sslmode=require`
 
-#### b) Render (backend)
+#### b) Google Cloud Run (backend — recomendado)
+
+Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run** (escala a zero, não cobra).
+
+1. Crie uma conta Google Cloud e um projeto (o free tier do Cloud Run Sul-América não pede cartão).
+2. Instale a CLI: `gcloud auth login` e `gcloud config set project SEU_PROJETO_ID`.
+3. Confira `backend/.env.supabase.bak` (contém `SECRET_KEY`, `ENCRYPTION_KEY`, `DATABASE_URL`).
+4. Execute:
+   ```bash
+   ./deploy/cloud_run.sh
+   ```
+5. No final ele exibe a URL `https://ifnmg-backend-....run.app` e instrui a apontar a Vercel para ela.
+
+> Formato exigido para o Cloud Run: **Dockerfile** (`backend/Dockerfile`) + build via `gcloud run deploy --source`.
+
+#### c) Render (backend — NÃO recomendado)
+
+> ⚠️ Bloqueado pelo Moodle (IP nos EUA não autentica no Virtual2). Mantido só como referência.
 
 1. GitHub → **New Web Service** → repo `awqy7/ifnmg`.
 2. **Root Directory**: `backend`
@@ -93,7 +113,7 @@ O sistema usa **3 serviços**:
    - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (ou deixe padrão; domínios `*.vercel.app` já são aceitos)
    - `GROQ_API_KEY`, `SECRET_KEY` etc. conforme necessário
 
-#### c) Vercel (frontend)
+#### d) Vercel (frontend)
 
 1. Importe o repo `awqy7/ifnmg`.
 2. **Root Directory**: `frontend` ← **importante, senão dá erro 404**

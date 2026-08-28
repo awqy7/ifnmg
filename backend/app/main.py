@@ -28,13 +28,15 @@ async def lifespan(app: FastAPI):
     create_tables()
     logger.info("✅ Banco de dados inicializado")
 
-    # Instala browsers do Playwright (se necessário)
-    try:
-        import subprocess
-        subprocess.run(["playwright", "install", "chromium"], capture_output=True, timeout=15)
-        logger.info("✅ Playwright Chromium verificado")
-    except Exception as e:
-        logger.warning(f"Playwright: {e}")
+    # Instala browsers do Playwright (somente local; em produção o login usa
+    # a REST API + HTML direto, e o Chromium só deixaria o cold start lento)
+    if settings.APP_ENV != "production":
+        try:
+            import subprocess
+            subprocess.run(["playwright", "install", "chromium"], capture_output=True, timeout=15)
+            logger.info("✅ Playwright Chromium verificado")
+        except Exception as e:
+            logger.warning(f"Playwright: {e}")
 
     # Inicia scheduler de jobs
     from app.services.scheduler import start_scheduler

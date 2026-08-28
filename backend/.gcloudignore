@@ -1,0 +1,16 @@
+# Ignora o venv local (GBs) no upload do gcloud builds
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.db
+*.sqlite
+.env
+.env.*
+.secret_key
+encryption.key
+data/
+tests/
+*.log
+.gcloudignore
+.dockerignore
