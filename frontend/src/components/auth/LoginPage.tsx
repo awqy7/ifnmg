@@ -58,12 +58,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              <label htmlFor="moodle-username" className="block text-xs font-semibold text-gray-300 mb-1.5">
                 Usuário / CPF / Matrícula
               </label>
               <div className="relative">
                 <input
+                  id="moodle-username"
                   type="text"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Ex: 14973814684"
@@ -75,12 +77,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              <label htmlFor="moodle-password" className="block text-xs font-semibold text-gray-300 mb-1.5">
                 Senha do Virtual2
               </label>
               <div className="relative">
                 <input
+                  id="moodle-password"
                   type={showPass ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
@@ -90,6 +94,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
