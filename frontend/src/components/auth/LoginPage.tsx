@@ -2,30 +2,29 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, Eye, EyeOff, Loader2, ShieldCheck, Lock, User, ExternalLink } from "lucide-react";
+import { GraduationCap, Eye, EyeOff, ShieldCheck, Lock, User, ExternalLink } from "lucide-react";
+import { LoginButton, SYNC_STEPS } from "@/components/ui/ImmersiveLoader";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const handleLogin = async () => {
     try {
       await login(username, password);
     } catch (err: any) {
-      setError(
+      throw new Error(
         err.message ||
         "Não foi possível conectar ao Virtual2. Verifique seu usuário e senha do IFNMG."
       );
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleError = (msg: string) => {
+    setError(msg);
   };
 
   return (
@@ -56,7 +55,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form className="space-y-4">
             <div>
               <label htmlFor="moodle-username" className="block text-xs font-semibold text-gray-300 mb-1.5">
                 Usuário / CPF / Matrícula
@@ -107,19 +106,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || !username.trim() || !password}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-xs sm:text-sm"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Conectando ao Virtual2...
-                </>
-              ) : (
-                "Entrar no Sistema"
-              )}
-            </button>
+            <LoginButton onLogin={handleLogin} isLoading={false} onError={handleError}>
+              Entrar no Sistema
+            </LoginButton>
           </form>
 
           <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400">
