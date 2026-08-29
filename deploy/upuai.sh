@@ -1,5 +1,5 @@
 #!/bin/bash
-# ═══════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════════════════
 # IFNMG Assistente — Deploy do BACKEND na Upuai Cloud (PaaS brasileira)
 # ═══════════════════════════════════════════════════════════════════════════
 # Por quê: IP brasileiro (datacenter no BR) → passa no bloqueio do Moodle
@@ -13,7 +13,12 @@
 #   3. upuai login          (browser OAuth — rodar você mesmo)
 #   4. Autorizar o GitHub App quando o init pedir
 #      (ou já em https://app.upuai.com.br/projects/new)
-#   5. backend/.env.supabase.bak com SECRET_KEY/ENCRYPTION_KEY (já está)
+#   5. Variáveis de ambiente definidas no shell ou .env.local (NÃO commite .env)
+#      - DATABASE_URL (PostgreSQL gerenciado)
+#      - SECRET_KEY (python3 -c "import secrets; print(secrets.token_hex(32))")
+#      - ENCRYPTION_KEY (python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+#      - GROQ_API_KEY (https://console.groq.com)
+#      - ALLOWED_ORIGINS (ex: https://ifnmg.vercel.app,http://localhost:3000)
 #
 # Uso:  ./deploy/upuai.sh
 # ═══════════════════════════════════════════════════════════════════════════
@@ -35,14 +40,22 @@ upuai whoami >/dev/null 2>&1 || {
   exit 1
 }
 
-test -f "$BACKEND_DIR/.env.supabase.bak" || {
-  echo "❌ Falta $BACKEND_DIR/.env.supabase.bak (veja o README)."
-  exit 1
-}
-set -a
-# shellcheck disable=SC1091
-source "$BACKEND_DIR/.env.supabase.bak"
-set +a
+# Carrega variáveis de .env.local se existir
+if [ -f "$BACKEND_DIR/.env.local" ]; then
+  set -a
+  source "$BACKEND_DIR/.env.local"
+  set +a
+fi
+
+# Verifica variáveis obrigatórias
+required_vars=("DATABASE_URL" "SECRET_KEY" "ENCRYPTION_KEY" "GROQ_API_KEY" "ALLOWED_ORIGINS")
+for var in "${required_vars[@]}"; do
+  if [ -z "${!var:-}" ]; then
+    echo "❌ Variável obrigatória não definida: $var"
+    echo "   Defina no shell ou em $BACKEND_DIR/.env.local"
+    exit 1
+  fi
+done
 
 # ────────────── 1) Projeto + fonte ──────────────
 if ! upuai ls -o json 2>/dev/null | grep -q "$SERVICE"; then
@@ -63,8 +76,11 @@ upuai vars set APP_ENV=production \
   ALLOWED_ORIGINS="$ALLOWED_ORIGINS" \
   SECRET_KEY="$SECRET_KEY" \
   ENCRYPTION_KEY="$ENCRYPTION_KEY" \
-  DEFAULT_AI_PROVIDER="$DEFAULT_AI_PROVIDER" \
-  GROQ_API_KEY="$GROQ_API_KEY"
+  DEFAULT_AI_PROVIDER="${DEFAULT_AI_PROVIDER:-groq}" \
+  GROQ_API_KEY="$GROQ_API_KEY" \
+  BCRYPT_ROUNDS="${BCRYPT_ROUNDS:-12}" \
+  RATE_LIMIT_LOGIN_PER_MINUTE="${RATE_LIMIT_LOGIN_PER_MINUTE:-5}" \
+  JWT_ALGORITHM="${JWT_ALGORITHM:-HS256}"
 
 # ────────────── 3) Deploy ──────────────
 echo "▶ Deploy (pode levar alguns minutos)..."

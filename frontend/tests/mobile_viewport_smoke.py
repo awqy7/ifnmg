@@ -38,7 +38,27 @@ def api_response(url: str):
                 "course_name": "Disciplina de teste",
                 "course_color": "#6366f1",
                 "due_date": "2030-12-31T23:59:00",
-            }
+            },
+            {
+                "id": "atividade-entregue",
+                "title": "Atividade já entregue",
+                "type": "assignment",
+                "status": "submitted",
+                "course_id": "curso-mobile",
+                "course_name": "Disciplina de teste",
+                "course_color": "#6366f1",
+                "due_date": "2030-11-30T23:59:00",
+            },
+            {
+                "id": "atividade-atrasada",
+                "title": "Atividade atrasada",
+                "type": "assignment",
+                "status": "late",
+                "course_id": "curso-mobile",
+                "course_name": "Disciplina de teste",
+                "course_color": "#6366f1",
+                "due_date": "2020-01-01T23:59:00",
+            },
         ]
     if url.endswith("/api/activities/atividade-mobile/details"):
         return {
@@ -87,15 +107,34 @@ def main():
                     f"conteúdo comprimido em {width}x{height}: main={main_width}px"
                 )
 
+                # Ao descer, o topo recolhe; ao subir, reaparece.
+                page.locator("main > div").evaluate(
+                    "element => element.style.paddingBottom = '1200px'"
+                )
+                page.locator("main").evaluate(
+                    "element => { element.scrollTop = 300; element.dispatchEvent(new Event('scroll')); }"
+                )
+                page.wait_for_timeout(400)
+                assert page.locator("header").evaluate("element => element.clientHeight") == 0
+                page.locator("main").evaluate(
+                    "element => { element.scrollTop = 100; element.dispatchEvent(new Event('scroll')); }"
+                )
+                page.wait_for_timeout(400)
+                assert page.locator("header").evaluate("element => element.clientHeight") > 0
+
                 page.locator("nav.mobile-bottom-nav button").filter(has_text="Tarefas").click()
                 page.get_by_role("heading", name="Atividades & Tarefas").wait_for(state="visible")
 
-                # Todos os filtros precisam estar visíveis sem rolagem horizontal oculta.
+                # Não há controles de filtro: a ordem é automática e a matéria aparece no card.
                 for label in ["Todas", "Pendentes", "Entregues", "Atrasadas"]:
-                    button = page.get_by_role("button", name=label, exact=True)
-                    button.wait_for(state="visible")
-                    box = button.bounding_box()
-                    assert box and box["x"] >= 0 and box["x"] + box["width"] <= width
+                    assert page.get_by_role("button", name=label, exact=True).count() == 0
+                assert page.get_by_text("Disciplina de teste", exact=True).first.is_visible()
+                titles = page.locator("main h3").all_text_contents()
+                assert titles[:3] == [
+                    "Atividade de teste responsivo",
+                    "Atividade já entregue",
+                    "Atividade atrasada",
+                ]
 
                 # O visualizador global também deve caber e fechar no menor viewport.
                 page.get_by_text("Atividade de teste responsivo", exact=True).click()

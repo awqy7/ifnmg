@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { authApi, api } from "@/lib/api";
+import { authApi } from "@/lib/api";
 
 interface User {
   id: string;
@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -28,23 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = api.getToken();
-    if (token) {
-      authApi.getMe()
-        .then(setUser)
-        .catch(() => {
-          api.setToken(null);
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Com cookies httpOnly, só precisamos chamar getMe
+    // O browser envia o cookie automaticamente
+    authApi.getMe()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (username: string, password: string) => {
     const data = await authApi.moodleLogin(username, password);
-    api.setToken(data.access_token);
+    // O token vem no cookie httpOnly (definido pelo backend)
+    // Também retornado no body para compatibilidade
     const me = await authApi.getMe();
     setUser(me);
   };
@@ -53,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } catch {}
-    api.setToken(null);
+    // Cookie limpo pelo backend
     setUser(null);
   };
 
@@ -62,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await authApi.getMe();
       setUser(me);
     } catch {
-      api.setToken(null);
       setUser(null);
     }
   };

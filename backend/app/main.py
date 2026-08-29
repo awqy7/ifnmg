@@ -2,53 +2,117 @@
 FastAPI — Aplicação principal do IFNMG Assistente Backend.
 """
 import logging
+import re
+import time
 from contextlib import asynccontextmanager
+from typing import Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import create_tables
 
-# Configura logging
+# Configura logging estruturado
+class SanitizingFormatter(logging.Formatter):
+    SENSITIVE_PATTERNS = [
+        (re.compile(r'(?i)(password|senha|token|secret|key|authorization)=[^\s&]+'), r'\1=***REDACTED***'),
+        (re.compile(r'Bearer\s+[A-Za-z0-9\-_=.]+'), 'Bearer ***REDACTED***'),
+        (re.compile(r'(?i)eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+'), '***JWT_REDACTED***'),
+    ]
+    
+    def format(self, record: logging.LogRecord) -> str:
+        msg = super().format(record)
+        for pattern, replacement in self.SENSITIVE_PATTERNS:
+            msg = pattern.sub(replacement, msg)
+        return msg
+
+handler = logging.StreamHandler()
+handler.setFormatter(SanitizingFormatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+))
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[handler],
 )
 logger = logging.getLogger(__name__)
+
+
+# Rate limiting simples em memória (para produção usar Redis)
+rate_limit_store: dict[str, list[float]] = {}
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, limit: int = 100, window: int = 60):
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+    
+    async def dispatch(self, request: Request, call_next: Callable):
+        if request.url.path in ("/api/health", "/", "/api/docs", "/api/redoc", "/api/openapi.json"):
+            return await call_next(request)
+        
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        
+        if client_ip not in rate_limit_store:
+            rate_limit_store[client_ip] = []
+        
+        rate_limit_store[client_ip] = [t for t in rate_limit_store[client_ip] if now - t < self.window]
+        
+        if len(rate_limit_store[client_ip]) >= self.limit:
+            return Response(
+                content='{"detail":"Rate limit exceeded"}',
+                status_code=429,
+                media_type="application/json",
+                headers={"Retry-After": str(self.window)}
+            )
+        
+        rate_limit_store[client_ip].append(now)
+        return await call_next(request)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        if settings.APP_ENV == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle do app: startup e shutdown."""
-    logger.info("🚀 Iniciando IFNMG Assistente Backend...")
+    logger.info("Iniciando IFNMG Assistente Backend...")
 
-    # Cria tabelas do banco de dados
     create_tables()
-    logger.info("✅ Banco de dados inicializado")
+    logger.info("Banco de dados inicializado")
 
-    # Instala browsers do Playwright (somente local; em produção o login usa
-    # a REST API + HTML direto, e o Chromium só deixaria o cold start lento)
     if settings.APP_ENV != "production":
         try:
             import subprocess
             subprocess.run(["playwright", "install", "chromium"], capture_output=True, timeout=15)
-            logger.info("✅ Playwright Chromium verificado")
+            logger.info("Playwright Chromium verificado")
         except Exception as e:
             logger.warning(f"Playwright: {e}")
 
-    # Inicia scheduler de jobs
     from app.services.scheduler import start_scheduler
     start_scheduler()
 
-    yield  # App rodando
+    yield
 
-    # Shutdown
     from app.services.scheduler import scheduler
     if scheduler.running:
         scheduler.shutdown()
-    logger.info("👋 Backend encerrado")
+    logger.info("Backend encerrado")
 
 
 # ─── Cria a aplicação ────────────────────────────────────────────────────────
@@ -63,13 +127,18 @@ app = FastAPI(
 
 # ─── Middlewares ─────────────────────────────────────────────────────────────
 
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, limit=200, window=60)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
     allow_origin_regex=settings.ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
+    expose_headers=["X-Content-Type-Options"],
+    max_age=3600,
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 

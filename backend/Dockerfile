@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libjpeg62-turbo \
         libpng16-16 \
         zlib1g \
+        tesseract-ocr \
+        tesseract-ocr-por \
         curl \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
@@ -31,17 +31,37 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [chatCourseId, setChatCourseId] = useState<string | undefined>();
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>();
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  const [topBarVisible, setTopBarVisible] = useState(true);
+  const mainRef = useRef<HTMLElement>(null);
+  const lastScrollTop = useRef(0);
 
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
     setMobileMenuOpen(false);
+    setTopBarVisible(true);
+    lastScrollTop.current = 0;
+    mainRef.current?.scrollTo({ top: 0 });
+  };
+
+  const handleMainScroll = (event: React.UIEvent<HTMLElement>) => {
+    const currentScrollTop = event.currentTarget.scrollTop;
+    const difference = currentScrollTop - lastScrollTop.current;
+
+    if (currentScrollTop < 16) {
+      setTopBarVisible(true);
+    } else if (difference > 6) {
+      setTopBarVisible(false);
+    } else if (difference < -6) {
+      setTopBarVisible(true);
+    }
+
+    lastScrollTop.current = currentScrollTop;
   };
 
   const openChat = (courseId?: string, prompt?: string) => {
-    setChatCourseId(courseId);
+    void courseId;
     setChatInitialPrompt(prompt);
     setCurrentView("chat");
     setMobileMenuOpen(false);
@@ -63,12 +83,7 @@ export default function Dashboard() {
     cursos: <CoursesView openChat={openChat} />,
     notas: <GradesView />,
     calendario: <CalendarView openActivity={openActivityModal} />,
-    chat: (
-      <ChatView
-        initialCourseId={chatCourseId}
-        initialPrompt={chatInitialPrompt}
-      />
-    ),
+    chat: <ChatView initialPrompt={chatInitialPrompt} />,
     horarios: <ScheduleView />,
     estudo: <StudyToolsView />,
     configuracoes: <SettingsView />,
@@ -90,8 +105,13 @@ export default function Dashboard() {
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           onNavigate={handleNavigate}
           onOpenActivity={openActivityModal}
+          isVisible={topBarVisible}
         />
-        <main className="flex-1 overflow-y-auto overscroll-contain pb-20 lg:pb-0">
+        <main
+          ref={mainRef}
+          onScroll={handleMainScroll}
+          className="flex-1 overflow-y-auto overscroll-contain pb-20 lg:pb-0"
+        >
           <div className="max-w-7xl mx-auto p-3 sm:p-4 lg:p-6">
             {viewMap[currentView]}
           </div>

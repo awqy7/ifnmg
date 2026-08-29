@@ -350,6 +350,7 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
             title = (mod.get("name") or "").strip()
             url = mod.get("url") or ""
             detail = instance_details.get(int(cmid), {}) if cmid else {}
+            external_url = str(detail.get("externalurl") or "").strip()
             description = (
                 descriptions.get(cmid, "")
                 or clean_moodle_text(detail.get("content") or detail.get("intro"))
@@ -366,7 +367,7 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 "moodle_id": str(cmid),
                 "title": title,
                 "type": modname,
-                "url": url,
+                "url": external_url if modname == "url" and external_url else url,
                 "description": description,
                 "topic_name": topic_name,
                 "topic_number": sec_idx,

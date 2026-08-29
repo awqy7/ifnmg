@@ -1,71 +1,66 @@
 /**
  * API client centralizado para comunicação com o backend FastAPI.
+ * Usa cookies httpOnly para armazenar o JWT (mais seguro que localStorage).
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 class ApiClient {
-  private token: string | null = null;
-
-  setToken(token: string | null) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem("ifnmg_token", token);
-    } else {
-      localStorage.removeItem("ifnmg_token");
-    }
-  }
-
-  getToken(): string | null {
-    if (this.token) return this.token;
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("ifnmg_token");
-    }
-    return null;
-  }
-
-  private headers(): HeadersInit {
-    const token = this.getToken();
+  private getAuthHeaders(): HeadersInit {
+    // Com cookies httpOnly, não precisamos enviar o token manualmente
+    // O browser envia automaticamente com credentials: 'include'
     return {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   }
 
-  async get<T>(path: string): Promise<T> {
+  private async request<T>(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: this.headers(),
+      ...options,
+      headers: {
+        ...this.getAuthHeaders(),
+        ...options.headers,
+      },
+      credentials: "include", // Importante: envia cookies httpOnly
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro na requisição");
     }
+
+    // Para 204 No Content
+    if (res.status === 204) {
+      return undefined as T;
+    }
+
     return res.json();
+  }
+
+  async get<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: "GET" });
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
+    return this.request<T>(path, {
       method: "POST",
-      headers: this.headers(),
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || "Erro na requisição");
-    }
-    return res.json();
   }
 
   async postForm<T>(path: string, body: URLSearchParams): Promise<T> {
-    const token = this.getToken();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body.toString(),
+      credentials: "include",
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro na requisição");
@@ -74,40 +69,23 @@ class ApiClient {
   }
 
   async put<T>(path: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
+    return this.request<T>(path, {
       method: "PUT",
-      headers: this.headers(),
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || "Erro na requisição");
-    }
-    return res.json();
   }
 
   async delete<T>(path: string): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || "Erro na requisição");
-    }
-    return res.json();
+    return this.request<T>(path, { method: "DELETE" });
   }
 
   // Streaming para chat (com buffer para chunks cortados no meio da linha)
   async *streamPost(path: string, body: unknown): AsyncGenerator<string> {
-    const token = this.getToken();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(body),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -125,7 +103,7 @@ class ApiClient {
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop() ?? ""; // última linha pode estar incompleta
+      buffer = lines.pop() ?? "";
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed.startsWith("data: ")) continue;
@@ -173,12 +151,9 @@ export const activitiesApi = {
   explainWithAI: (id: string) =>
     api.post<any>(`/api/activities/${id}/explain-ai`),
   generateResponsePDF: async (id: string): Promise<Blob> => {
-    const token = api.getToken();
     const res = await fetch(`${API_BASE}/api/activities/${id}/generate-response-pdf`, {
       method: "POST",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      credentials: "include",
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));

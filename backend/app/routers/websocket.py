@@ -3,9 +3,9 @@ WebSocket para notificações em tempo real.
 """
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, Cookie
 from jose import jwt, JWTError
 
 from app.config import settings
@@ -13,7 +13,7 @@ from app.config import settings
 router = APIRouter(tags=["WebSocket"])
 logger = logging.getLogger(__name__)
 
-ALGORITHM = "HS256"
+ALGORITHM = settings.JWT_ALGORITHM
 
 
 class ConnectionManager:
@@ -52,35 +52,60 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/ws")
-async def websocket_endpoint(
+async def get_ws_user_id(
     websocket: WebSocket,
-    token: str = Query(...),
-):
-    """WebSocket autenticado para notificações em tempo real."""
-    # Valida token JWT
+    authorization: Optional[str] = Header(None),
+    token_query: Optional[str] = Query(None, alias="token"),
+    token_cookie: Optional[str] = Cookie(None, alias="ifnmg_token"),
+) -> Optional[str]:
+    """Extrai e valida o token JWT de header, query ou cookie (preferência: header > cookie > query)."""
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    elif token_cookie:
+        token = token_cookie
+    elif token_query:
+        token = token_query
+    
+    if not token:
+        return None
+    
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
-        if not user_id:
-            await websocket.close(code=4001)
-            return
+        return user_id
     except JWTError:
-        await websocket.close(code=4001)
+        return None
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+):
+    """WebSocket autenticado para notificações em tempo real.
+    
+    Token pode ser enviado via:
+    - Header Authorization: Bearer <token> (recomendado)
+    - Cookie ifnmg_token (para navegadores)
+    - Query param ?token= (fallback, menos seguro)
+    """
+    user_id = await get_ws_user_id(websocket, authorization, token)
+    
+    if not user_id:
+        await websocket.close(code=4001, reason="Unauthorized")
         return
 
     await manager.connect(user_id, websocket)
     try:
-        # Envia mensagem de boas-vindas
         await websocket.send_json({
             "type": "connected",
-            "message": "Conectado ao IFNMG Assistente! 🎓",
+            "message": "Conectado ao IFNMG Assistente!",
         })
 
-        # Mantém conexão aberta aguardando mensagens
         while True:
             data = await websocket.receive_text()
-            # Processa ping/pong
             if data == "ping":
                 await websocket.send_text("pong")
 

@@ -6,7 +6,7 @@ import httpx
 from PyPDF2 import PdfReader
 
 from app.models import Activity, User
-from app.routers.activities import generate_activity_response_pdf_endpoint
+from app.routers.activities import explain_activity_with_ai, generate_activity_response_pdf_endpoint
 from app.services.ai_service import AIProvider, AIService
 from app.services.material_extractor import download_file_limited
 from app.services.pdf_service import generate_activity_response_pdf
@@ -120,6 +120,41 @@ class ActivityResponsePdfTests(unittest.TestCase):
             page.extract_text() or "" for page in PdfReader(__import__("io").BytesIO(response.body)).pages
         )
         self.assertIn("Aluno: Maria Souza", text)
+
+    def test_explanation_uses_automatically_extracted_attachments(self):
+        activity = Activity(
+            id="activity-2",
+            user_id="user-1",
+            course_id="course-1",
+            title="Lista com anexo",
+            activity_type="assign",
+            description="Descrição curta.",
+        )
+        user = User(
+            id="user-1",
+            name="Maria Souza",
+            email="maria@example.test",
+            hashed_password="not-used",
+            ai_provider="groq",
+        )
+        db = _ActivityDb((activity, "Química"))
+        chat = AsyncMock(return_value="explicação")
+
+        async def run():
+            with (
+                patch(
+                    "app.routers.activities._collect_activity_source",
+                    new=AsyncMock(return_value=("ANEXO: roteiro.pdf\nConteúdo completo", "roteiro.pdf")),
+                ),
+                patch("app.routers.activities.ai_service.chat", new=chat),
+            ):
+                return await explain_activity_with_ai("activity-2", user, db)
+
+        response = asyncio.run(run())
+        self.assertEqual(response["explanation"], "explicação")
+        prompt = chat.await_args.kwargs["messages"][0]["content"]
+        self.assertIn("ANEXO: roteiro.pdf", prompt)
+        self.assertIn("Conteúdo completo", prompt)
 
 
 if __name__ == "__main__":

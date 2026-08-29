@@ -2,14 +2,14 @@
 Rotas de autenticação direta via Virtual2 IFNMG (Moodle).
 Sem necessidade de criar conta separada: o login do Virtual2 é a única credencial.
 """
-import hashlib
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response
+from fastapi.security import OAuth2PasswordBearer, HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -22,53 +22,75 @@ from app.services.scheduler import sync_moodle_for_user
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/moodle-login")
-ALGORITHM = "HS256"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/moodle-login", auto_error=False)
+bearer_scheme = HTTPBearer(auto_error=False)
+ALGORITHM = settings.JWT_ALGORITHM
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=settings.BCRYPT_ROUNDS)
+
+login_attempts: dict[str, list[datetime]] = {}
 
 
-# ─── Schemas ────────────────────────────────────────────────────────────────
-
-class MoodleDirectLogin(BaseModel):
-    username: str
-    password: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: dict
+def check_rate_limit(ip: str, limit: int, window_seconds: int = 60) -> bool:
+    now = datetime.utcnow()
+    if ip not in login_attempts:
+        login_attempts[ip] = []
+    login_attempts[ip] = [t for t in login_attempts[ip] if (now - t).total_seconds() < window_seconds]
+    if len(login_attempts[ip]) >= limit:
+        return False
+    login_attempts[ip].append(now)
+    return True
 
 
-class UserResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    moodle_connected: bool
-    moodle_last_sync: Optional[datetime]
-    ai_provider: str
-    theme: str
-    created_at: datetime
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
-# ─── Helpers ────────────────────────────────────────────────────────────────
-
-def hash_secret(secret: str) -> str:
-    """Hash SHA-256 seguro sem dependências externas problemáticas."""
-    salt = settings.SECRET_KEY[:16]
-    return hashlib.sha256(f"{salt}{secret}".encode()).hexdigest()
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(user_id: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(
-        {"sub": user_id, "exp": expire},
+        {"sub": user_id, "exp": expire, "iat": datetime.utcnow(), "jti": secrets.token_hex(16)},
         settings.SECRET_KEY,
         algorithm=ALGORITHM,
     )
 
 
+def set_auth_cookie(response: Response, token: str):
+    """Define o cookie httpOnly com o token JWT."""
+    is_production = settings.APP_ENV == "production"
+    response.set_cookie(
+        key="ifnmg_token",
+        value=token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response):
+    """Remove o cookie de autenticação."""
+    response.set_cookie(
+        key="ifnmg_token",
+        value="",
+        httponly=True,
+        secure=settings.APP_ENV == "production",
+        samesite="lax",
+        max_age=0,
+        path="/",
+    )
+
+
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    response: Response,
+    token: Optional[str] = Depends(oauth2_scheme),
+    bearer: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     credentials_exception = HTTPException(
@@ -76,8 +98,17 @@ async def get_current_user(
         detail="Sessão expirada. Faça login novamente.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    token_str = token or (bearer.credentials if bearer else None)
+    # Fallback: tenta ler do cookie
+    if not token_str:
+        token_str = request.cookies.get("ifnmg_token")
+    
+    if not token_str:
+        raise credentials_exception
+
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token_str, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if not user_id:
             raise credentials_exception
@@ -92,8 +123,10 @@ async def get_current_user(
 
 # ─── Rotas de Login Direto ──────────────────────────────────────────────────
 
-@router.post("/moodle-login", response_model=Token)
+@router.post("/moodle-login", response_model=dict)
 async def moodle_login(
+    request: Request,
+    response: Response,
     data: MoodleDirectLogin,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -102,6 +135,13 @@ async def moodle_login(
     Login direto com as credenciais do Virtual2 IFNMG.
     Não requer cadastro prévio: autentica no Moodle e cria a sessão local automaticamente.
     """
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip, settings.RATE_LIMIT_LOGIN_PER_MINUTE, 60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Muitas tentativas de login. Aguarde um minuto.",
+        )
+
     username = data.username.strip()
     password = data.password
 
@@ -116,19 +156,16 @@ async def moodle_login(
             detail="Credenciais inválidas no Virtual2 IFNMG. Verifique seu login e senha.",
         )
 
-    # Nome do aluno extraído do Moodle ou fallback
     student_name = session_data.get("user_name") or f"Aluno {username}"
     user_email = f"{username}@virtual2.ifnmg.edu.br"
 
-    # Busca usuário existente ou cria novo
     user = db.query(User).filter(User.email == user_email, User.is_active == True).first()
 
     if not user:
-        # Cria conta local automaticamente
         user = User(
             name=student_name,
             email=user_email,
-            hashed_password=hash_secret(password),
+            hashed_password=hash_password(password),
             moodle_username_enc=crypto_service.encrypt(username),
             moodle_password_enc=crypto_service.encrypt(password),
             moodle_session_cookies=crypto_service.encrypt_json(session_data),
@@ -138,16 +175,14 @@ async def moodle_login(
         db.commit()
         db.refresh(user)
     else:
-        # Atualiza credenciais e sessão
         user.name = student_name
-        user.hashed_password = hash_secret(password)
+        user.hashed_password = hash_password(password)
         user.moodle_username_enc = crypto_service.encrypt(username)
         user.moodle_password_enc = crypto_service.encrypt(password)
         user.moodle_session_cookies = crypto_service.encrypt_json(session_data)
         user.moodle_connected = True
         db.commit()
 
-    # Tenta obter token da API REST (via sessão do login ou novo request)
     moodle_token = session_data.get("moodle_token") or await moodle_auth_service.get_moodle_token(username, password)
     if moodle_token:
         existing_keys = {}
@@ -160,10 +195,11 @@ async def moodle_login(
         user.ai_api_keys_enc = crypto_service.encrypt_json(existing_keys)
         db.commit()
 
-    # Dispara sincronização completa em background
     background_tasks.add_task(sync_moodle_for_user, user.id)
 
     token = create_access_token(user.id)
+    set_auth_cookie(response, token)
+
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -176,7 +212,7 @@ async def moodle_login(
     }
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=dict)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Retorna dados do usuário atualmente logado."""
     return {
@@ -191,7 +227,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     }
 
 
-@router.put("/me", response_model=UserResponse)
+@router.put("/me", response_model=dict)
 async def update_me(
     data: dict,
     current_user: User = Depends(get_current_user),
@@ -221,9 +257,38 @@ async def update_me(
 
 
 @router.post("/logout")
-async def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Desconecta a sessão do Virtual2."""
     current_user.moodle_connected = False
     current_user.moodle_session_cookies = None
     db.commit()
+    clear_auth_cookie(response)
     return {"message": "Sessão encerrada com sucesso"}
+
+
+# ─── Schemas ────────────────────────────────────────────────────────────────
+
+class MoodleDirectLogin(BaseModel):
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    moodle_connected: bool
+    moodle_last_sync: Optional[datetime]
+    ai_provider: str
+    theme: str
+    created_at: datetime

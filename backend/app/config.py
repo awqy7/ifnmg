@@ -7,36 +7,24 @@ from cryptography.fernet import Fernet
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def _get_or_create_secret_key() -> str:
-    """Lê SECRET_KEY de arquivo persistente ou gera uma nova e salva."""
-    key_file = BASE_DIR / ".secret_key"
-    if key_file.exists():
-        saved = key_file.read_text().strip()
-        if saved:
-            return saved
-    new_key = secrets.token_hex(32)
-    key_file.write_text(new_key)
-    key_file.chmod(0o600)
-    return new_key
-
-
 class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
-    DEBUG: bool = True
-    SECRET_KEY: str = ""
-    ENCRYPTION_KEY: Optional[str] = None
+    DEBUG: bool = False
+    SECRET_KEY: str
+    ENCRYPTION_KEY: str
 
     # Database
-    DATABASE_URL: str = "sqlite:///./ifnmg_assistente.db"
+    DATABASE_URL: str
 
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
-    ALLOWED_ORIGIN_REGEX: str = r"https://.*\.vercel\.app"
+    ALLOWED_ORIGIN_REGEX: str = r"^https://ifnmg(-[a-z0-9-]+)?\.vercel\.app$"
 
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    JWT_ALGORITHM: str = "HS256"
 
     # AI Providers
     DEFAULT_AI_PROVIDER: str = "groq"
@@ -60,44 +48,31 @@ class Settings(BaseSettings):
     MOODLE_BASE_URL: str = "https://virtual2.ifnmg.edu.br"
     SCRAPER_INTERVAL_MINUTES: int = 30
 
+    # Security
+    BCRYPT_ROUNDS: int = 12
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
+    RATE_LIMIT_SYNC_PER_HOUR: int = 10
+
     class Config:
         env_file = str(BASE_DIR / ".env")
         extra = "ignore"
 
     def model_post_init(self, __context):
         if not self.SECRET_KEY:
-            if self.APP_ENV == "production":
-                raise RuntimeError(
-                    "SECRET_KEY é obrigatória em produção (defina no Render). "
-                    "Sem ela os JWT mudam a cada restart e as sessões caem."
-                )
-            object.__setattr__(self, 'SECRET_KEY', _get_or_create_secret_key())
+            raise RuntimeError("SECRET_KEY é obrigatória. Defina no arquivo .env ou variável de ambiente.")
+        if not self.ENCRYPTION_KEY:
+            raise RuntimeError("ENCRYPTION_KEY é obrigatória. Defina no arquivo .env ou variável de ambiente.")
+        if not self.DATABASE_URL:
+            raise RuntimeError("DATABASE_URL é obrigatória. Defina no arquivo .env ou variável de ambiente.")
+        if self.APP_ENV == "production" and self.DEBUG:
+            raise RuntimeError("DEBUG deve ser false em produção.")
 
     @property
     def allowed_origins_list(self) -> List[str]:
-        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
     def get_fernet(self) -> Fernet:
-        """Retorna instância do Fernet para criptografia.
-
-        Em produção o ENCRYPTION_KEY precisa ser fixa (definida no Render),
-        senão os dados criptografados no banco (credenciais do Moodle) ficam
-        indecifráveis após cada restart/redeploy.
-        """
-        if self.ENCRYPTION_KEY:
-            return Fernet(self.ENCRYPTION_KEY.encode())
-        if self.APP_ENV == "production":
-            raise RuntimeError(
-                "ENCRYPTION_KEY é obrigatória em produção (defina no Render). "
-                "Sem ela as credenciais criptografadas no banco ficam ilegíveis."
-            )
-        key_file = BASE_DIR / "encryption.key"
-        if key_file.exists():
-            return Fernet(key_file.read_bytes())
-        key = Fernet.generate_key()
-        key_file.write_bytes(key)
-        key_file.chmod(0o600)
-        return Fernet(key)
+        return Fernet(self.ENCRYPTION_KEY.encode())
 
 
 settings = Settings()
