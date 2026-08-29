@@ -2,7 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  
+
+  // Rewrites para proxy das chamadas de API para o backend
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*`,
+      },
+    ];
+  },
+
   // Headers de segurança
   async headers() {
     return [
@@ -37,7 +47,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "img-src 'self' data: https:",
-              "connect-src 'self' https://*.vercel.app https://*.supabase.co wss://*.supabase.co https://ifnmg-assistente-api.vercel.app http://localhost:8000",
+              "connect-src 'self' https://*.vercel.app https://*.supabase.co wss://*.supabase.co https://ifnmg-production.apps.upuai.cloud http://localhost:8000",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
