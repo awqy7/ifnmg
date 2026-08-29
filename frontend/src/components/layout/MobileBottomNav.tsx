@@ -40,7 +40,7 @@ export default function MobileBottomNav({ currentView, onNavigate, onOpenMenu }:
               aria-current={active ? "page" : undefined}
               className={`min-h-14 rounded-xl flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition relative ${
                 isDisabled
-                  ? "opacity-50 cursor-not-allowed text-gray-500"
+                  ? "bg-[#161622]/80 border border-white/5 text-gray-500 cursor-not-allowed opacity-80"
                   : active
                   ? "text-indigo-300 bg-indigo-500/10"
                   : "text-gray-400 active:bg-white/10"
@@ -48,14 +48,14 @@ export default function MobileBottomNav({ currentView, onNavigate, onOpenMenu }:
               title={isDisabled ? "Em breve" : item.label}
             >
               <div className="relative">
-                <Icon className="w-5 h-5" aria-hidden="true" />
+                <Icon className={`w-5 h-5 ${isDisabled ? "text-gray-500" : ""}`} aria-hidden="true" />
                 {item.badge && (
-                  <span className="absolute -top-1.5 -right-3 text-[8px] font-bold px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="absolute -top-1.5 -right-3 text-[8px] font-bold px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span>{item.label}</span>
+              <span className={isDisabled ? "text-gray-500" : ""}>{item.label}</span>
             </button>
           );
         })}

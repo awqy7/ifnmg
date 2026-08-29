@@ -118,7 +118,7 @@ export default function Sidebar({
                 }}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all relative ${
                   isDisabled
-                    ? "opacity-50 cursor-not-allowed text-gray-500 hover:bg-transparent"
+                    ? "bg-[#161622] border border-white/5 text-gray-500 cursor-not-allowed opacity-75 shadow-inner"
                     : isActive
                     ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
                     : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -126,12 +126,12 @@ export default function Sidebar({
                 title={isDisabled ? `${item.label} (Em breve)` : !showFull ? item.label : undefined}
                 aria-label={item.label}
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isDisabled ? "text-gray-600" : isActive ? "text-indigo-400" : "text-gray-400"}`} />
+                <Icon className={`w-5 h-5 shrink-0 ${isDisabled ? "text-gray-500" : isActive ? "text-indigo-400" : "text-gray-400"}`} />
                 {showFull && <span className="truncate text-left">{item.label}</span>}
                 {item.badge && showFull && (
                   <span className={`ml-auto text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md border ${
                     item.badge === "BETA"
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      ? "bg-zinc-800 text-zinc-400 border-zinc-700/60"
                       : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                   }`}>
                     {item.badge}

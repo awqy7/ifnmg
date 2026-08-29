@@ -211,13 +211,13 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             disabled
             className={`mobile-ai-action ${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
-            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-gray-500 opacity-60 cursor-not-allowed transition`}
+            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-[#161622] border border-white/5 text-xs font-medium text-gray-500 cursor-not-allowed transition shadow-inner`}
             aria-label="Tutor IA em breve"
             title="Chat com IA (Em breve)"
           >
-            <Sparkles className="w-3.5 h-3.5 text-gray-500" />
-            <span className="hidden sm:inline">IA</span>
-            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-gray-600" />
+            <span className="hidden sm:inline text-gray-500">IA</span>
+            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
               BETA
             </span>
           </button>
