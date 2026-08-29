@@ -35,6 +35,7 @@ const stripThinking = (text: string) =>
 
 interface ChatViewProps {
   initialPrompt?: string;
+  initialCourseId?: string;
 }
 
 export default function ChatView({ initialPrompt }: ChatViewProps) {
