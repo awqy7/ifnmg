@@ -285,7 +285,6 @@ export function ImmersiveLoader({
     }
 
     function drawParticles(ctx: CanvasRenderingContext2D, t: number, phase: Phase) {
-      const isLogin = phase === 'login';
       const isSync = phase === 'sync';
 
       particles.forEach((p, idx) => {
@@ -303,7 +302,6 @@ export function ImmersiveLoader({
 
         const dx = centerX - p.x;
         const dy = centerY - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
         const force = isSync ? 0.0005 : 0.0002;
         p.vx += dx * force + (Math.random() - 0.5) * 0.02;
         p.vy += dy * force + (Math.random() - 0.5) * 0.02;
@@ -333,7 +331,6 @@ export function ImmersiveLoader({
     }
 
     function drawCore(ctx: CanvasRenderingContext2D, t: number, phase: Phase) {
-      const isLogin = phase === 'login';
       const isSync = phase === 'sync';
       const progress = isSync && syncProgress ? syncProgress.currentStep / syncProgress.totalSteps : 0;
 
@@ -342,16 +339,13 @@ export function ImmersiveLoader({
       const r = coreRadius * pulse;
 
       const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, r * 2);
-      if (isLogin) {
-        grad.addColorStop(0, 'hsla(255, 80%, 75%, 0.9)');
-        grad.addColorStop(0.5, 'hsla(265, 80%, 65%, 0.6)');
-        grad.addColorStop(1, 'transparent');
-      } else if (isSync) {
+      if (isSync) {
         grad.addColorStop(0, `hsla(200, 80%, 70%, ${0.8 + progress * 0.2})`);
         grad.addColorStop(0.5, `hsla(255, 70%, 60%, ${0.5 + progress * 0.3})`);
         grad.addColorStop(1, 'transparent');
       } else {
-        grad.addColorStop(0, 'hsla(255, 70%, 60%, 0.5)');
+        grad.addColorStop(0, 'hsla(255, 80%, 75%, 0.9)');
+        grad.addColorStop(0.5, 'hsla(265, 80%, 65%, 0.6)');
         grad.addColorStop(1, 'transparent');
       }
 
@@ -512,7 +506,6 @@ export function ImmersiveLoader({
       aria-live="polite"
       aria-label={messages[phase]}
     >
-      {children}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-[#08080f] overflow-hidden"
         role="status"
@@ -598,14 +591,25 @@ export function LoginButton({
     }
   };
 
+  const loading = showLoader;
+
   return (
     <>
       <button
         onClick={handleClick}
-        disabled={isLoading || showLoader}
-        className="w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm"
+        disabled={isLoading || loading}
+        className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm overflow-hidden"
       >
-        {children}
+        {loading ? (
+          <>
+            <span className="flex items-center gap-2">
+              <ButtonSpinner />
+              <span className="font-medium">{phase === 'login' ? 'Conectando...' : phase === 'sync' ? 'Sincronizando...' : 'Pronto!'}</span>
+            </span>
+          </>
+        ) : (
+          children
+        )}
       </button>
 
       {showLoader && (
@@ -619,5 +623,31 @@ export function LoginButton({
         </ImmersiveLoader>
       )}
     </>
+  );
+}
+
+function ButtonSpinner() {
+  return (
+    <svg
+      className="w-5 h-5 animate-spin text-white"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
   );
 }
