@@ -138,9 +138,27 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-gray-600 mt-5">
-          IFNMG Assistente — Plataforma independente para estudantes.
-        </p>
+        {/* Footer: crédito + privacidade */}
+        <div className="mt-6 flex flex-col items-center gap-2 text-center">
+          <p className="text-[11px] text-gray-600">
+            IFNMG Assistente — Plataforma independente para estudantes.
+          </p>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span>Desenvolvido e criado por</span>
+            <a
+              href="https://instagram.com/vinicius.tsx"
+              target="_blank"
+              rel="noreferrer"
+              className="text-indigo-400 hover:text-indigo-300 font-semibold transition"
+            >
+              @vinicius.tsx
+            </a>
+          </div>
+          <p className="text-[10px] text-gray-600 leading-relaxed max-w-xs">
+            🔒 Nosso sistema segue todas as diretrizes de privacidade —{" "}
+            <span className="text-gray-500">não armazenamos nenhum dado seu.</span>
+          </p>
+        </div>
       </div>
     </div>
   );
