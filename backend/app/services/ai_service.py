@@ -53,7 +53,7 @@ PROVIDER_MODELS = {
     AIProvider.GEMINI: "gemini/gemini-1.5-flash",
     AIProvider.OPENAI: "gpt-4o-mini",
     AIProvider.ANTHROPIC: "claude-3-haiku-20240307",
-    AIProvider.GROQ: "groq/qwen/qwen3.8-27b",  # Qwen3 funcional via Groq
+    AIProvider.GROQ: "groq/llama-3.3-70b-versatile",
     AIProvider.OLLAMA: "ollama/llama3.2",
 }
 
@@ -132,6 +132,23 @@ class AIService:
             return _strip_thinking(content)
 
         except Exception as e:
+            # Fallback inteligente se estourar cota/TPM na Groq: tenta llama-3.1-8b-instant
+            if provider == AIProvider.GROQ and ("rate_limit" in str(e).lower() or "413" in str(e) or "429" in str(e)):
+                try:
+                    logger.warning("Groq rate limit atingido, tentando fallback para llama-3.1-8b-instant...")
+                    fallback_kwargs = self._build_litellm_kwargs(provider, api_key, custom_api_keys)
+                    fallback_kwargs.update({
+                        "model": "groq/llama-3.1-8b-instant",
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                    })
+                    response = await litellm.acompletion(**fallback_kwargs)
+                    content = response.choices[0].message.content or ""
+                    return _strip_thinking(content)
+                except Exception as fallback_err:
+                    logger.error(f"Fallback Groq falhou: {fallback_err}")
+
             logger.error(f"Erro na chamada de IA [{provider}]: {e}", exc_info=True)
             raise
 
