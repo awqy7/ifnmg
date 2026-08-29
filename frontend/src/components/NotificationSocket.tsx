@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bell, X } from "lucide-react";
-import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Toast {
@@ -27,9 +26,15 @@ export default function NotificationSocket() {
 
     let closed = false;
 
+    const getCookie = (name: string): string | null => {
+      if (typeof document === "undefined") return null;
+      const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+      return match ? match[2] : null;
+    };
+
     const connect = () => {
       if (closed) return;
-      const token = api.getToken();
+      const token = getCookie("ifnmg_token");
       if (!token) return;
 
       const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
