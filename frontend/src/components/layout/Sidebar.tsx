@@ -64,9 +64,9 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`h-dvh bg-[#13131c] border-r border-white/10 flex flex-col relative z-40 transition-all duration-300 fixed inset-y-0 left-0 w-64 ${
+        className={`h-dvh bg-[#13131c] border-r border-white/10 flex flex-col fixed inset-y-0 left-0 z-40 w-64 transition-all duration-300 ${
           mobileOpen ? "translate-x-0 shadow-2xl shadow-black/60" : "-translate-x-full shadow-none"
-        } lg:static lg:translate-x-0 lg:transition-[width] ${
+        } lg:relative lg:translate-x-0 lg:transition-[width] ${
           isOpen ? "lg:w-64" : "lg:w-20"
         }`}
       >
@@ -85,8 +85,9 @@ export default function Sidebar({
           </div>
           <button
             onClick={onCloseMobile}
-            className="p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition lg:hidden"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition lg:hidden"
             title="Fechar menu"
+            aria-label="Fechar menu"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>

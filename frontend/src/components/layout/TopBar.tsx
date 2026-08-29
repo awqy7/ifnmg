@@ -149,7 +149,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onMenuToggle}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition lg:hidden shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition lg:hidden shrink-0"
             aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
@@ -191,7 +191,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-200 transition disabled:opacity-50"
+            className="min-w-11 h-11 sm:h-10 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-200 transition disabled:opacity-50"
+            aria-label="Sincronizar agora com o Moodle"
             title="Sincronizar agora com o Moodle"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-indigo-400" : "text-gray-400"}`} />
@@ -203,7 +204,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
             onClick={() => onNavigate("chat")}
             className={`mobile-ai-action ${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
-            } items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/40 hover:to-purple-600/40 border border-indigo-500/30 text-xs font-medium text-indigo-300 transition`}
+            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/40 hover:to-purple-600/40 border border-indigo-500/30 text-xs font-medium text-indigo-300 transition`}
+            aria-label="Abrir tutor de inteligência artificial"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden sm:inline">Perguntar à IA</span>
@@ -213,7 +215,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
           <div className="relative">
             <button
               onClick={toggleNotifications}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 relative transition"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 relative transition"
+              aria-label="Abrir notificações"
               title="Notificações"
             >
               <Bell className="w-4 h-4" />

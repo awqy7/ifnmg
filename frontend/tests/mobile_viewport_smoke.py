@@ -27,6 +27,33 @@ def api_response(url: str):
         return {"count": 0}
     if "/api/activities/summary" in url:
         return {}
+    if url.endswith("/api/activities"):
+        return [
+            {
+                "id": "atividade-mobile",
+                "title": "Atividade de teste responsivo",
+                "type": "assignment",
+                "status": "pending",
+                "course_id": "curso-mobile",
+                "course_name": "Disciplina de teste",
+                "course_color": "#6366f1",
+                "due_date": "2030-12-31T23:59:00",
+            }
+        ]
+    if url.endswith("/api/activities/atividade-mobile/details"):
+        return {
+            "id": "atividade-mobile",
+            "title": "Atividade de teste responsivo",
+            "type": "assignment",
+            "status": "pending",
+            "status_text": "Pendente",
+            "course_id": "curso-mobile",
+            "course_name": "Disciplina de teste",
+            "course_color": "#6366f1",
+            "due_date": "2030-12-31T23:59:00",
+            "description": "Leia as orientações e responda às questões propostas.",
+            "files": [],
+        }
     return []
 
 
@@ -55,9 +82,28 @@ def main():
                     "document.documentElement.scrollWidth > document.documentElement.clientWidth"
                 )
                 assert not overflow, f"overflow horizontal em {width}x{height}"
+                main_width = page.locator("main").evaluate("element => element.clientWidth")
+                assert main_width >= width - 1, (
+                    f"conteúdo comprimido em {width}x{height}: main={main_width}px"
+                )
 
                 page.locator("nav.mobile-bottom-nav button").filter(has_text="Tarefas").click()
                 page.get_by_role("heading", name="Atividades & Tarefas").wait_for(state="visible")
+
+                # Todos os filtros precisam estar visíveis sem rolagem horizontal oculta.
+                for label in ["Todas", "Pendentes", "Entregues", "Atrasadas"]:
+                    button = page.get_by_role("button", name=label, exact=True)
+                    button.wait_for(state="visible")
+                    box = button.bounding_box()
+                    assert box and box["x"] >= 0 and box["x"] + box["width"] <= width
+
+                # O visualizador global também deve caber e fechar no menor viewport.
+                page.get_by_text("Atividade de teste responsivo", exact=True).click()
+                page.get_by_role("dialog").wait_for(state="visible")
+                dialog = page.get_by_role("dialog").bounding_box()
+                assert dialog and dialog["x"] >= 0 and dialog["x"] + dialog["width"] <= width
+                page.get_by_role("button", name="Fechar atividade").click()
+
                 page.get_by_role("button", name="Abrir todas as opções").click()
                 page.wait_for_timeout(400)
                 aside = page.locator("aside").bounding_box()

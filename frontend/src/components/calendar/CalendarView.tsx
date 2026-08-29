@@ -58,7 +58,7 @@ export default function CalendarView({ openActivity }: CalendarViewProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilterType("all")}
-            className={`px-3 py-2 rounded-xl text-xs font-medium transition ${
+            className={`min-h-11 px-3 py-2 rounded-xl text-xs font-medium transition ${
               filterType === "all"
                 ? "bg-indigo-600 text-white"
                 : "bg-white/5 text-gray-400 hover:text-white"
@@ -68,7 +68,7 @@ export default function CalendarView({ openActivity }: CalendarViewProps) {
           </button>
           <button
             onClick={() => setFilterType("deadline")}
-            className={`px-3 py-2 rounded-xl text-xs font-medium transition ${
+            className={`min-h-11 px-3 py-2 rounded-xl text-xs font-medium transition ${
               filterType === "deadline"
                 ? "bg-indigo-600 text-white"
                 : "bg-white/5 text-gray-400 hover:text-white"
@@ -78,7 +78,7 @@ export default function CalendarView({ openActivity }: CalendarViewProps) {
           </button>
           <button
             onClick={() => setFilterType("event")}
-            className={`px-3 py-2 rounded-xl text-xs font-medium transition ${
+            className={`min-h-11 px-3 py-2 rounded-xl text-xs font-medium transition ${
               filterType === "event"
                 ? "bg-indigo-600 text-white"
                 : "bg-white/5 text-gray-400 hover:text-white"

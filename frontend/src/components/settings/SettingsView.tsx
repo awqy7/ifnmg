@@ -90,7 +90,7 @@ export default function SettingsView() {
       </div>
 
       {/* SECTION 1: Virtual2 Moodle Authentication */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-6 space-y-5">
+      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -125,7 +125,7 @@ export default function SettingsView() {
                 onChange={(e) => setMoodleUser(e.target.value)}
                 placeholder="Seu login no virtual2.ifnmg.edu.br"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
 
@@ -139,7 +139,7 @@ export default function SettingsView() {
                 onChange={(e) => setMoodlePass(e.target.value)}
                 placeholder="••••••••••••"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function SettingsView() {
             <button
               type="submit"
               disabled={savingMoodle}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
             >
               {savingMoodle ? (
                 <>
@@ -180,7 +180,7 @@ export default function SettingsView() {
       </div>
 
       {/* SECTION 2: AI Multi-Provider Config */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-6 space-y-5">
+      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -204,7 +204,7 @@ export default function SettingsView() {
               <select
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
               >
                 <option value="groq">Groq GPT-OSS 120B (Gratuito, Padrão)</option>
                 <option value="gemini">Google Gemini 1.5 Flash (Gratuito)</option>
@@ -223,7 +223,7 @@ export default function SettingsView() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Insira sua chave de API personalizada..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function SettingsView() {
             <button
               type="submit"
               disabled={savingAI || !apiKey}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
             >
               {savingAI ? (
                 <>
@@ -253,7 +253,7 @@ export default function SettingsView() {
       </div>
 
       {/* SECTION 3: Notifications Preferences */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-6 space-y-5">
+      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
         <div className="flex items-center gap-2.5 pb-4 border-b border-white/10">
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Bell className="w-4 h-4" />

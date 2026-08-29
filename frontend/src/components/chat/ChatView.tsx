@@ -32,10 +32,15 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState(initialPrompt || "");
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Rola somente a lista do chat. scrollIntoView também rolava o <main>
+    // do dashboard no mobile e empurrava a barra superior para fora da tela.
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   };
 
   const selectSession = useCallback(async (sessionId: string) => {
@@ -135,7 +140,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
   ];
 
   return (
-    <div className="h-[calc(100vh-10rem)] supports-[height:100dvh]:h-[calc(100dvh-10rem)] min-h-[30rem] md:h-[calc(100vh-6.5rem)] md:supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-2xl sm:rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
+    <div className="h-[calc(100vh-10rem)] supports-[height:100dvh]:h-[calc(100dvh-10rem)] min-h-0 md:h-[calc(100vh-6.5rem)] md:supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-2xl sm:rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
       {/* Sidebar: Sessions & Course Selection */}
       <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-b md:border-b-0 md:border-r border-white/10 p-3 sm:p-4 flex flex-col justify-between shrink-0 max-h-36 sm:max-h-40 md:max-h-none overflow-y-auto md:overflow-hidden">
         <div className="space-y-4">
@@ -145,8 +150,9 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
             </h2>
             <button
               onClick={handleNewSession}
-              className="p-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition"
               title="Nova conversa"
+              aria-label="Nova conversa"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -164,7 +170,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
                 setCurrentSessionId(null);
                 setMessages([]);
               }}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
+              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
             >
               <option value="">Geral (Todas as matérias)</option>
               {courses.map((c) => (
@@ -210,7 +216,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
       {/* Main Chat Panel */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#181826]">
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto p-4">
               <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 mb-4">
@@ -281,7 +287,6 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
             </div>
           )}
 
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Bar */}
@@ -297,7 +302,8 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="p-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition shadow-lg shadow-indigo-600/20 shrink-0"
+              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition shadow-lg shadow-indigo-600/20 shrink-0"
+              aria-label="Enviar mensagem"
             >
               <Send className="w-4 h-4" />
             </button>

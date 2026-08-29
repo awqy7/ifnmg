@@ -98,7 +98,7 @@ export default function StudyToolsView() {
       <div className="flex rounded-2xl bg-[#181826] border border-white/10 p-1.5 max-w-md">
         <button
           onClick={() => setActiveTab("flashcards")}
-          className={`flex-1 py-2.5 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-2 ${
+          className={`flex-1 min-h-11 py-2.5 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-2 ${
             activeTab === "flashcards"
               ? "bg-indigo-600 text-white shadow-md"
               : "text-gray-400 hover:text-white"
@@ -108,7 +108,7 @@ export default function StudyToolsView() {
         </button>
         <button
           onClick={() => setActiveTab("quiz")}
-          className={`flex-1 py-2.5 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-2 ${
+          className={`flex-1 min-h-11 py-2.5 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-2 ${
             activeTab === "quiz"
               ? "bg-indigo-600 text-white shadow-md"
               : "text-gray-400 hover:text-white"
@@ -119,7 +119,7 @@ export default function StudyToolsView() {
       </div>
 
       {/* Generator Form */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-6 space-y-4">
+      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">
@@ -128,7 +128,7 @@ export default function StudyToolsView() {
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
             >
               <option value="">Digitar conteúdo personalizado abaixo...</option>
               {courses.map((c) => (
@@ -148,7 +148,7 @@ export default function StudyToolsView() {
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
               placeholder="Ex: Derivadas, Ciclo de Krebs, TCP/IP..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function StudyToolsView() {
           <button
             onClick={activeTab === "flashcards" ? handleGenerateFlashcards : handleGenerateQuiz}
             disabled={loading || (!selectedCourse && !customText)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition"
+            className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition"
           >
             {loading ? (
               <>

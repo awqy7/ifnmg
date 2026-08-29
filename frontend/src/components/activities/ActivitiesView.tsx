@@ -100,17 +100,17 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar atividade..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+            className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
           />
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+        <div className="grid grid-cols-2 gap-2 w-full md:flex md:items-center md:w-auto">
           {["all", "pending", "submitted", "late"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition shrink-0 ${
+              className={`w-full min-h-11 px-3 py-2.5 md:min-h-0 md:py-1.5 rounded-xl text-xs font-medium transition md:w-auto md:shrink-0 ${
                 statusFilter === st
                   ? "bg-indigo-600 text-white"
                   : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
@@ -129,7 +129,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
           <select
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 transition shrink-0"
+            className="col-span-2 w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 md:min-h-0 md:py-1.5 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 transition md:w-auto md:shrink-0"
           >
             <option value="all">Todas as disciplinas</option>
             {courses.map((c) => (

@@ -103,7 +103,7 @@ export default function ActivityModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-[#181826] border border-white/15 rounded-t-3xl sm:rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
+      <div role="dialog" aria-modal="true" aria-labelledby="activity-modal-title" className="bg-[#181826] border border-white/15 rounded-t-3xl sm:rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         {/* Modal Header */}
         <div className="p-5 border-b border-white/10 flex items-start justify-between gap-4 bg-white/5">
           <div className="min-w-0">
@@ -118,14 +118,15 @@ export default function ActivityModal({
                 {details?.type || "Atividade"}
               </span>
             </div>
-            <h2 className="text-lg font-bold text-white leading-snug">
+            <h2 id="activity-modal-title" className="text-lg font-bold text-white leading-snug">
               {loading ? "Carregando atividade..." : details?.title}
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition shrink-0"
+            aria-label="Fechar atividade"
           >
             <X className="w-5 h-5" />
           </button>
@@ -260,7 +261,7 @@ export default function ActivityModal({
                   <button
                     onClick={handleExplainAI}
                     disabled={loadingAi || generatingPdf}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition shrink-0"
+                    className="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition shrink-0"
                   >
                     {loadingAi ? (
                       <>
@@ -282,7 +283,7 @@ export default function ActivityModal({
                 <button
                   onClick={handleGeneratePDF}
                   disabled={loadingAi || generatingPdf}
-                  className="w-full py-2 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium shadow-md flex items-center justify-center gap-2 transition">
+                  className="w-full min-h-11 py-2 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium shadow-md flex items-center justify-center gap-2 transition">
                   {generatingPdf ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" /> Lendo atividade e gerando...
