@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ViewType } from "@/components/dashboard/Dashboard";
 import {
@@ -13,6 +13,7 @@ import {
   Sparkles,
   Check,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { notificationsApi, moodleApi } from "@/lib/api";
 
@@ -30,6 +31,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const hasAutoSynced = useRef(false);
 
   const fetchUnread = useCallback(async () => {
     try {
@@ -44,6 +47,27 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
       setNotifications(list);
     } catch {}
   };
+
+  // Fecha dropdown de notificações ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showNotifications]);
 
   // Contador de não-lidas + atualização em tempo real via evento do WebSocket
   useEffect(() => {
@@ -68,7 +92,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
         if (st.running) {
           setSyncProgress(
-            `Sincronizando... ${st.courses_done ? `${st.courses_done} disciplinas` : "iniciando"}`
+            `Sincronizando dados... ${st.courses_done ? `${st.courses_done} disciplinas` : "iniciando"}`
           );
           setTimeout(poll, 2000);
         } else {
@@ -77,7 +101,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             setSyncProgress("Erro na sincronização");
           } else {
             setSyncProgress(
-              `Sincronizado! ${st.courses_done || 0} disciplinas · ${st.materials || 0} materiais`
+              `Sincronizado com sucesso! ${st.courses_done || 0} disciplinas · ${st.materials || 0} materiais`
             );
             window.dispatchEvent(new CustomEvent("data-refresh"));
           }
@@ -98,7 +122,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
   const handleSync = async () => {
     setSyncing(true);
-    setSyncProgress("Iniciando sincronização...");
+    setSyncProgress("Sincronizando dados com o Virtual2... por favor aguarde");
     try {
       await moodleApi.forceSync();
       // o polling acima cuida do restante
@@ -108,6 +132,14 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
       setTimeout(() => setSyncProgress(null), 4000);
     }
   };
+
+  // Auto-sync automático no primeiro carregamento pós-login
+  useEffect(() => {
+    if (user?.moodle_connected && !hasAutoSynced.current && !syncing) {
+      hasAutoSynced.current = true;
+      handleSync();
+    }
+  }, [user?.moodle_connected]);
 
   const toggleNotifications = () => {
     if (!showNotifications) {
@@ -223,7 +255,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           </button>
 
           {/* Notifications Bell */}
-          <div className="relative">
+          <div ref={notificationsRef} className="relative">
             <button
               onClick={toggleNotifications}
               className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 relative transition"
@@ -240,7 +272,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-96 max-w-[calc(100vw-1rem)] bg-[#181826] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-72 sm:w-96 max-w-[calc(100vw-1rem)] bg-[#181826] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
                 <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-white/5">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-indigo-400" />
@@ -289,6 +321,16 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           </div>
         </div>
       </div>
+
+      {/* Banner de Sincronização em Andamento (Mobile & Desktop) */}
+      {syncing && (
+        <div className="bg-indigo-950/80 border-t border-indigo-500/30 px-4 py-2 flex items-center justify-center gap-2.5 text-xs text-indigo-200 animate-in fade-in slide-in-from-top-1">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
+          <span className="font-medium">
+            Sincronizando dados com o Virtual2... por favor, aguarde alguns instantes enquanto atualizamos suas matérias e prazos.
+          </span>
+        </div>
+      )}
     </header>
   );
 }
