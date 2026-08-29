@@ -124,20 +124,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <div className="mb-2">
                       <span
-                        className="inline-flex max-w-full items-center rounded-lg border px-2 py-0.5 text-[11px] font-bold"
-                        style={{
-                          color: act.course_color || "#a5b4fc",
-                          borderColor: `${act.course_color || "#6366f1"}55`,
-                          backgroundColor: `${act.course_color || "#6366f1"}18`,
-                        }}
+                        className="inline-flex max-w-full items-center rounded-xl border border-indigo-500/40 bg-indigo-500/15 px-2.5 py-1 text-xs font-semibold text-indigo-300 shadow-sm"
                       >
                         <span className="truncate">{act.course_name || "Disciplina"}</span>
-                      </span>
-                      <span className="text-[10px] text-gray-500">•</span>
-                      <span className="text-[11px] font-medium text-gray-400">
-                        {act.course_name || "Geral"}
                       </span>
                     </div>
 
@@ -148,7 +139,6 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                           isSubmitted ? "line-through text-gray-500" : ""
                         }`}
                       >
-                        <span className="text-indigo-300 font-medium mr-1.5">[{act.course_name || "Matéria"}]</span>
                         {act.title}
                       </h3>
                     </div>

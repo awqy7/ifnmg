@@ -247,15 +247,15 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   className="p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/40 hover:bg-white/10 flex items-center justify-between gap-3 transition cursor-pointer group"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[11px] font-bold text-indigo-400 truncate">
-                        {act.course_name || "Disciplina"}
+                    <div className="mb-1.5">
+                      <span className="inline-flex items-center rounded-lg border border-indigo-500/40 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                        <span className="truncate">{act.course_name || "Disciplina"}</span>
                       </span>
                     </div>
                     <h4 className="text-xs font-semibold text-white group-hover:text-indigo-300 transition truncate">
                       {act.title}
                     </h4>
-                    <p className="text-[11px] text-gray-400 truncate">
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
                       {act.due_date ? `Vence em: ${new Date(act.due_date).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sem data limite"}
                     </p>
                   </div>
