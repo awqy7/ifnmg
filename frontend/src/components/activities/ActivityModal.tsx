@@ -237,74 +237,30 @@ export default function ActivityModal({
                 </div>
               )}
 
-              {/* AI Explanation Box */}
-              {aiExplanation ? (
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-purple-950/30 border border-indigo-500/30 space-y-3 animate-in fade-in">
-                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
-                    <Bot className="w-4 h-4 text-indigo-400" /> Guia de Resolução da IA
+              {/* AI Assistance Box - Em Breve / BETA */}
+              <div className="p-4 rounded-2xl bg-[#161622] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-zinc-800 text-zinc-400 border border-zinc-700/60">
+                    <Sparkles className="w-4 h-4 text-zinc-400 shrink-0" />
                   </div>
-                  <div className="text-xs sm:text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-                    {aiExplanation}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-indigo-400 shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold text-white">Precisa de ajuda com esta tarefa?</p>
-                      <p className="text-[11px] text-gray-400">
-                        A IA pode analisar o enunciado e gerar um passo a passo detalhado para você.
-                      </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold text-gray-400">Tutor e Resolução com IA</p>
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
+                        BETA
+                      </span>
                     </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Recurso de explicação passo a passo e resolução automática em desenvolvimento.
+                    </p>
                   </div>
-                  <button
-                    onClick={handleExplainAI}
-                    disabled={loadingAi || generatingPdf}
-                    className="min-h-11 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition shrink-0"
-                  >
-                    {loadingAi ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analisando...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5" /> Explicar com IA
-                      </>
-                    )}
-                  </button>
                 </div>
-              )}
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mt-3 space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300">Gerar PDF respondido</h4>
-                <p className="text-[11px] text-gray-400">
-                  A IA lê o enunciado e PDFs anexados pelo professor. O arquivo sai com seu nome e é um rascunho: revise antes de entregar.
-                </p>
                 <button
-                  onClick={handleGeneratePDF}
-                  disabled={loadingAi || generatingPdf}
-                  className="w-full min-h-11 py-2 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium shadow-md flex items-center justify-center gap-2 transition">
-                  {generatingPdf ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Lendo atividade e gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-3.5 h-3.5" /> Gerar PDF de Respostas
-                    </>
-                  )}
+                  disabled
+                  className="min-h-10 px-3.5 py-2 rounded-xl bg-zinc-800 border border-zinc-700/60 text-zinc-500 text-xs font-semibold cursor-not-allowed flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Em breve
                 </button>
-                {pdfUrl && (
-                  <div className="mt-2 text-xs text-green-400">
-                    <a
-                      href={pdfUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline text-green-300 hover:text-green-200">
-                      Abrir o PDF gerado
-                    </a>
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -313,18 +269,17 @@ export default function ActivityModal({
         {/* Modal Footer */}
         <div className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-4 sm:pt-4 border-t border-white/10 bg-[#13131c] flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {openChatWithContext && details?.course_id && (
+            {details?.course_id && (
               <button
-                onClick={() => {
-                  onClose();
-                  openChatWithContext(
-                    details.course_id,
-                    `Como posso resolver a atividade "${details.title}"?`
-                  );
-                }}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 hover:text-white transition"
+                disabled
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#161622] border border-white/5 text-xs font-medium text-gray-500 cursor-not-allowed"
+                title="Chat com IA (Em breve)"
               >
-                <Bot className="w-4 h-4 text-indigo-400" /> Tirar Dúvida no Chat IA
+                <Bot className="w-4 h-4 text-gray-600" />
+                <span>Chat IA</span>
+                <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
+                  BETA
+                </span>
               </button>
             )}
           </div>

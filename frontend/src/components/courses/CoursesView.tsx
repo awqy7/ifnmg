@@ -117,14 +117,15 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
 
                   <div className="flex items-center gap-3 shrink-0">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openChat(course.id);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-xs font-semibold text-indigo-300 transition"
+                      disabled
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161622] border border-white/5 text-xs font-medium text-gray-500 cursor-not-allowed transition"
+                      title="Chat com IA (Em breve)"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Tutor IA</span>
+                      <Sparkles className="w-3.5 h-3.5 text-gray-600" />
+                      <span>Chat</span>
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
+                        BETA
+                      </span>
                     </button>
 
                     <div className="p-1 rounded-lg bg-white/5 text-gray-400">
@@ -138,7 +139,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                   <div className="px-5 pb-5 pt-2 border-t border-white/5 space-y-3 bg-black/20">
                     <div className="flex items-center justify-between text-xs text-gray-400 pb-2">
                       <span className="font-semibold uppercase tracking-wider text-[11px] text-gray-500">
-                        Materiais & Recursos postados
+                         Materiais & Recursos postados
                       </span>
                       <span>{materials.length} itens encontrados</span>
                     </div>
@@ -177,11 +178,11 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                                 </a>
                               )}
                               <button
-                                onClick={() => openChat(course.id)}
-                                className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 transition"
-                                title="Estudar este conteúdo com IA"
+                                disabled
+                                className="p-1.5 rounded-lg bg-[#161622] border border-white/5 text-gray-600 cursor-not-allowed transition"
+                                title="Estudar com IA (Em breve)"
                               >
-                                <Sparkles className="w-3.5 h-3.5" />
+                                <Sparkles className="w-3.5 h-3.5 text-gray-600" />
                               </button>
                             </div>
                           </div>
