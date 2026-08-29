@@ -57,7 +57,15 @@ def _compute_status(item: dict, existing_status: Optional[str], grade=None) -> s
     return "pending"
 
 
-async def _upsert_activity(db: Session, user_id: str, course, act_data: dict, is_new_course: bool):
+async def _upsert_activity(
+    db: Session,
+    user_id: str,
+    course,
+    act_data: dict,
+    is_new_course: bool,
+    ws=None,
+    client=None,
+):
     from app.models import Activity
 
     mid = str(act_data.get("moodle_id") or "")
@@ -119,6 +127,36 @@ async def _upsert_activity(db: Session, user_id: str, course, act_data: dict, is
         # Atividade existente: não é nova
         activity.is_new = False
 
+    # Extração automática de anexos de atividades (PDFs, etc) para a IA ter acesso imediato
+    files_list = act_data.get("files") or []
+    if not files_list and activity.raw_data and isinstance(activity.raw_data, dict):
+        files_list = activity.raw_data.get("files") or []
+
+    raw_data = dict(activity.raw_data or {})
+    if files_list and not raw_data.get("content_text") and (ws or client):
+        try:
+            from app.services.material_extractor import extract_material_content
+            extracted_parts = []
+            for file_item in files_list[:6]:
+                f_url = file_item.get("fileurl") or file_item.get("url")
+                f_name = file_item.get("filename") or file_item.get("name", "")
+                f_mime = file_item.get("mimetype", "")
+                if f_url:
+                    text_extracted = await extract_material_content(
+                        ws=ws,
+                        client=client,
+                        fileurl=f_url,
+                        filename=f_name,
+                        mimetype=f_mime,
+                    )
+                    if text_extracted:
+                        extracted_parts.append(f"[{f_name}]:\n{text_extracted}")
+            if extracted_parts:
+                raw_data["content_text"] = "\n\n".join(extracted_parts)[:25000]
+                activity.raw_data = raw_data
+        except Exception as e:
+            logger.debug(f"Erro ao extrair anexo da atividade {mid}: {e}")
+
     # status recalculado (preserva 'graded' e 'submitted' manuais)
     new_status = _compute_status(
         {**act_data, "due_date": activity.due_date},
@@ -146,7 +184,7 @@ async def _sync_materials(
 ):
     """Cria/atualiza materiais do curso e extrai texto dos arquivos para a IA."""
     from app.models import Material
-    from app.services.material_extractor import extract_material_content
+    from app.services.material_extractor import extract_material_content, extract_url_content
 
     synced = 0
     for mat_data in materials_data:
@@ -209,6 +247,14 @@ async def _sync_materials(
                         text_parts.append(txt)
                     if sum(len(t) for t in text_parts) > 14000:
                         break
+
+            # Links e vídeos são abertos automaticamente. URLs do tipo
+            # /mod/url/view.php podem redirecionar para YouTube ou outra página.
+            material_type = (mat_data.get("type") or "").lower()
+            if material.url and material_type in {"url", "video", "link", "lti"}:
+                linked_text = await extract_url_content(client, material.url)
+                if linked_text:
+                    text_parts.append(linked_text)
 
             if text_parts:
                 material.content_text = "\n\n".join(text_parts)[:15000]
@@ -434,10 +480,10 @@ async def sync_moodle_for_user(user_id: str):
                 if teacher_from_page and not course.teacher:
                     course.teacher = teacher_from_page
 
-                # Atividades (cria OU atualiza)
+                # Atividades (cria OU atualiza + extrai anexos)
                 for act_data in content.get("activities", []):
                     activity = await _upsert_activity(
-                        db, user_id, course, act_data, is_new_course
+                        db, user_id, course, act_data, is_new_course, ws=ws, client=client
                     )
                     if activity and activity.is_new and activity.status in ("pending", "late"):
                         existing_ids = {a.id for a in new_activities_all}
