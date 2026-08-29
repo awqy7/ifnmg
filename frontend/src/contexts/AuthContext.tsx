@@ -23,38 +23,118 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Chave para armazenar token em memória (fallback para mobile/Safari)
+const TOKEN_STORAGE_KEY = "ifnmg_auth_token";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Tenta obter token salvo (fallback mobile)
+  const getStoredToken = (): string | null => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  };
+
+  const setStoredToken = (token: string | null) => {
+    if (typeof window === "undefined") return;
+    if (token) sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+    else sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  };
+
+  // Cria headers com token fallback se cookie não funcionar
+  const getAuthHeaders = (): HeadersInit => {
+    const fallbackToken = getStoredToken();
+    return {
+      "Content-Type": "application/json",
+      ...(fallbackToken ? { Authorization: `Bearer ${fallbackToken}` } : {}),
+    };
+  };
+
+  // Wrapper para fetch com fallback de token
+  const apiFetch = async (path: string, options: RequestInit = {}) => {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}${path}`, {
+      ...options,
+      headers: {
+        ...getAuthHeaders(),
+        ...options.headers,
+      },
+      credentials: "include",
+    });
+    return res;
+  };
+
+  // Substitui métodos da api com fallback
+  const authApiWithFallback = {
+    moodleLogin: async (username: string, password: string) => {
+      const res = await apiFetch("/api/auth/moodle-login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Erro na requisição");
+      }
+      return res.json();
+    },
+    getMe: async () => {
+      const res = await apiFetch("/api/auth/me");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Erro na requisição");
+      }
+      return res.json();
+    },
+    logout: async () => {
+      const res = await apiFetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Erro na requisição");
+      }
+      return res.json();
+    },
+    updateMe: async (data: any) => {
+      const res = await apiFetch("/api/auth/me", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Erro na requisição");
+      }
+      return res.json();
+    },
+  };
+
   useEffect(() => {
-    // Com cookies httpOnly, só precisamos chamar getMe
-    // O browser envia o cookie automaticamente
-    authApi.getMe()
+    // Tenta primeiro com cookie (funciona no desktop)
+    authApiWithFallback.getMe()
       .then(setUser)
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   const login = async (username: string, password: string) => {
-    const data = await authApi.moodleLogin(username, password);
-    // O token vem no cookie httpOnly (definido pelo backend)
-    // Também retornado no body para compatibilidade
-    const me = await authApi.getMe();
+    const data = await authApiWithFallback.moodleLogin(username, password);
+    // Salva token como fallback para mobile/Safari
+    if (data.access_token) {
+      setStoredToken(data.access_token);
+    }
+    const me = await authApiWithFallback.getMe();
     setUser(me);
   };
 
   const logout = async () => {
     try {
-      await authApi.logout();
+      await authApiWithFallback.logout();
     } catch {}
-    // Cookie limpo pelo backend
+    setStoredToken(null);
     setUser(null);
   };
 
   const refreshUser = async () => {
     try {
-      const me = await authApi.getMe();
+      const me = await authApiWithFallback.getMe();
       setUser(me);
     } catch {
       setUser(null);
