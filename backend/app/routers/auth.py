@@ -86,12 +86,13 @@ def create_access_token(user_id: str) -> str:
 def set_auth_cookie(response: Response, token: str):
     """Define o cookie httpOnly com o token JWT."""
     is_production = settings.APP_ENV == "production"
+    # SameSite=none necessário para cookies cross-site funcionarem via proxy Vercel
     response.set_cookie(
         key="ifnmg_token",
         value=token,
         httponly=True,
-        secure=is_production,
-        samesite="lax",
+        secure=True,  # Obrigatório para SameSite=none
+        samesite="none",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -103,8 +104,8 @@ def clear_auth_cookie(response: Response):
         key="ifnmg_token",
         value="",
         httponly=True,
-        secure=settings.APP_ENV == "production",
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=0,
         path="/",
     )
