@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GraduationCap, Eye, EyeOff, ShieldCheck, Lock, User, ExternalLink } from "lucide-react";
-import { LoginButton, SYNC_STEPS } from "@/components/ui/ImmersiveLoader";
+import { LoginButton } from "@/components/ui/ImmersiveLoader";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -106,7 +106,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <LoginButton onLogin={handleLogin} isLoading={false} onError={handleError}>
+            <LoginButton onLogin={handleLogin} onError={handleError}>
               Entrar no Sistema
             </LoginButton>
           </form>
