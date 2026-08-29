@@ -246,8 +246,15 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   onClick={() => openActivity && openActivity(act.id)}
                   className="p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/40 hover:bg-white/10 flex items-center justify-between gap-3 transition cursor-pointer group"
                 >
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-semibold text-white group-hover:text-indigo-300 transition truncate">{act.title}</h4>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[11px] font-bold text-indigo-400 truncate">
+                        {act.course_name || "Disciplina"}
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-semibold text-white group-hover:text-indigo-300 transition truncate">
+                      {act.title}
+                    </h4>
                     <p className="text-[11px] text-gray-400 truncate">
                       {act.due_date ? `Vence em: ${new Date(act.due_date).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sem data limite"}
                     </p>
@@ -304,7 +311,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   <div className="mt-3 flex items-center justify-between text-[11px] text-indigo-400">
                     <span>{crs.pending_activities || 0} pendentes</span>
                     <span className="flex items-center gap-1 text-[10px] font-semibold">
-                      Tutor IA <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+                      Chat <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
                     </span>
                   </div>
                 </div>

@@ -20,9 +20,10 @@ interface TopBarProps {
   onMenuToggle: () => void;
   onNavigate: (view: ViewType) => void;
   onOpenActivity?: (activityId: string) => void;
+  isVisible?: boolean;
 }
 
-export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: TopBarProps) {
+export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true }: TopBarProps) {
   const { user } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
@@ -144,7 +145,13 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-[#13131c]/80 backdrop-blur-md border-b border-white/10 pt-[env(safe-area-inset-top)]">
+    <header
+      className={`sticky top-0 z-30 bg-[#13131c]/80 backdrop-blur-md border-b border-white/10 pt-[env(safe-area-inset-top)] transition-[max-height,transform,opacity] duration-300 ease-out ${
+        isVisible
+          ? "max-h-24 translate-y-0 opacity-100 overflow-visible"
+          : "max-h-0 -translate-y-full opacity-0 overflow-hidden border-transparent"
+      }`}
+    >
       <div className="px-3 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <button
@@ -201,14 +208,18 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity }: Top
 
           {/* AI Tutor Quick Access */}
           <button
-            onClick={() => onNavigate("chat")}
+            disabled
             className={`mobile-ai-action ${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
-            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/40 hover:to-purple-600/40 border border-indigo-500/30 text-xs font-medium text-indigo-300 transition`}
-            aria-label="Abrir tutor de inteligência artificial"
+            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-gray-500 opacity-60 cursor-not-allowed transition`}
+            aria-label="Tutor IA em breve"
+            title="Chat com IA (Em breve)"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden sm:inline">Perguntar à IA</span>
+            <Sparkles className="w-3.5 h-3.5 text-gray-500" />
+            <span className="hidden sm:inline">IA</span>
+            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              BETA
+            </span>
           </button>
 
           {/* Notifications Bell */}

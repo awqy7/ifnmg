@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import {
   CheckSquare,
-  Search,
   CheckCircle2,
   Clock,
   FileText,
@@ -12,7 +11,7 @@ import {
   Sparkles,
   ChevronRight,
 } from "lucide-react";
-import { activitiesApi, coursesApi } from "@/lib/api";
+import { activitiesApi } from "@/lib/api";
 
 interface ActivitiesViewProps {
   openActivity?: (activityId: string) => void;
@@ -20,21 +19,13 @@ interface ActivitiesViewProps {
 
 export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
   const [activities, setActivities] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [courseFilter, setCourseFilter] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState("");
 
   const loadActivities = async () => {
     setLoading(true);
     try {
-      const [acts, crs] = await Promise.all([
-        activitiesApi.list(),
-        coursesApi.list(),
-      ]);
+      const acts = await activitiesApi.list();
       setActivities(acts);
-      setCourses(crs);
     } catch {}
     setLoading(false);
   };
@@ -54,15 +45,25 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
     } catch {}
   };
 
-  const filtered = activities.filter((act) => {
-    const matchesStatus =
-      statusFilter === "all" ? true : act.status === statusFilter;
-    const matchesCourse =
-      courseFilter === "all" ? true : act.course_id === courseFilter;
-    const matchesSearch =
-      searchTerm === "" ||
-      act.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesCourse && matchesSearch;
+  const effectiveStatus = (act: any) => {
+    if (
+      act.status === "late" ||
+      (act.status === "pending" && act.due_date && new Date(act.due_date) < new Date())
+    ) {
+      return "late";
+    }
+    return act.status;
+  };
+
+  // Ordem definida para leitura rápida: pendentes, entregues e atrasadas.
+  const statusOrder: Record<string, number> = { pending: 0, submitted: 1, late: 2 };
+  const sortedActivities = [...activities].sort((a, b) => {
+    const statusDifference =
+      (statusOrder[effectiveStatus(a)] ?? 3) - (statusOrder[effectiveStatus(b)] ?? 3);
+    if (statusDifference !== 0) return statusDifference;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
   });
 
   const getTypeIcon = (type: string) => {
@@ -90,71 +91,17 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-[#181826] border border-white/10 p-4 rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between">
-        {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar atividade..."
-            className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-2 gap-2 w-full md:flex md:items-center md:w-auto">
-          {["all", "pending", "submitted", "late"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`w-full min-h-11 px-3 py-2.5 md:min-h-0 md:py-1.5 rounded-xl text-xs font-medium transition md:w-auto md:shrink-0 ${
-                statusFilter === st
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              {st === "all"
-                ? "Todas"
-                : st === "pending"
-                ? "Pendentes"
-                : st === "submitted"
-                ? "Entregues"
-                : "Atrasadas"}
-            </button>
-          ))}
-
-          <select
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="col-span-2 w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 md:min-h-0 md:py-1.5 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 transition md:w-auto md:shrink-0"
-          >
-            <option value="all">Todas as disciplinas</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {/* Activities List */}
       <div className="space-y-3">
         {loading ? (
           <div className="p-12 text-center text-gray-500 text-sm">Carregando atividades...</div>
-        ) : filtered.length === 0 ? (
+        ) : sortedActivities.length === 0 ? (
           <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
-            Nenhuma atividade encontrada com os filtros selecionados.
+            Nenhuma atividade encontrada no Virtual2.
           </div>
         ) : (
-          filtered.map((act) => {
-            const isLate =
-              act.status === "pending" &&
-              act.due_date &&
-              new Date(act.due_date) < new Date();
+          sortedActivities.map((act) => {
+            const isLate = effectiveStatus(act) === "late";
             const isSubmitted = act.status === "submitted";
 
             return (
@@ -176,7 +123,24 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                     {isSubmitted && <CheckCircle2 className="w-3.5 h-3.5" />}
                   </button>
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span
+                        className="inline-flex max-w-full items-center rounded-lg border px-2 py-0.5 text-[11px] font-bold"
+                        style={{
+                          color: act.course_color || "#a5b4fc",
+                          borderColor: `${act.course_color || "#6366f1"}55`,
+                          backgroundColor: `${act.course_color || "#6366f1"}18`,
+                        }}
+                      >
+                        <span className="truncate">{act.course_name || "Disciplina"}</span>
+                      </span>
+                      <span className="text-[10px] text-gray-500">•</span>
+                      <span className="text-[11px] font-medium text-gray-400">
+                        {act.course_name || "Geral"}
+                      </span>
+                    </div>
+
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="p-1 rounded-md bg-white/5">{getTypeIcon(act.type)}</span>
                       <h3
@@ -184,6 +148,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                           isSubmitted ? "line-through text-gray-500" : ""
                         }`}
                       >
+                        <span className="text-indigo-300 font-medium mr-1.5">[{act.course_name || "Matéria"}]</span>
                         {act.title}
                       </h3>
                     </div>

@@ -40,15 +40,15 @@ export default function Sidebar({
   // só aparece quando a sidebar está expandida.
   const showFull = isOpen || mobileOpen;
 
-  const menuItems: { id: ViewType; label: string; icon: any; badge?: string }[] = [
+  const menuItems: { id: ViewType; label: string; icon: any; badge?: string; disabled?: boolean }[] = [
     { id: "home", label: "Visão Geral", icon: Home },
     { id: "atividades", label: "Atividades & Prazos", icon: CheckSquare },
     { id: "cursos", label: "Disciplinas & Materiais", icon: BookOpen },
     { id: "notas", label: "Boletim & Notas", icon: GraduationCap },
     { id: "calendario", label: "Calendário", icon: Calendar },
     { id: "horarios", label: "Grade de Horários", icon: Clock },
-    { id: "chat", label: "Tutor IA", icon: MessageSquare, badge: "IA" },
-    { id: "estudo", label: "Ferramentas de Estudo", icon: Sparkles },
+    { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA", disabled: true },
+    { id: "estudo", label: "Ferramentas de Estudo", icon: Sparkles, badge: "BETA", disabled: true },
     { id: "configuracoes", label: "Configurações", icon: Settings },
   ];
 
@@ -105,25 +105,35 @@ export default function Sidebar({
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
+            const isDisabled = item.disabled;
+
             return (
               <button
                 key={item.id}
+                disabled={isDisabled}
                 onClick={() => {
+                  if (isDisabled) return;
                   onNavigate(item.id);
                   if (mobileOpen) onCloseMobile();
                 }}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all relative ${
-                  isActive
+                  isDisabled
+                    ? "opacity-50 cursor-not-allowed text-gray-500 hover:bg-transparent"
+                    : isActive
                     ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
                     : "text-gray-400 hover:text-white hover:bg-white/5"
                 }`}
-                title={!showFull ? item.label : undefined}
+                title={isDisabled ? `${item.label} (Em breve)` : !showFull ? item.label : undefined}
                 aria-label={item.label}
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-indigo-400" : "text-gray-400"}`} />
+                <Icon className={`w-5 h-5 shrink-0 ${isDisabled ? "text-gray-600" : isActive ? "text-indigo-400" : "text-gray-400"}`} />
                 {showFull && <span className="truncate text-left">{item.label}</span>}
                 {item.badge && showFull && (
-                  <span className="ml-auto text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  <span className={`ml-auto text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md border ${
+                    item.badge === "BETA"
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                  }`}>
                     {item.badge}
                   </span>
                 )}
