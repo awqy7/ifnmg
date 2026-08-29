@@ -9,7 +9,7 @@ import {
   User as UserIcon,
   Loader2,
 } from "lucide-react";
-import { chatApi, coursesApi } from "@/lib/api";
+import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 
 /** Remove blocos <think>...</think> (inclusive truncados sem fechamento) */
@@ -20,40 +20,45 @@ const stripThinking = (text: string) =>
     .trim();
 
 interface ChatViewProps {
-  initialCourseId?: string;
   initialPrompt?: string;
 }
 
-export default function ChatView({ initialCourseId, initialPrompt }: ChatViewProps) {
-  const [courses, setCourses] = useState<any[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<string>(initialCourseId || "");
+export default function ChatView({ initialPrompt }: ChatViewProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState(initialPrompt || "");
   const [loading, setLoading] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-
-    // Rola somente a lista do chat. scrollIntoView também rolava o <main>
-    // do dashboard no mobile e empurrava a barra superior para fora da tela.
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-  };
+    // Só rola se o usuário já estiver próximo do fim (evita pular scroll manual)
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 200) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
+  }, []);
 
   const selectSession = useCallback(async (sessionId: string) => {
     setCurrentSessionId(sessionId);
     try {
       const msgs = await chatApi.getMessages(sessionId);
       setMessages(msgs);
+      // Vai ao fim após carregar histórico
+      setTimeout(() => {
+        const c = messagesContainerRef.current;
+        if (c) c.scrollTop = c.scrollHeight;
+      }, 50);
     } catch {}
   }, []);
 
   const loadSessions = useCallback(async () => {
     try {
-      const list = await chatApi.getSessions(selectedCourse || undefined);
+      const list = await chatApi.getSessions();
       setSessions(list);
       setCurrentSessionId((cur) => {
         if (!cur && list.length > 0) {
@@ -62,11 +67,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
         return cur;
       });
     } catch {}
-  }, [selectedCourse, selectSession]);
-
-  useEffect(() => {
-    coursesApi.list().then(setCourses).catch(() => {});
-  }, []);
+  }, [selectSession]);
 
   useEffect(() => {
     loadSessions();
@@ -74,12 +75,12 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, loading]);
+  }, [messages, loading, scrollToBottom]);
 
   const handleNewSession = async () => {
     try {
       const res = await chatApi.createSession(
-        selectedCourse || undefined,
+        undefined,
         "Nova conversa de estudos"
       );
       setSessions((prev) => [
@@ -88,6 +89,7 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
       ]);
       setCurrentSessionId(res.id);
       setMessages([]);
+      inputRef.current?.focus();
     } catch {}
   };
 
@@ -97,17 +99,27 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
 
     const userText = input.trim();
     setInput("");
+    // Reset altura do textarea
+    if (inputRef.current) {
+      inputRef.current.style.height = "48px";
+    }
 
     // Optimistic user message
     const newMsgs = [...messages, { role: "user", content: userText }];
     setMessages(newMsgs);
     setLoading(true);
 
+    // Força scroll ao fundo imediatamente após mensagem do usuário
+    setTimeout(() => {
+      const c = messagesContainerRef.current;
+      if (c) c.scrollTop = c.scrollHeight;
+    }, 30);
+
     try {
       const res = await chatApi.sendMessage(
         userText,
         currentSessionId || undefined,
-        selectedCourse || undefined
+        undefined
       );
 
       if (!currentSessionId && res.session_id) {
@@ -124,11 +136,19 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
         ...prev,
         {
           role: "assistant",
-          content: `⚠️ Erro ao consultar IA: ${err.message || "Tente novamente mais tarde."}`,
+          content: `⚠️ Erro ao consultar IA: ${err instanceof Error ? err.message : "Tente novamente mais tarde."}`,
         },
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Envia com Enter (sem Shift) no desktop; no mobile usa o botão do teclado */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && window.innerWidth >= 768) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -140,53 +160,45 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
   ];
 
   return (
-    <div className="h-[calc(100vh-10rem)] supports-[height:100dvh]:h-[calc(100dvh-10rem)] min-h-0 md:h-[calc(100vh-6.5rem)] md:supports-[height:100dvh]:h-[calc(100dvh-6.5rem)] flex flex-col md:flex-row rounded-2xl sm:rounded-3xl bg-[#181826] border border-white/10 overflow-hidden">
-      {/* Sidebar: Sessions & Course Selection */}
-      <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-b md:border-b-0 md:border-r border-white/10 p-3 sm:p-4 flex flex-col justify-between shrink-0 max-h-36 sm:max-h-40 md:max-h-none overflow-y-auto md:overflow-hidden">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" /> Tutor Acadêmico
-            </h2>
-            <button
-              onClick={handleNewSession}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition"
-              title="Nova conversa"
-              aria-label="Nova conversa"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+    /*
+     * Altura: ocupa tudo entre a TopBar e a MobileBottomNav.
+     * - mobile: pb-20 no <main> do Dashboard dá espaço ao bottom nav.
+     *   Aqui usamos `h-full` para preencher o container pai sem calcular
+     *   offsets manualmente, evitando o bug do input escondido pelo teclado.
+     * - desktop (md+): flex-row com sidebar lateral.
+     */
+    <div className="flex flex-col md:flex-row rounded-2xl sm:rounded-3xl bg-[#181826] border border-white/10 overflow-hidden h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-6.5rem)]">
+      {/* ── Sidebar: Histórico de sessões ── */}
+      <div className="w-full md:w-72 md:flex-none bg-[#13131c] border-b md:border-b-0 md:border-r border-white/10 flex flex-col shrink-0
+                      /* mobile: altura fixa compacta mas scroll interno funcional */
+                      h-auto md:h-full">
+        {/* Cabeçalho da sidebar */}
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10 shrink-0">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-400" /> Chat IA
+          </h2>
+          <button
+            onClick={handleNewSession}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition shrink-0"
+            title="Nova conversa"
+            aria-label="Nova conversa"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
 
-          {/* Discipline selector */}
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Contexto da Disciplina
-            </label>
-            <select
-              value={selectedCourse}
-              onChange={(e) => {
-                setSelectedCourse(e.target.value);
-                setCurrentSessionId(null);
-                setMessages([]);
-              }}
-              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
-            >
-              <option value="">Geral (Todas as matérias)</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Corpo da sidebar — scroll interno no mobile (max-h limitado) e no desktop ocupa o resto */}
+        <div className="flex flex-col gap-3 p-3 sm:p-4 overflow-y-auto max-h-44 md:max-h-none md:flex-1">
+          <p className="text-[11px] leading-relaxed text-gray-400 rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-2.5 shrink-0">
+            Contexto automático: a IA pesquisa todas as matérias, atividades e materiais sincronizados.
+          </p>
 
-          {/* Session history */}
-          <div>
-            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Histórico de Conversas
+          {/* Histórico */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">
+              Histórico
             </span>
-            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+            <div className="space-y-1">
               {sessions.length === 0 ? (
                 <p className="text-xs text-gray-500 italic p-2">Nenhuma conversa salva.</p>
               ) : (
@@ -208,15 +220,21 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
           </div>
         </div>
 
-        <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-400 border border-white/5">
-          💡 A IA utiliza os materiais e atividades do Virtual2 para responder dúvidas específicas.
+        {/* Dica rodapé — oculta no mobile para ganhar espaço */}
+        <div className="hidden md:block p-3 border-t border-white/10 shrink-0">
+          <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-400 border border-white/5">
+            💡 A IA usa os materiais e atividades do Virtual2 para responder suas dúvidas.
+          </div>
         </div>
       </div>
 
-      {/* Main Chat Panel */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#181826]">
-        {/* Chat Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+      {/* ── Painel principal do chat ── */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#181826]">
+        {/* Área de mensagens */}
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-6 space-y-4 min-h-0"
+        >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto p-4">
               <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 mb-4">
@@ -227,13 +245,14 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
                 Tire dúvidas sobre suas matérias, peça resumos, simule provas e domine o conteúdo do IFNMG.
               </p>
 
-              {/* Quick Prompt suggestions */}
+              {/* Quick prompts */}
               <div className="grid grid-cols-1 gap-2 w-full text-left">
                 {quickPrompts.map((prompt, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
                       setInput(prompt);
+                      inputRef.current?.focus();
                     }}
                     className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-indigo-500/30 text-xs text-gray-300 hover:text-white transition text-left"
                   >
@@ -248,27 +267,31 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
               return (
                 <div
                   key={idx}
-                  className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}
+                  className={`flex items-end gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                 >
                   {!isUser && (
-                    <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
-                      <Bot className="w-4 h-4" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mb-0.5">
+                      <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   )}
 
                   <div
-                    className={`max-w-2xl rounded-2xl p-4 text-xs sm:text-sm leading-relaxed ${
-                      isUser
-                        ? "bg-indigo-600 text-white rounded-tr-sm shadow-md whitespace-pre-wrap"
-                        : "bg-[#13131c] border border-white/10 text-gray-200 rounded-tl-sm"
-                    }`}
+                    className={`
+                      /* Mobile: máx 85% da largura; desktop: limite maior */
+                      max-w-[85%] sm:max-w-[78%] md:max-w-2xl
+                      rounded-2xl p-3 sm:p-4 text-xs sm:text-sm leading-relaxed
+                      ${isUser
+                        ? "bg-indigo-600 text-white rounded-br-sm shadow-md whitespace-pre-wrap break-words"
+                        : "bg-[#13131c] border border-white/10 text-gray-200 rounded-bl-sm"
+                      }
+                    `}
                   >
                     {isUser ? m.content : <Markdown content={stripThinking(m.content)} />}
                   </div>
 
                   {isUser && (
-                    <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5">
-                      <UserIcon className="w-4 h-4" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-white shrink-0 mb-0.5">
+                      <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                   )}
                 </div>
@@ -277,37 +300,53 @@ export default function ChatView({ initialCourseId, initialPrompt }: ChatViewPro
           )}
 
           {loading && (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                <Bot className="w-4 h-4" />
+            <div className="flex items-end gap-2 sm:gap-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-0.5">
+                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="p-3.5 rounded-2xl bg-[#13131c] border border-white/10 text-xs text-indigo-300 flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Gerando resposta inteligente...
+              <div className="p-3 sm:p-3.5 rounded-2xl rounded-bl-sm bg-[#13131c] border border-white/10 text-xs text-indigo-300 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Gerando resposta...
               </div>
             </div>
           )}
-
         </div>
 
-        {/* Input Bar */}
-        <div className="p-4 border-t border-white/10 bg-[#13131c] pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <form onSubmit={handleSend} className="flex items-center gap-2">
-            <input
-              type="text"
+        {/* ── Barra de input ── */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-white/10 bg-[#13131c] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <form onSubmit={handleSend} className="flex items-end gap-2">
+            <textarea
+              ref={inputRef}
+              rows={1}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua dúvida ou peça um resumo/exercício..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+              onChange={(e) => {
+                setInput(e.target.value);
+                // Auto-resize: reset e cresce até 5 linhas (~120px)
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua dúvida ou peça um resumo..."
+              enterKeyHint="send"
+              autoCorrect="on"
+              spellCheck
+              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none overflow-hidden leading-relaxed min-h-[48px]"
+              style={{ height: "48px" }}
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition shadow-lg shadow-indigo-600/20 shrink-0"
+              className="w-11 h-11 flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition shadow-lg shadow-indigo-600/20 shrink-0"
               aria-label="Enviar mensagem"
             >
-              <Send className="w-4 h-4" />
+              {loading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />
+              }
             </button>
           </form>
+          <p className="text-[10px] text-gray-600 mt-1.5 text-center">
+            Enter para enviar · Shift+Enter para nova linha
+          </p>
         </div>
       </div>
     </div>
