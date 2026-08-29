@@ -64,17 +64,10 @@ export function LoginButton({
       <button
         onClick={handleClick}
         disabled={loading}
-        className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm overflow-hidden"
+        className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center overflow-hidden"
       >
         {loading ? (
-          <>
-            <span className="flex items-center gap-2">
-              <ButtonSpinner />
-              <span className="font-medium">
-                {phase === 'login' ? 'Conectando...' : phase === 'sync' ? 'Sincronizando...' : 'Pronto!'}
-              </span>
-            </span>
-          </>
+          <ButtonSpinner />
         ) : (
           children
         )}
@@ -86,12 +79,11 @@ export function LoginButton({
 function ButtonSpinner() {
   return (
     <svg
-      className="w-6 h-6 text-white pacman-spinner"
+      className="w-10 h-10 text-white pacman-spinner"
       xmlns="http://www.w3.org/2000/svg"
       version="1.1"
       viewBox="50 0 500 300"
       aria-hidden="true"
-      style={{ width: '24px', height: '24px' }}
     >
       <style>{`
         .pacman3351-dot {
