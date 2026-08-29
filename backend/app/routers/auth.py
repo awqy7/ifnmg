@@ -20,6 +20,30 @@ from app.services.moodle_auth import moodle_auth_service
 from app.services.crypto_service import crypto_service
 from app.services.scheduler import sync_moodle_for_user
 
+# ─── Schemas (definidos ANTES das rotas que os usam) ──────────────────────────
+
+class MoodleDirectLogin(BaseModel):
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    moodle_connected: bool
+    moodle_last_sync: Optional[datetime]
+    ai_provider: str
+    theme: str
+    created_at: datetime
+
+
 router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/moodle-login", auto_error=False)
@@ -268,27 +292,3 @@ async def logout(
     db.commit()
     clear_auth_cookie(response)
     return {"message": "Sessão encerrada com sucesso"}
-
-
-# ─── Schemas ────────────────────────────────────────────────────────────────
-
-class MoodleDirectLogin(BaseModel):
-    username: str
-    password: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: dict
-
-
-class UserResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    moodle_connected: bool
-    moodle_last_sync: Optional[datetime]
-    ai_provider: str
-    theme: str
-    created_at: datetime
