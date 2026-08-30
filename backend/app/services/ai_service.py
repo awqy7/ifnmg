@@ -229,51 +229,33 @@ class AIService:
         recent_materials: List[Dict],
     ) -> str:
         """
-        Gera um briefing acadêmico ultra-conciso, persuasivo e direto ao ponto com dados reais do Virtual2.
-        Formato exato: 3 parágrafos, exatamente 2 frases por parágrafo (6 frases no total).
+        Gera um briefing acadêmico ultra-curto e cirúrgico com dados reais do Virtual2.
+        Formato: 3 linhas compactas, direto ao ponto.
         """
         first_name = user_name.split()[0] if user_name else "Líder"
 
-        # Parágrafo 1 (2 frases): Saudação com situação da grade + radar de entregas
+        # Linha 1: Saudação + Aulas + Contagem de pendências
         if today_courses:
             c_names = ", ".join([f"**{c['name']}** ({c.get('start_time', '--:--')})" for c in today_courses[:2]])
-            s1 = f"Bom dia, **{first_name}**! Hoje você tem aula de {c_names}, então aproveite cada minuto para absorver a matéria direto com o professor."
+            p1 = f"Bom dia, **{first_name}**! Aulas hoje: {c_names}. Você tem **{len(pending_activities)} entrega(s)** no radar."
         else:
-            s1 = f"Bom dia, **{first_name}**! Você não tem aulas presenciais hoje, o que garante uma janela perfeita para avançar nos estudos sem interrupções."
+            p1 = f"Bom dia, **{first_name}**! Sem aulas hoje e com **{len(pending_activities)} entrega(s) pendente(s)** no Virtual2." if pending_activities else f"Bom dia, **{first_name}**! Sem aulas presenciais hoje e com todas as tarefas em dia."
 
-        if pending_activities:
-            s2 = f"Você tem **{len(pending_activities)} atividade(s) no radar do Virtual2** que exigem atenção estratégica para não acumular matéria."
-        else:
-            s2 = "Seu painel está totalmente em dia, um sinal claro da sua disciplina e consistência acadêmica."
-
-        p1 = f"{s1} {s2}"
-
-        # Parágrafo 2 (2 frases): Prioridade crítica com prazo + motivo para liquidar agora
+        # Linha 2: Foco principal e prazo
         if pending_activities:
             top_act = pending_activities[0]
-            course = top_act.get("course_name") or "sua matéria principal"
-            title = top_act.get("title") or "Atividade Avaliativa"
+            course = top_act.get("course_name") or "Disciplina"
+            title = top_act.get("title") or "Atividade"
             due = top_act.get("due_date") or "em breve"
-            s3 = f"Sua prioridade número um é a entrega de **{course}** (*{title}*), com prazo final para `{due}`."
-            s4 = "Resolver essa entrega agora consolida seus pontos na média e elimina qualquer sobrecarga na reta final do bimestre."
+            p2 = f"Foco: **{course}** (*{title}*), prazo final `{due}`."
         elif recent_materials:
             top_mat = recent_materials[0]
-            s3 = f"Sua meta de estudo de hoje é revisar o material **\"{top_mat.get('title')}\"** de **{top_mat.get('course_name')}**."
-            s4 = "Essa revisão ativa de 15 minutos fixa os conceitos essenciais na sua memória de longo prazo."
+            p2 = f"Foco: revisar *\"{top_mat.get('title')}\"* de **{top_mat.get('course_name')}**."
         else:
-            s3 = "Escolha sua matéria mais desafiadora do semestre para fazer uma revisão preventiva hoje."
-            s4 = "Antecipar os conteúdos complexos é o segredo de quem passa de primeira sem sufoco."
+            p2 = "Foco: revisar suas anotações da matéria principal."
 
-        p2 = f"{s3} {s4}"
-
-        # Parágrafo 3 (2 frases): Micro-ação imediata de 25 min + encerramento motivador
-        if pending_activities:
-            s5 = "Ative o modo foco no celular e reserve 25 minutos seguidos agora para rascunhar a solução dessa atividade."
-        else:
-            s5 = "Reserve um bloco de 25 minutos do seu dia para organizar suas anotações e planejar suas próximas metas."
-        s6 = "Comece agora com foco absoluto e garanta um dia de alto rendimento!"
-
-        p3 = f"{s5} {s6}"
+        # Linha 3: Ação rápida
+        p3 = "Dedique 25 minutos de foco agora para liquidar essa meta e começar o dia vencendo!" if pending_activities else "Aproveite para adiantar leituras e manter seu ritmo de alto rendimento!"
 
         return f"{p1}\n\n{p2}\n\n{p3}"
 
@@ -286,39 +268,23 @@ class AIService:
         provider: AIProvider = AIProvider.GROQ,
         custom_api_keys: Optional[Dict] = None,
     ) -> str:
-        """Gera o resumo diário ultra-curto via IA (6 frases, 2 por parágrafo), com fallback inteligente."""
-        courses_str = "\n".join([
-            f"- {c['name']} ({c.get('start_time', '?')} - {c.get('end_time', '?')})"
-            for c in today_courses
-        ])
-        activities_str = "\n".join([
-            f"- [{a.get('course_name', 'Geral')}] {_sanitize_user_input(a['title'])} (Status: {a['status'].upper()} | Prazo: {a.get('due_date', 'Sem prazo fixo')})"
-            for a in pending_activities[:5]
-        ])
-        materials_str = "\n".join([
-            f"- [{m['course_name']}] {_sanitize_user_input(m['title'])}"
-            for m in recent_materials[:3]
-        ])
+        """Gera o resumo diário ultra-curto via IA (3 linhas cirúrgicas), com fallback inteligente."""
+        courses_str = ", ".join([f"{c['name']} ({c.get('start_time', '?')})" for c in today_courses[:2]])
+        activities_str = ", ".join([f"[{a.get('course_name', 'Geral')}] {a['title']} (prazo: {a.get('due_date', '?')})" for a in pending_activities[:3]])
 
         system_prompt = """Você é o Mentor Acadêmico IA do IFNMG.
-Sua missão é dar um direcionamento ultra-rápido, persuasivo e cirúrgico para o aluno.
+Gere um briefing acadêmico ULTRA-CURTO para o aluno.
 
-REQUISITO OBRIGATÓRIO DE FORMATO & TAMANHO (NÃO QUEBRE ESSA REGRA):
-- O briefing DEVE ter EXATAMENTE 3 parágrafos.
-- Cada parágrafo DEVE conter EXATAMENTE 2 frases completas.
-- Total de EXATAMENTE 6 frases no texto inteiro.
-- NÃO use títulos markdown (#, ##, ###), bullets (-) ou listas numeradas. Apenas os 3 parágrafos de texto puro em markdown com negritos para destaque.
+REGRAS RÍGIDAS DE TAMANHO:
+- Exatamente 3 parágrafos de 1 frase curta cada (totalizando no máximo 35-40 palavras).
+- Sem títulos (#), sem bullets (-), sem introduções longas.
+- Parágrafo 1: Saudação com primeiro nome + aulas de hoje + pendências.
+- Parágrafo 2: Foco principal com matéria, título e prazo.
+- Parágrafo 3: Chamada para ação de 25 minutos."""
 
-ESTRUTURA DOS 3 PARÁGRAFOS:
-Parágrafo 1 (2 frases): Saudação direta chamando pelo primeiro nome com a situação de aulas de hoje + contagem de pendências no radar.
-Parágrafo 2 (2 frases): Destaque da atividade mais crítica com nome da matéria e prazo + por que liquidar essa tarefa hoje.
-Parágrafo 3 (2 frases): Desafio de ação imediata de 25 minutos (Pomodoro) + frase de impacto final para começar agora."""
-
-        user_prompt = f"""Gere o Briefing Diário ultra-curto (exatamente 3 parágrafos de 2 frases cada) para o estudante {_sanitize_user_input(user_name)}.
-
-Aulas hoje: {courses_str if courses_str else "Nenhuma aula presencial hoje."}
-Pendências: {activities_str if activities_str else "Nenhuma pendência no momento."}
-Materiais recentes: {materials_str if materials_str else "Nenhum material recente."}"""
+        user_prompt = f"""Aluno: {user_name}
+Aulas: {courses_str if courses_str else 'Nenhuma aula hoje'}
+Tarefas: {activities_str if activities_str else 'Nenhuma tarefa pendente'}"""
 
         try:
             content = await self.chat(
@@ -328,15 +294,15 @@ Materiais recentes: {materials_str if materials_str else "Nenhum material recent
                 ],
                 provider=provider,
                 custom_api_keys=custom_api_keys,
-                max_tokens=400,
-                temperature=0.6,
+                max_tokens=150,
+                temperature=0.4,
             )
-            if content and len(content.strip()) > 80:
+            if content and len(content.strip()) > 30:
                 return content
         except Exception as e:
             logger.warning("Falha na geração com IA externa (%s). Acionando gerador inteligente acadêmico: %s", provider, e)
 
-        # Fallback ultra-conciso estruturado com dados reais do aluno
+        # Fallback ultra-conciso
         return self.generate_smart_fallback_briefing(
             user_name=user_name,
             today_courses=today_courses,

@@ -120,7 +120,7 @@ async def get_today_briefing(
     is_legacy_placeholder = (
         not briefing
         or not briefing.content
-        or len(briefing.content.strip()) < 120
+        or len(briefing.content.strip()) < 30
         or "Seu painel está pronto" in briefing.content
         or "<think>" in briefing.content
     )
