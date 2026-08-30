@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
@@ -36,29 +36,38 @@ export default function Dashboard() {
   const [topBarVisible, setTopBarVisible] = useState(true);
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollTop = useRef(0);
+  const lastToggleTime = useRef(0);
 
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
     setMobileMenuOpen(false);
     setTopBarVisible(true);
     lastScrollTop.current = 0;
+    lastToggleTime.current = 0;
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleMainScroll = (event: React.UIEvent<HTMLElement>) => {
+  const handleMainScroll = useCallback((event: React.UIEvent<HTMLElement>) => {
     const currentScrollTop = event.currentTarget.scrollTop;
+    const now = Date.now();
     const difference = currentScrollTop - lastScrollTop.current;
 
+    // Always show near top
     if (currentScrollTop < 16) {
-      setTopBarVisible(true);
-    } else if (difference > 6) {
-      setTopBarVisible(false);
-    } else if (difference < -6) {
-      setTopBarVisible(true);
+      if (!topBarVisible) setTopBarVisible(true);
+    } else if (now - lastToggleTime.current > 350) {
+      // Cooldown 350ms prevents rapid toggling on mouse wheel
+      if (difference > 8 && topBarVisible) {
+        setTopBarVisible(false);
+        lastToggleTime.current = now;
+      } else if (difference < -8 && !topBarVisible) {
+        setTopBarVisible(true);
+        lastToggleTime.current = now;
+      }
     }
 
     lastScrollTop.current = currentScrollTop;
-  };
+  }, [topBarVisible]);
 
   const openChat = (courseId?: string, prompt?: string) => {
     void courseId;
