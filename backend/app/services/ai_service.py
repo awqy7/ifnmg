@@ -229,94 +229,53 @@ class AIService:
         recent_materials: List[Dict],
     ) -> str:
         """
-        Gera um briefing acadêmico real, rico e persuasivo estruturado em Markdown,
-        utilizando os dados reais do aluno extraídos do Virtual2 IFNMG.
-        Garante entrega consistente mesmo se o provedor de IA externo estiver offline ou com quota esgotada.
+        Gera um briefing acadêmico ultra-conciso, persuasivo e direto ao ponto com dados reais do Virtual2.
+        Formato exato: 3 parágrafos, exatamente 2 frases por parágrafo (6 frases no total).
         """
-        from datetime import datetime
-        now = datetime.now()
-        weekdays = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
-        weekday_name = weekdays[now.weekday()]
         first_name = user_name.split()[0] if user_name else "Líder"
 
-        lines = []
-
-        # 1. Visão Estratégica do Dia
-        lines.append(f"### 🎯 **Visão Estratégica do Dia — {weekday_name}**")
-        if pending_activities:
-            lines.append(
-                f"Bom dia, **{first_name}**! Hoje é dia de foco estratégico e alta execução. "
-                f"Você tem **{len(pending_activities)} entrega(s) pendente(s)** no radar. "
-                "O sucesso no IFNMG não depende de sorte, mas da consistência com que você antecipa seus prazos e domina os conteúdos."
-            )
-        else:
-            lines.append(
-                f"Excelente dia, **{first_name}**! Todas as suas atividades cadastradas estão em dia — esse é o padrão de quem se destaca. "
-                "Aproveite a tranquilidade de hoje para aprofundar tópicos complexos e sair na frente no semestre."
-            )
-
+        # Parágrafo 1 (2 frases): Saudação com situação da grade + radar de entregas
         if today_courses:
-            courses_str = ", ".join([
-                f"**{c['name']}** ({c.get('start_time', '--:--')} às {c.get('end_time', '--:--')})"
-                for c in today_courses
-            ])
-            lines.append(f"\n📚 **Grade de Aulas Hoje:** {courses_str}. Esteja presente com atenção ativa para absorver os conceitos direto na fonte.")
+            c_names = ", ".join([f"**{c['name']}** ({c.get('start_time', '--:--')})" for c in today_courses[:2]])
+            s1 = f"Bom dia, **{first_name}**! Hoje você tem aula de {c_names}, então aproveite cada minuto para absorver a matéria direto com o professor."
         else:
-            lines.append("\n📚 **Grade de Aulas Hoje:** Nenhuma aula presencial agendada para hoje — uma excelente oportunidade para adiantar estudos e projetos sem interrupções.")
+            s1 = f"Bom dia, **{first_name}**! Você não tem aulas presenciais hoje, o que garante uma janela perfeita para avançar nos estudos sem interrupções."
 
-        # 2. Prazos & Entregas Críticas
-        lines.append("\n### ⚠️ **Prazos & Entregas Críticas no Virtual2**")
         if pending_activities:
-            lines.append("Não deixe para a última hora. Cada atividade enviada no prazo garante sua nota e elimina a sobrecarga mental:")
-            for act in pending_activities[:6]:
-                course = act.get("course_name") or "Disciplina Geral"
-                title = act.get("title") or "Atividade Avaliativa"
-                due = act.get("due_date") or "Sem prazo fixado"
-                status = act.get("status", "pending")
-                desc = act.get("description")
-
-                badge = "🚨 **[ATRASADA]**" if status == "late" else "⏳ **[PENDENTE]**"
-                act_line = f"- {badge} **{course}**: *{title}* — Prazo final: `{due}`"
-                if desc and len(desc) > 10:
-                    clean_desc = desc.replace("\n", " ").strip()
-                    if len(clean_desc) > 90:
-                        clean_desc = clean_desc[:90] + "..."
-                    act_line += f"\n  - *Resumo:* {clean_desc}"
-                lines.append(act_line)
-
-            if len(pending_activities) > 6:
-                lines.append(f"- *... e mais {len(pending_activities) - 6} atividade(s) monitorada(s) no seu painel.*")
+            s2 = f"Você tem **{len(pending_activities)} atividade(s) no radar do Virtual2** que exigem atenção estratégica para não acumular matéria."
         else:
-            lines.append("🎉 **Tudo limpo no radar!** Nenhuma atividade pendente no momento. Mantenha essa disciplina!")
+            s2 = "Seu painel está totalmente em dia, um sinal claro da sua disciplina e consistência acadêmica."
 
-        # 3. Tópico em Foco para Dominar Hoje
-        lines.append("\n### 💡 **Tópico em Foco para Dominar Hoje**")
+        p1 = f"{s1} {s2}"
+
+        # Parágrafo 2 (2 frases): Prioridade crítica com prazo + motivo para liquidar agora
         if pending_activities:
-            focus_act = pending_activities[0]
-            focus_course = focus_act.get("course_name") or "sua matéria prioritária"
-            focus_title = focus_act.get("title") or "o conteúdo da atividade"
-            lines.append(f"Direcione sua energia principal para **{focus_course}** (*{focus_title}*).")
-            lines.append("👉 **Por que dominar agora?** A compreensão prática desse tópico é cumulativa. Ao resolver essa pendência hoje, você consolida a base teórica e evita acumular dúvidas para as semanas de prova.")
-            lines.append("👉 **Como estudar com máxima eficiência:** Separe 15 minutos para reler as anotações e os slides da disciplina no Virtual2, identifique os critérios centrais exigidos e construa a resposta de forma estruturada.")
+            top_act = pending_activities[0]
+            course = top_act.get("course_name") or "sua matéria principal"
+            title = top_act.get("title") or "Atividade Avaliativa"
+            due = top_act.get("due_date") or "em breve"
+            s3 = f"Sua prioridade número um é a entrega de **{course}** (*{title}*), com prazo final para `{due}`."
+            s4 = "Resolver essa entrega agora consolida seus pontos na média e elimina qualquer sobrecarga na reta final do bimestre."
         elif recent_materials:
-            mat = recent_materials[0]
-            lines.append(f"Aprofunde seus estudos em **{mat.get('course_name', 'suas disciplinas')}**, revisando o material recente: *\"{mat.get('title', 'Conteúdo da disciplina')}\"*.")
-            lines.append("👉 **Dica de estudo ativo:** Faça um resumo esquemático de 5 tópicos principais para fixar o aprendizado na memória de longo prazo.")
+            top_mat = recent_materials[0]
+            s3 = f"Sua meta de estudo de hoje é revisar o material **\"{top_mat.get('title')}\"** de **{top_mat.get('course_name')}**."
+            s4 = "Essa revisão ativa de 15 minutos fixa os conceitos essenciais na sua memória de longo prazo."
         else:
-            lines.append("Selecione a disciplina com maior peso ou dificuldade do seu semestre e faça uma sessão de leitura ativa e resolução de exercícios práticos.")
+            s3 = "Escolha sua matéria mais desafiadora do semestre para fazer uma revisão preventiva hoje."
+            s4 = "Antecipar os conteúdos complexos é o segredo de quem passa de primeira sem sufoco."
 
-        # 4. Ação de Impacto Imediato
-        lines.append("\n### 🔥 **Ação de Impacto Imediato (Desafio dos 25 Minutos)**")
+        p2 = f"{s3} {s4}"
+
+        # Parágrafo 3 (2 frases): Micro-ação imediata de 25 min + encerramento motivador
         if pending_activities:
-            first_act = pending_activities[0]
-            lines.append(
-                f"Ative o modo foco, abra a atividade **\"{first_act.get('title')}\"** de **{first_act.get('course_name', 'sua disciplina')}** "
-                "e dedique um bloco ininterrupto de 25 minutos (Pomodoro) para rascunhar a solução. Começar é vencer 80% da batalha!"
-            )
+            s5 = "Ative o modo foco no celular e reserve 25 minutos seguidos agora para rascunhar a solução dessa atividade."
         else:
-            lines.append("Dedique um bloco de 25 minutos para organizar suas anotações da semana, revisar pendências futuras e planejar suas próximas metas.")
+            s5 = "Reserve um bloco de 25 minutos do seu dia para organizar suas anotações e planejar suas próximas metas."
+        s6 = "Comece agora com foco absoluto e garanta um dia de alto rendimento!"
 
-        return "\n".join(lines)
+        p3 = f"{s5} {s6}"
+
+        return f"{p1}\n\n{p2}\n\n{p3}"
 
     async def generate_daily_briefing(
         self,
@@ -327,47 +286,39 @@ class AIService:
         provider: AIProvider = AIProvider.GROQ,
         custom_api_keys: Optional[Dict] = None,
     ) -> str:
-        """Gera o resumo diário personalizado via IA, com fallback dinâmico inteligente."""
+        """Gera o resumo diário ultra-curto via IA (6 frases, 2 por parágrafo), com fallback inteligente."""
         courses_str = "\n".join([
             f"- {c['name']} ({c.get('start_time', '?')} - {c.get('end_time', '?')})"
             for c in today_courses
         ])
         activities_str = "\n".join([
             f"- [{a.get('course_name', 'Geral')}] {_sanitize_user_input(a['title'])} (Status: {a['status'].upper()} | Prazo: {a.get('due_date', 'Sem prazo fixo')})"
-            + (f" - Contexto: {_sanitize_user_input(a['description'])}" if a.get("description") else "")
-            for a in pending_activities[:8]
+            for a in pending_activities[:5]
         ])
         materials_str = "\n".join([
             f"- [{m['course_name']}] {_sanitize_user_input(m['title'])}"
-            for m in recent_materials[:5]
+            for m in recent_materials[:3]
         ])
 
-        system_prompt = """Você é o Mentor & Estrategista Acadêmico IA do IFNMG.
-Sua missão é impulsionar a disciplina, o foco e a produtividade do estudante com alta persuasão, energia positiva e inteligência pedagógica.
+        system_prompt = """Você é o Mentor Acadêmico IA do IFNMG.
+Sua missão é dar um direcionamento ultra-rápido, persuasivo e cirúrgico para o aluno.
 
-DIRETRIZES DE ESTILO & ESTRUTURA:
-1. Tom de voz: Persuasivo, motivador, direto ao ponto e envolvente (fale como um mentor de alta performance que acredita no potencial do aluno).
-2. Formato em Markdown com seções claras, bullets e destaques em negrito.
-3. Não seja genérico: use os nomes reais das matérias e atividades fornecidas.
+REQUISITO OBRIGATÓRIO DE FORMATO & TAMANHO (NÃO QUEBRE ESSA REGRA):
+- O briefing DEVE ter EXATAMENTE 3 parágrafos.
+- Cada parágrafo DEVE conter EXATAMENTE 2 frases completas.
+- Total de EXATAMENTE 6 frases no texto inteiro.
+- NÃO use títulos markdown (#, ##, ###), bullets (-) ou listas numeradas. Apenas os 3 parágrafos de texto puro em markdown com negritos para destaque.
 
-ESTRUTURA DO BRIEFING:
-🎯 **Visão Estratégica do Dia**: Saudação persuasiva chamando pelo primeiro nome, destacando a importância do dia de hoje para o progresso acadêmico.
-⚠️ **Prazos & Entregas Críticas**: Liste as atividades que estão faltando/pendentes com seus prazos, reforçando com persuasão a urgência de entregar no prazo para não comprometer a média ou acumular matéria.
-💡 **Tópico em Foco para Dominar Hoje**: Escolha UMA das disciplinas com atividade ou material recente. Destaque um conceito/tópico central dessa matéria, dê uma explicação rápida e prática de como estudar e por que esse conceito faz a diferença.
-🔥 **Ação de Impacto Imediato**: Um desafio/micro-ação prática de 20-30 minutos para o aluno executar agora e começar o dia vencendo."""
+ESTRUTURA DOS 3 PARÁGRAFOS:
+Parágrafo 1 (2 frases): Saudação direta chamando pelo primeiro nome com a situação de aulas de hoje + contagem de pendências no radar.
+Parágrafo 2 (2 frases): Destaque da atividade mais crítica com nome da matéria e prazo + por que liquidar essa tarefa hoje.
+Parágrafo 3 (2 frases): Desafio de ação imediata de 25 minutos (Pomodoro) + frase de impacto final para começar agora."""
 
-        user_prompt = f"""Gere o Briefing Estratégico do Dia para o estudante {_sanitize_user_input(user_name)}.
+        user_prompt = f"""Gere o Briefing Diário ultra-curto (exatamente 3 parágrafos de 2 frases cada) para o estudante {_sanitize_user_input(user_name)}.
 
-📚 **Aulas na grade de hoje:**
-{courses_str if courses_str else "Nenhuma aula presencial hoje (ótima oportunidade para adiantar tarefas!)"}
-
-📝 **Atividades Pendentes & Faltantes no Virtual2:**
-{activities_str if activities_str else "Nenhuma atividade pendente registrada no momento."}
-
-📖 **Materiais e conteúdos recentes postados pelos professores:**
-{materials_str if materials_str else "Sem novos materiais nas últimas semanas."}
-
-Elabore um briefing envolvente, interativo e persuasivo seguindo a estrutura."""
+Aulas hoje: {courses_str if courses_str else "Nenhuma aula presencial hoje."}
+Pendências: {activities_str if activities_str else "Nenhuma pendência no momento."}
+Materiais recentes: {materials_str if materials_str else "Nenhum material recente."}"""
 
         try:
             content = await self.chat(
@@ -377,15 +328,15 @@ Elabore um briefing envolvente, interativo e persuasivo seguindo a estrutura."""
                 ],
                 provider=provider,
                 custom_api_keys=custom_api_keys,
-                max_tokens=800,
-                temperature=0.7,
+                max_tokens=400,
+                temperature=0.6,
             )
-            if content and len(content.strip()) > 100:
+            if content and len(content.strip()) > 80:
                 return content
         except Exception as e:
             logger.warning("Falha na geração com IA externa (%s). Acionando gerador inteligente acadêmico: %s", provider, e)
 
-        # Fallback de alta qualidade estruturado com dados reais do aluno
+        # Fallback ultra-conciso estruturado com dados reais do aluno
         return self.generate_smart_fallback_briefing(
             user_name=user_name,
             today_courses=today_courses,
