@@ -70,11 +70,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "quiz":
-        return <HelpCircle className="w-4 h-4 text-purple-400" />;
+        return <HelpCircle className="w-4 h-4 text-emerald-400" />;
       case "forum":
-        return <MessageCircle className="w-4 h-4 text-blue-400" />;
+        return <MessageCircle className="w-4 h-4 text-teal-400" />;
       default:
-        return <FileText className="w-4 h-4 text-indigo-400" />;
+        return <FileText className="w-4 h-4 text-emerald-400" />;
     }
   };
 
@@ -83,11 +83,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2.5">
-            <CheckSquare className="w-7 h-7 text-indigo-400" /> Central de Atividades & Prazos
+          <h1 className="text-2xl font-black text-white flex items-center gap-2.5 tracking-tight">
+            <CheckSquare className="w-7 h-7 text-emerald-400" /> Central de Atividades & Prazos
           </h1>
-          <p className="text-sm text-gray-400">
-            Acompanhe cada entrega, estude as instruções com o Tutor IA e garanta 100% de aproveitamento acadêmico
+          <p className="text-sm text-zinc-400">
+            Acompanhe cada entrega, estude as instruções com o Mentor IA e garanta 100% de aproveitamento acadêmico
           </p>
         </div>
       </div>
@@ -99,8 +99,8 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
             <CogSpinner size={40} className="text-white" />
           </div>
         ) : sortedActivities.length === 0 ? (
-          <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
-            Nenhuma atividade encontrada no Virtual2.
+          <div className="p-12 rounded-3xl bg-[#121217] border border-white/10 text-center text-zinc-400 text-sm leading-relaxed shadow-xl shadow-black/40">
+            Nenhuma atividade pendente encontrada no Virtual2. Parabéns pela organização! 🚀
           </div>
         ) : (
           sortedActivities.map((act) => {
@@ -111,15 +111,15 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
               <div
                 key={act.id}
                 onClick={() => openActivity && openActivity(act.id)}
-                className="bg-[#181826] border border-white/10 hover:border-indigo-500/40 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition cursor-pointer group"
+                className="bg-[#121217] border border-white/10 hover:border-emerald-500/30 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition cursor-pointer group shadow-lg shadow-black/30"
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <button
                     onClick={(e) => handleToggleStatus(e, act.id, act.status)}
                     className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 ${
                       isSubmitted
-                        ? "bg-emerald-600 border-emerald-500 text-white"
-                        : "border-white/20 hover:border-indigo-500 bg-white/5"
+                        ? "bg-emerald-500 border-emerald-400 text-black font-black"
+                        : "border-white/20 hover:border-emerald-500 bg-white/5"
                     }`}
                     title={isSubmitted ? "Marcar como pendente" : "Marcar como entregue"}
                   >
@@ -129,28 +129,28 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                   <div className="min-w-0 flex-1">
                     <div className="mb-2">
                       <span
-                        className="inline-flex max-w-full items-center rounded-xl border border-indigo-500/40 bg-indigo-500/15 px-2.5 py-1 text-xs font-semibold text-indigo-300 shadow-sm"
+                        className="inline-flex max-w-full items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300 shadow-sm"
                       >
                         <span className="truncate">{act.course_name || "Disciplina"}</span>
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="p-1 rounded-md bg-white/5">{getTypeIcon(act.type)}</span>
+                      <span className="p-1 rounded-md bg-white/[0.04] border border-white/5">{getTypeIcon(act.type)}</span>
                       <h3
-                        className={`text-sm font-semibold text-white group-hover:text-indigo-300 transition ${
-                          isSubmitted ? "line-through text-gray-500" : ""
+                        className={`text-sm font-semibold text-white group-hover:text-emerald-300 transition ${
+                          isSubmitted ? "line-through text-zinc-500" : ""
                         }`}
                       >
                         {act.title}
                       </h3>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-400 flex-wrap">
                       {act.due_date ? (
                         <span
                           className={`flex items-center gap-1 font-medium ${
-                            isLate ? "text-red-400" : isSubmitted ? "text-gray-500" : "text-amber-400"
+                            isLate ? "text-red-400" : isSubmitted ? "text-zinc-500" : "text-amber-400"
                           }`}
                         >
                           <Clock className="w-3.5 h-3.5" />
@@ -163,11 +163,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                           })}
                         </span>
                       ) : (
-                        <span className="text-gray-500">Sem prazo definido</span>
+                        <span className="text-zinc-500">Sem prazo definido</span>
                       )}
 
                       {act.grade !== null && act.grade !== undefined && (
-                        <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                           Nota: {act.grade} {act.max_grade ? `/ ${act.max_grade}` : ""}
                         </span>
                       )}
@@ -176,10 +176,10 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 group-hover:bg-indigo-600/20 border border-indigo-500/20 text-xs font-semibold text-indigo-300 transition">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Ver no App</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition" />
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 group-hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-semibold text-emerald-300 transition">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Detalhes & IA</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:translate-x-0.5 transition" />
                   </span>
                 </div>
               </div>

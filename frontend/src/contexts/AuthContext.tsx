@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { authApi } from "@/lib/api";
+import { tokenStore } from "@/lib/token-store";
 
 interface User {
   id: string;
@@ -23,122 +23,92 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Chave para armazenar token em memória (fallback para mobile/Safari)
-const TOKEN_STORAGE_KEY = "ifnmg_auth_token";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+/**
+ * Realiza um fetch autenticado usando cookies httpOnly + Bearer token como fallback.
+ * Isso garante compatibilidade com iOS Safari (ITP bloqueia cookies cross-site).
+ */
+async function apiFetch(path: string, options: RequestInit = {}) {
+  const token = tokenStore.get();
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    },
+    credentials: "include",
+  });
+  return res;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Tenta obter token salvo (fallback mobile)
-  const getStoredToken = (): string | null => {
-    if (typeof window === "undefined") return null;
-    return sessionStorage.getItem(TOKEN_STORAGE_KEY);
-  };
-
-  const setStoredToken = (token: string | null) => {
-    if (typeof window === "undefined") return;
-    if (token) sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
-    else sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-  };
-
-  // Cria headers com token fallback se cookie não funcionar
-  const getAuthHeaders = (): HeadersInit => {
-    const fallbackToken = getStoredToken();
-    return {
-      "Content-Type": "application/json",
-      ...(fallbackToken ? { Authorization: `Bearer ${fallbackToken}` } : {}),
-    };
-  };
-
-  // Wrapper para fetch com fallback de token
-  const apiFetch = async (path: string, options: RequestInit = {}) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}${path}`, {
-      ...options,
-      headers: {
-        ...getAuthHeaders(),
-        ...options.headers,
-      },
-      credentials: "include",
-    });
-    return res;
-  };
-
-  // Substitui métodos da api com fallback
-  const authApiWithFallback = {
-    moodleLogin: async (username: string, password: string) => {
-      const res = await apiFetch("/api/auth/moodle-login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Erro na requisição");
-      }
-      return res.json();
-    },
-    getMe: async () => {
+  /**
+   * Tenta recuperar o usuário autenticado.
+   * No iOS Safari o cookie pode não chegar; o Bearer token é o fallback.
+   */
+  const fetchMe = async (): Promise<User | null> => {
+    try {
       const res = await apiFetch("/api/auth/me");
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Erro na requisição");
+      if (res.status === 401) {
+        tokenStore.clear();
+        return null;
       }
+      if (!res.ok) return null;
       return res.json();
-    },
-    logout: async () => {
-      const res = await apiFetch("/api/auth/logout", { method: "POST" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Erro na requisição");
-      }
-      return res.json();
-    },
-    updateMe: async (data: any) => {
-      const res = await apiFetch("/api/auth/me", {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Erro na requisição");
-      }
-      return res.json();
-    },
+    } catch {
+      return null;
+    }
   };
 
   useEffect(() => {
-    // Tenta primeiro com cookie (funciona no desktop)
-    authApiWithFallback.getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
+    fetchMe()
+      .then((me) => setUser(me))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (username: string, password: string) => {
-    const data = await authApiWithFallback.moodleLogin(username, password);
-    // Salva token como fallback para mobile/Safari
-    if (data.access_token) {
-      setStoredToken(data.access_token);
+    const res = await apiFetch("/api/auth/moodle-login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(
+        err.detail || "Não foi possível autenticar no Virtual2. Confira seu usuário e senha institucionais."
+      );
     }
-    const me = await authApiWithFallback.getMe();
+
+    const data = await res.json();
+
+    // Salva o token JWT em memória + sessionStorage + localStorage
+    // O ApiClient vai incluí-lo em todos os requests subsequentes (iOS Safari fix)
+    if (data.access_token) {
+      tokenStore.set(data.access_token);
+    }
+
+    const me = await fetchMe();
+    if (!me) throw new Error("Não foi possível obter dados do usuário após login.");
     setUser(me);
   };
 
   const logout = async () => {
     try {
-      await authApiWithFallback.logout();
+      await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
-    setStoredToken(null);
+    tokenStore.clear();
     setUser(null);
   };
 
   const refreshUser = async () => {
-    try {
-      const me = await authApiWithFallback.getMe();
-      setUser(me);
-    } catch {
-      setUser(null);
-    }
+    const me = await fetchMe();
+    setUser(me);
   };
 
   return (

@@ -81,24 +81,24 @@ export default function SettingsView() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-extrabold text-white flex items-center gap-2.5">
-          <Settings className="w-7 h-7 text-indigo-400" /> Configurações do Sistema
+        <h1 className="text-2xl font-black text-white flex items-center gap-2.5 tracking-tight">
+          <Settings className="w-7 h-7 text-emerald-400" /> Configurações do Sistema
         </h1>
-        <p className="text-sm text-gray-400">
-          Gerencie suas credenciais do Moodle, provedores de IA e preferências de notificação
+        <p className="text-sm text-zinc-400">
+          Gerencie suas credenciais do Moodle, provedores de inteligência e preferências de alertas
         </p>
       </div>
 
       {/* SECTION 1: Virtual2 Moodle Authentication */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
+      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <Lock className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Credenciais do Virtual2 IFNMG</h2>
-              <p className="text-xs text-gray-400">Login automático e sincronização contínua de atividades</p>
+              <p className="text-xs text-zinc-400">Sincronização em tempo real das suas disciplinas, tarefas e notas</p>
             </div>
           </div>
 
@@ -116,7 +116,7 @@ export default function SettingsView() {
         <form onSubmit={handleSaveMoodle} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
                 Usuário / CPF (Virtual2)
               </label>
               <input
@@ -125,12 +125,12 @@ export default function SettingsView() {
                 onChange={(e) => setMoodleUser(e.target.value)}
                 placeholder="Seu login no virtual2.ifnmg.edu.br"
                 required
-                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
                 Senha (Virtual2)
               </label>
               <input
@@ -139,7 +139,7 @@ export default function SettingsView() {
                 onChange={(e) => setMoodlePass(e.target.value)}
                 placeholder="••••••••••••"
                 required
-                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
               />
             </div>
           </div>
@@ -157,15 +157,15 @@ export default function SettingsView() {
           )}
 
           <div className="flex items-center justify-between pt-2">
-            <p className="text-[11px] text-gray-500 flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-indigo-400" />
-              Suas credenciais são criptografadas com Fernet (AES-128) no banco de dados.
+            <p className="text-[11px] text-zinc-500 flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              Credenciais criptografadas em repouso com algoritmo Fernet (AES-128).
             </p>
 
             <button
               type="submit"
               disabled={savingMoodle}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-950/40 transition"
             >
               {savingMoodle ? (
                 <>
@@ -180,16 +180,16 @@ export default function SettingsView() {
       </div>
 
       {/* SECTION 2: AI Multi-Provider Config */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
+      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              <Cpu className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-zinc-800 text-zinc-300 border border-zinc-700/50">
+              <Cpu className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Provedores de IA</h2>
-              <p className="text-xs text-gray-400">
-                Padrão gratuito via Google Gemini Flash ou configure sua própria chave (OpenAI, Anthropic, Groq, Ollama)
+              <h2 className="text-base font-bold text-white">Provedores de Inteligência Artificial</h2>
+              <p className="text-xs text-zinc-400">
+                Padrão inteligente de alta performance com Groq e Google Gemini, ou conecte sua própria chave
               </p>
             </div>
           </div>
@@ -198,15 +198,15 @@ export default function SettingsView() {
         <form onSubmit={handleSaveAI} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
                 Provedor de Inteligência Artificial
               </label>
               <select
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
               >
-                <option value="groq">Groq GPT-OSS 120B (Gratuito, Padrão)</option>
+                <option value="groq">Groq GPT-OSS 120B (Ultra Rápido, Padrão)</option>
                 <option value="gemini">Google Gemini 1.5 Flash (Gratuito)</option>
                 <option value="openai">OpenAI GPT-4o Mini (Chave Própria)</option>
                 <option value="anthropic">Anthropic Claude 3 Haiku (Chave Própria)</option>
@@ -215,7 +215,7 @@ export default function SettingsView() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
                 Chave de API (Opcional)
               </label>
               <input
@@ -223,13 +223,13 @@ export default function SettingsView() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Insira sua chave de API personalizada..."
-                className="w-full min-h-11 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition"
               />
             </div>
           </div>
 
           {aiMessage && (
-            <div className="p-3 rounded-xl text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+            <div className="p-3 rounded-xl text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
               {aiMessage}
             </div>
           )}
@@ -238,11 +238,11 @@ export default function SettingsView() {
             <button
               type="submit"
               disabled={savingAI || !apiKey}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-950/40 transition"
             >
               {savingAI ? (
                 <>
-                  <CogSpinner size={16} className="text-white" /> Testando & Salvando...
+                  <CogSpinner size={16} className="text-white" /> Validando & Salvando...
                 </>
               ) : (
                 "Atualizar Chave de IA"
@@ -253,38 +253,38 @@ export default function SettingsView() {
       </div>
 
       {/* SECTION 3: Notifications Preferences */}
-      <div className="rounded-3xl bg-[#181826] border border-white/10 p-4 sm:p-6 space-y-5">
+      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
         <div className="flex items-center gap-2.5 pb-4 border-b border-white/10">
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Bell className="w-4 h-4" />
           </div>
           <div>
             <h2 className="text-base font-bold text-white">Preferências de Notificação</h2>
-            <p className="text-xs text-gray-400">Escolha quais alertas você deseja receber</p>
+            <p className="text-xs text-zinc-400">Personalize a frequência e o tipo de avisos acadêmicos</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
-            { key: "new_activity", label: "Novas atividades postadas pelos professores" },
-            { key: "deadline_7d", label: "Alertas de prazo: 7 dias antes" },
-            { key: "deadline_3d", label: "Alertas de prazo: 3 dias antes" },
-            { key: "deadline_1d", label: "Alertas de prazo: 1 dia antes" },
-            { key: "deadline_6h", label: "Alertas de prazo urgente: 6 horas antes" },
-            { key: "grade_released", label: "Notas e avaliações lançadas" },
-            { key: "daily_briefing", label: "Resumo diário com IA às 6h da manhã" },
+            { key: "new_activity", label: "Novas tarefas postadas pelos professores" },
+            { key: "deadline_7d", label: "Antecipação estratégica: 7 dias antes do prazo" },
+            { key: "deadline_3d", label: "Alerta de foco: 3 dias antes do prazo" },
+            { key: "deadline_1d", label: "Alerta prioritário: 1 dia antes do prazo" },
+            { key: "deadline_6h", label: "Alerta de urgência máxima: 6 horas antes" },
+            { key: "grade_released", label: "Lançamento de novas notas e correções" },
+            { key: "daily_briefing", label: "Briefing diário com IA às 6h da manhã" },
           ].map((item) => {
             const active = notifSettings[item.key as keyof typeof notifSettings];
             return (
               <div
                 key={item.key}
                 onClick={() => handleToggleNotif(item.key)}
-                className="p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 flex items-center justify-between gap-3 cursor-pointer transition select-none"
+                className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/20 flex items-center justify-between gap-3 cursor-pointer transition select-none"
               >
-                <span className="text-xs text-gray-300">{item.label}</span>
+                <span className="text-xs text-zinc-300">{item.label}</span>
                 <div
                   className={`w-9 h-5 rounded-full p-0.5 transition ${
-                    active ? "bg-indigo-600" : "bg-white/10"
+                    active ? "bg-emerald-500" : "bg-white/10"
                   }`}
                 >
                   <div

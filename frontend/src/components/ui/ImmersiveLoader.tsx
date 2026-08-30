@@ -36,7 +36,7 @@ export function LoginButton({
     <button
       onClick={handleClick}
       disabled={loading}
-      className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center overflow-hidden"
+      className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-900/30 flex items-center justify-center overflow-hidden font-semibold text-white tracking-wide"
     >
       {loading ? (
         <CogSpinner size={28} className="text-white" />
@@ -53,7 +53,7 @@ export function LoginButton({
  */
 export function InitialLoadingScreen() {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08080f]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08080c]">
       <CogSpinner size={80} className="text-white" />
     </div>
   );

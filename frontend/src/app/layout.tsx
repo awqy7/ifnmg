@@ -8,13 +8,13 @@ import { Analytics } from "@vercel/analytics/next";
 const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
-  themeColor: "#0f0f13",
+  themeColor: "#08080c",
   viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
-  title: "IFNMG Assistente — Seu Tutor Acadêmico com IA",
-  description: "Sistema inteligente de assistência acadêmica para alunos do IFNMG com notificações, resumos e tutor de IA",
+  title: "IFNMG Assistente — Seu Tutor Acadêmico de Elite",
+  description: "Plataforma avançada de inteligência acadêmica para estudantes do IFNMG: sincronização inteligente com Virtual2, tutoria com IA e gestão de alto desempenho.",
   manifest: "/manifest.json",
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={`${inter.className} bg-[#0f0f13] text-white antialiased`}>
+      <body className={`${inter.className} bg-[#08080c] text-white antialiased`}>
         <AuthProvider>
           <SyncProvider>
             {children}

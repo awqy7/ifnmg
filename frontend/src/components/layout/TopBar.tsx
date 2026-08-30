@@ -131,7 +131,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
   return (
     <header
-      className={`sticky top-0 z-30 bg-[#13131c]/80 backdrop-blur-md border-b border-white/10 pt-[env(safe-area-inset-top)] transition-[max-height,transform,opacity] duration-300 ease-out ${
+      className={`sticky top-0 z-30 bg-[#0d0d12]/85 backdrop-blur-md border-b border-white/10 pt-[env(safe-area-inset-top)] transition-[max-height,transform,opacity] duration-300 ease-out ${
         isVisible
           ? "max-h-24 translate-y-0 opacity-100 overflow-visible"
           : "max-h-0 -translate-y-full opacity-0 overflow-hidden border-transparent"
@@ -141,29 +141,29 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onMenuToggle}
-            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition lg:hidden shrink-0"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 transition lg:hidden shrink-0"
             aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="mobile-brand sm:hidden flex items-center gap-2 min-w-0">
-            <GraduationCap className="w-5 h-5 text-indigo-400 shrink-0" />
+            <GraduationCap className="w-5 h-5 text-emerald-400 shrink-0" />
             <span className="text-sm font-bold text-white truncate">
-              IFNMG <span className="text-indigo-400 font-medium">Assistente</span>
+              IFNMG <span className="text-emerald-400 font-medium">Assistente</span>
             </span>
           </div>
           <div className="hidden sm:block min-w-0">
-            <p className="text-xs text-gray-400">Ambiente Acadêmico Conectado</p>
+            <p className="text-xs text-zinc-400">Ambiente Acadêmico Conectado</p>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-white truncate">Virtual2 IFNMG</span>
               {user?.moodle_connected ? (
-                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
-                  <CheckCircle2 className="w-3 h-3" /> Online
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+                  <CheckCircle2 className="w-3 h-3" /> Sincronizado
                 </span>
               ) : (
                 <button
                   onClick={() => onNavigate("configuracoes")}
-                  className="flex items-center gap-1 text-[11px] font-medium text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 hover:bg-amber-500/20 transition shrink-0"
+                  className="flex items-center gap-1 text-[11px] font-medium text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 hover:bg-amber-500/20 transition shrink-0"
                 >
                   <AlertCircle className="w-3 h-3" /> Conectar Virtual2
                 </button>
@@ -177,11 +177,11 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="min-w-11 h-11 sm:h-10 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-200 transition disabled:opacity-50"
-            aria-label="Sincronizar agora com o Moodle"
+            className="min-w-11 h-11 sm:h-10 flex items-center justify-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-white/5 hover:bg-white/10 hover:border-emerald-500/30 border border-white/10 text-xs font-semibold text-zinc-200 transition disabled:opacity-50"
+            aria-label="Sincronizar dados com o Virtual2"
             title="Sincronizar agora com o Moodle"
           >
-            {syncing ? <CogSpinner size={18} className="text-indigo-400" /> : <RefreshCw className="w-3.5 h-3.5 text-gray-400" />}
+            {syncing ? <CogSpinner size={18} className="text-emerald-400" /> : <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />}
             <span className="hidden sm:inline">{syncing ? "Sincronizando..." : "Sincronizar"}</span>
           </button>
 
@@ -190,12 +190,12 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             disabled
             className={`mobile-ai-action ${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
-            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-[#161622] border border-white/5 text-xs font-medium text-gray-500 cursor-not-allowed transition shadow-inner`}
+            } min-w-11 h-11 sm:h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-[#14141a] border border-white/5 text-xs font-medium text-zinc-500 cursor-not-allowed transition shadow-inner`}
             aria-label="Tutor IA em breve"
             title="Chat com IA (Em breve)"
           >
-            <Sparkles className="w-3.5 h-3.5 text-gray-600" />
-            <span className="hidden sm:inline text-gray-500">IA</span>
+            <Sparkles className="w-3.5 h-3.5 text-zinc-600" />
+            <span className="hidden sm:inline text-zinc-500">IA</span>
             <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/80">
               BETA
             </span>
@@ -205,13 +205,13 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           <div ref={notificationsRef} className="relative">
             <button
               onClick={toggleNotifications}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 relative transition"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 relative transition"
               aria-label="Abrir notificações"
               title="Notificações"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#13131c]">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center border-2 border-[#0d0d12]">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -219,16 +219,16 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-96 max-w-[calc(100vw-1rem)] bg-[#181826] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-white/5">
+              <div className="absolute right-0 mt-2 w-72 sm:w-96 max-w-[calc(100vw-1rem)] bg-[#121217] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-white/[0.03]">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-indigo-400" />
-                    <span className="font-semibold text-sm text-white">Notificações</span>
+                    <Bell className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold text-sm text-white">Alertas & Avisos</span>
                   </div>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition"
+                      className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold transition"
                     >
                       <Check className="w-3.5 h-3.5" /> Marcar todas como lidas
                     </button>
@@ -237,8 +237,8 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
                 <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
                   {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-gray-400 text-xs">
-                      Nenhuma notificação no momento.
+                    <div className="p-6 text-center text-zinc-500 text-xs">
+                      Tudo em ordem. Nenhuma notificação nova no momento.
                     </div>
                   ) : (
                     notifications.slice(0, 10).map((notif) => (
@@ -246,19 +246,19 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
                         className={`p-3.5 hover:bg-white/5 transition flex flex-col gap-1 cursor-pointer select-none ${
-                          !notif.is_read ? "bg-indigo-600/10 border-l-2 border-indigo-500" : ""
+                          !notif.is_read ? "bg-emerald-500/10 border-l-2 border-emerald-400" : ""
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="text-xs font-semibold text-gray-200 line-clamp-1 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <h4 className="text-xs font-semibold text-zinc-200 line-clamp-1 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                             <span>{notif.title}</span>
                           </h4>
-                          <span className="text-[10px] text-gray-500 shrink-0">
+                          <span className="text-[10px] text-zinc-500 shrink-0">
                             {new Date(notif.created_at).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 line-clamp-2">{notif.message}</p>
+                        <p className="text-xs text-zinc-400 line-clamp-2">{notif.message}</p>
                       </div>
                     ))
                   )}

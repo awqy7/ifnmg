@@ -1,16 +1,25 @@
 /**
  * API client centralizado para comunicação com o backend FastAPI.
- * Usa cookies httpOnly para armazenar o JWT (mais seguro que localStorage).
+ * Estratégia de autenticação dupla para compatibilidade total:
+ * - Cookie httpOnly (desktops e browsers que aceitam cross-site cookies)
+ * - Bearer Authorization header (iOS Safari / ITP / modo privado)
  */
+
+import { tokenStore } from "./token-store";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 class ApiClient {
+  /**
+   * Monta os headers de autenticação.
+   * Sempre inclui o Bearer token quando disponível (iOS Safari / cross-site).
+   * Envia também credentials: "include" para cookies funcionar no desktop.
+   */
   private getAuthHeaders(): HeadersInit {
-    // Com cookies httpOnly, não precisamos enviar o token manualmente
-    // O browser envia automaticamente com credentials: 'include'
+    const token = tokenStore.get();
     return {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   }
 
@@ -24,8 +33,13 @@ class ApiClient {
         ...this.getAuthHeaders(),
         ...options.headers,
       },
-      credentials: "include", // Importante: envia cookies httpOnly
+      credentials: "include", // Envia cookies httpOnly (desktop)
     });
+
+    if (res.status === 401) {
+      // Token inválido ou expirado: limpa o store
+      tokenStore.clear();
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -52,14 +66,20 @@ class ApiClient {
   }
 
   async postForm<T>(path: string, body: URLSearchParams): Promise<T> {
+    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body.toString(),
       credentials: "include",
     });
+
+    if (res.status === 401) {
+      tokenStore.clear();
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -81,9 +101,13 @@ class ApiClient {
 
   // Streaming para chat (com buffer para chunks cortados no meio da linha)
   async *streamPost(path: string, body: unknown): AsyncGenerator<string> {
+    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: this.getAuthHeaders(),
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
       credentials: "include",
     });

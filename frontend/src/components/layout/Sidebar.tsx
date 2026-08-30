@@ -41,14 +41,14 @@ export default function Sidebar({
   const showFull = isOpen || mobileOpen;
 
   const menuItems: { id: ViewType; label: string; icon: any; badge?: string; disabled?: boolean }[] = [
-    { id: "home", label: "Visão Geral", icon: Home },
+    { id: "home", label: "Central de Comando", icon: Home },
     { id: "atividades", label: "Atividades & Prazos", icon: CheckSquare },
-    { id: "cursos", label: "Disciplinas & Materiais", icon: BookOpen },
-    { id: "notas", label: "Boletim & Notas", icon: GraduationCap },
-    { id: "calendario", label: "Calendário", icon: Calendar },
+    { id: "cursos", label: "Disciplinas & Acervo", icon: BookOpen },
+    { id: "notas", label: "Boletim & Desempenho", icon: GraduationCap },
+    { id: "calendario", label: "Calendário Acadêmico", icon: Calendar },
     { id: "horarios", label: "Grade de Horários", icon: Clock },
-    { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA", disabled: true },
-    { id: "estudo", label: "Ferramentas de Estudo", icon: Sparkles, badge: "BETA", disabled: true },
+    { id: "chat", label: "Mentor IA", icon: MessageSquare, badge: "BETA", disabled: true },
+    { id: "estudo", label: "Laboratório de Estudo", icon: Sparkles, badge: "BETA", disabled: true },
     { id: "configuracoes", label: "Configurações", icon: Settings },
   ];
 
@@ -58,14 +58,14 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm lg:hidden animate-in fade-in"
+          className="fixed inset-0 z-30 bg-black/80 backdrop-blur-sm lg:hidden animate-in fade-in"
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`h-dvh bg-[#13131c] border-r border-white/10 flex flex-col fixed inset-y-0 left-0 z-40 w-64 transition-all duration-300 ${
-          mobileOpen ? "translate-x-0 shadow-2xl shadow-black/60" : "-translate-x-full shadow-none"
+        className={`h-dvh bg-[#0d0d12] border-r border-white/10 flex flex-col fixed inset-y-0 left-0 z-40 w-64 transition-all duration-300 ${
+          mobileOpen ? "translate-x-0 shadow-2xl shadow-black/80" : "-translate-x-full shadow-none"
         } lg:relative lg:translate-x-0 lg:transition-[width] ${
           isOpen ? "lg:w-64" : "lg:w-20"
         }`}
@@ -73,19 +73,19 @@ export default function Sidebar({
         {/* Brand Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-950/50 border border-emerald-400/20">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             {showFull && (
               <div className="truncate">
-                <h1 className="font-bold text-base leading-tight text-white">IFNMG</h1>
-                <p className="text-xs text-indigo-400 font-medium">Assistente IA</p>
+                <h1 className="font-extrabold text-base leading-tight text-white tracking-tight">IFNMG</h1>
+                <p className="text-xs text-emerald-400 font-semibold">Assistente IA</p>
               </div>
             )}
           </div>
           <button
             onClick={onCloseMobile}
-            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition lg:hidden"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition lg:hidden"
             title="Fechar menu"
             aria-label="Fechar menu"
           >
@@ -93,7 +93,7 @@ export default function Sidebar({
           </button>
           <button
             onClick={onToggleDesktop}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition hidden lg:block"
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition hidden lg:block"
             title={isOpen ? "Recolher menu" : "Expandir menu"}
           >
             {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -118,21 +118,21 @@ export default function Sidebar({
                 }}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all relative ${
                   isDisabled
-                    ? "bg-[#161622] border border-white/5 text-gray-500 cursor-not-allowed opacity-75 shadow-inner"
+                    ? "bg-[#14141a] border border-white/5 text-zinc-600 cursor-not-allowed opacity-75 shadow-inner"
                     : isActive
-                    ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm shadow-emerald-950/40"
+                    : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                 }`}
                 title={isDisabled ? `${item.label} (Em breve)` : !showFull ? item.label : undefined}
                 aria-label={item.label}
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isDisabled ? "text-gray-500" : isActive ? "text-indigo-400" : "text-gray-400"}`} />
-                {showFull && <span className="truncate text-left">{item.label}</span>}
+                <Icon className={`w-5 h-5 shrink-0 ${isDisabled ? "text-zinc-600" : isActive ? "text-emerald-400" : "text-zinc-400"}`} />
+                {showFull && <span className="truncate text-left font-medium">{item.label}</span>}
                 {item.badge && showFull && (
                   <span className={`ml-auto text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md border ${
                     item.badge === "BETA"
                       ? "bg-zinc-800 text-zinc-400 border-zinc-700/60"
-                      : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                   }`}>
                     {item.badge}
                   </span>
@@ -144,20 +144,20 @@ export default function Sidebar({
 
         {/* User profile / logout footer */}
         <div className="p-3 border-t border-white/10 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${!showFull ? "justify-center" : ""}`}>
-            <div className="w-9 h-9 rounded-lg bg-indigo-950 border border-indigo-500/40 flex items-center justify-center font-bold text-sm text-indigo-300 shrink-0">
+          <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/[0.03] border border-white/5 ${!showFull ? "justify-center" : ""}`}>
+            <div className="w-9 h-9 rounded-lg bg-emerald-950/70 border border-emerald-500/30 flex items-center justify-center font-bold text-sm text-emerald-300 shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
             {showFull && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name || "Estudante"}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                <p className="text-sm font-semibold text-white truncate">{user?.name || "Estudante"}</p>
+                <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
               </div>
             )}
             {showFull && (
               <button
                 onClick={logout}
-                className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
+                className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition"
                 title="Sair da conta"
               >
                 <LogOut className="w-4 h-4" />

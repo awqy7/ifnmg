@@ -109,61 +109,62 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900/60 via-purple-900/40 to-slate-900 border border-white/10 p-6 lg:p-8">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#121218] via-[#15151e] to-[#0c0c10] border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/50">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
             </span>
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-white mt-1">
-              {getGreeting()}, {user?.name ? user.name.split(" ")[0] : "Campeão"}! 🚀
+            <h1 className="text-2xl lg:text-3xl font-black text-white mt-1.5 tracking-tight">
+              {getGreeting()}, {user?.name ? user.name.split(" ")[0] : "Líder"}! 🚀
             </h1>
-            <p className="text-sm text-gray-300 mt-1 max-w-xl leading-relaxed">
-              Tudo pronto para dominar o seu dia. Você tem{" "}
-              <strong className="text-indigo-300 font-semibold">{todaySchedule.slots?.length || 0} aulas hoje</strong> e{" "}
-              <strong className="text-amber-300 font-semibold">{pendingActivities.length} metas a cumprir</strong>. Mantenha o foco e avance rumo ao topo!
+            <p className="text-sm text-zinc-300 mt-1.5 max-w-xl leading-relaxed">
+              Consistência é o segredo de quem passa de primeira. Você tem{" "}
+              <strong className="text-emerald-300 font-semibold">{todaySchedule.slots?.length || 0} aulas hoje</strong> e{" "}
+              <strong className="text-amber-300 font-semibold">{pendingActivities.length} metas no radar</strong>. Domine o dia passo a passo.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => openChat()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-bold shadow-lg shadow-indigo-600/30 transition hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-lg shadow-emerald-950/60 transition hover:scale-105 active:scale-95"
             >
               <Sparkles className="w-4 h-4" />
-              Acelerar com Tutor IA
+              Estudar com Mentor IA
             </button>
           </div>
         </div>
 
         {/* Ambient glow */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Grid: Briefing IA & Today Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* IA Daily Briefing (2 cols) */}
-        <div className="lg:col-span-2 rounded-3xl bg-[#181826] border border-white/10 p-6 flex flex-col justify-between">
+        <div className="lg:col-span-2 rounded-3xl bg-[#121217] border border-white/10 p-6 flex flex-col justify-between shadow-xl shadow-black/40">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-white">Briefing Estratégico Diário</h2>
-                  <p className="text-xs text-gray-400">Direcionamento inteligente de prioridades, prazos e estudo focado</p>
+                  <p className="text-xs text-zinc-400">Direcionamento de prioridades, prazos fatais e conceito-chave para dominar</p>
                 </div>
               </div>
               <button
                 onClick={handleGenerateBriefing}
                 disabled={generatingBriefing || syncing}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-200 transition disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 hover:border-emerald-500/30 border border-white/10 text-xs font-semibold text-zinc-200 transition disabled:opacity-50"
               >
                 {generatingBriefing ? (
                   <>
-                    <CogSpinner size={16} className="text-indigo-400" />
-                    <span>Elaborando...</span>
+                    <CogSpinner size={16} className="text-emerald-400" />
+                    <span>Calculando...</span>
                   </>
                 ) : syncing ? (
                   <>
@@ -172,37 +173,37 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
                     <span>Atualizar Briefing</span>
                   </>
                 )}
               </button>
             </div>
 
-            <div className="mt-4 text-sm text-gray-300 leading-relaxed min-h-[140px] whitespace-pre-line">
+            <div className="mt-4 text-sm text-zinc-300 leading-relaxed min-h-[140px] whitespace-pre-line">
               {syncing ? (
                 // Durante o sync: mostra somente o spinner, sem texto de "carregando"
                 <div className="flex items-center justify-center h-32">
-                  <CogSpinner size={24} className="text-indigo-400" />
+                  <CogSpinner size={24} className="text-emerald-400" />
                 </div>
               ) : loadingBriefing ? (
                 <div className="flex items-center justify-center h-32">
                   <CogSpinner size={20} className="text-white" />
                 </div>
               ) : briefing ? (
-                <div className="max-w-none text-gray-300">
+                <div className="max-w-none text-zinc-200">
                   <Markdown content={briefing} />
                 </div>
               ) : (
-                <div className="p-5 rounded-2xl bg-white/5 text-center text-gray-400 text-xs flex flex-col items-center gap-3">
-                  <Sparkles className="w-6 h-6 text-indigo-400" />
-                  <p className="max-w-md text-gray-300">
-                    O seu briefing estratégico de hoje ainda não foi montado. Gere agora para mapear prioridades e destravar seu estudo.
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 text-center text-zinc-400 text-xs flex flex-col items-center gap-3">
+                  <Sparkles className="w-6 h-6 text-emerald-400" />
+                  <p className="max-w-md text-zinc-300 leading-relaxed">
+                    Seu briefing de hoje ainda não foi montado. Gere agora para mapear prioridades, antecipar prazos e destravar seu estudo.
                   </p>
                   <button
                     onClick={handleGenerateBriefing}
                     disabled={syncing}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:from-indigo-500 hover:to-purple-500 shadow-md transition disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-950/40 transition disabled:opacity-50"
                   >
                     {syncing ? (
                       <CogSpinner size={14} className="text-white" />
@@ -217,21 +218,21 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
         </div>
 
         {/* Today's Classes (1 col) */}
-        <div className="rounded-3xl bg-[#181826] border border-white/10 p-6 flex flex-col justify-between">
+        <div className="rounded-3xl bg-[#121217] border border-white/10 p-6 flex flex-col justify-between shadow-xl shadow-black/40">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                  <Clock className="w-4 h-4" />
+                <div className="p-2 rounded-xl bg-zinc-800 text-zinc-300 border border-zinc-700/50">
+                  <Clock className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-white">Aulas de Hoje</h2>
-                  <p className="text-xs text-gray-400">{todaySchedule.day || "Hoje"}</p>
+                  <p className="text-xs text-zinc-400">{todaySchedule.day || "Hoje"}</p>
                 </div>
               </div>
               <button
                 onClick={() => onNavigate("horarios")}
-                className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+                className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
               >
                 Grade Completa <ArrowRight className="w-3 h-3" />
               </button>
@@ -239,20 +240,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
 
             <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto">
               {!todaySchedule.slots || todaySchedule.slots.length === 0 ? (
-                <div className="p-6 text-center text-gray-400 text-xs">
-                  Sem aulas presenciais hoje! Aproveite o dia para colocar suas metas em dia e sair na frente. 🎯
+                <div className="p-6 text-center text-zinc-400 text-xs leading-relaxed">
+                  Sem aulas presenciais hoje! Use esse tempo livre para zerar tarefas e adiantar matérias difíceis. 🎯
                 </div>
               ) : (
                 todaySchedule.slots.map((slot: any) => (
                   <div
                     key={slot.id}
-                    className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between gap-2 hover:bg-white/10 transition"
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between gap-2 hover:bg-white/[0.06] transition"
                   >
                     <div className="min-w-0">
                       <h4 className="text-xs font-semibold text-white truncate">{slot.course_name}</h4>
-                      <p className="text-[11px] text-gray-400">{slot.room || "Sala padrão"}</p>
+                      <p className="text-[11px] text-zinc-400">{slot.room || "Sala padrão"}</p>
                     </div>
-                    <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 shrink-0">
+                    <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 shrink-0">
                       {slot.start_time} - {slot.end_time}
                     </span>
                   </div>
@@ -266,20 +267,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
       {/* Grid: Pending Activities & Enrolled Courses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Activities */}
-        <div className="rounded-3xl bg-[#181826] border border-white/10 p-6">
+        <div className="rounded-3xl bg-[#121217] border border-white/10 p-6 shadow-xl shadow-black/40">
           <div className="flex items-center justify-between pb-4 border-b border-white/10">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Prazos & Missões Críticas</h2>
-                <p className="text-xs text-gray-400">{pendingActivities.length} entregas requerem sua atenção</p>
+                <h2 className="text-base font-bold text-white">Missões Críticas & Prazos</h2>
+                <p className="text-xs text-zinc-400">{pendingActivities.length} entregas requerem sua atenção</p>
               </div>
             </div>
             <button
               onClick={() => onNavigate("atividades")}
-              className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+              className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
             >
               Ver Todas <ArrowRight className="w-3 h-3" />
             </button>
@@ -287,7 +288,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
 
           <div className="mt-4 space-y-2.5 max-h-72 overflow-y-auto">
             {pendingActivities.length === 0 ? (
-              <div className="p-6 text-center text-emerald-400/90 text-xs font-medium">
+              <div className="p-6 text-center text-emerald-400/90 text-xs font-medium leading-relaxed">
                 Excelente! Todas as suas atividades estão entregues e em dia. Continue nesse ritmo! 🏆
               </div>
             ) : (
@@ -295,18 +296,18 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <div
                   key={act.id}
                   onClick={() => openActivity && openActivity(act.id)}
-                  className="p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/40 hover:bg-white/10 flex items-center justify-between gap-3 transition cursor-pointer group"
+                  className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/30 hover:bg-white/[0.06] flex items-center justify-between gap-3 transition cursor-pointer group"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="mb-1.5">
-                      <span className="inline-flex items-center rounded-lg border border-indigo-500/40 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                      <span className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                         <span className="truncate">{act.course_name || "Disciplina"}</span>
                       </span>
                     </div>
-                    <h4 className="text-xs font-semibold text-white group-hover:text-indigo-300 transition truncate">
+                    <h4 className="text-xs font-semibold text-white group-hover:text-emerald-300 transition truncate">
                       {act.title}
                     </h4>
-                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                    <p className="text-[11px] text-zinc-400 truncate mt-0.5">
                       {act.due_date ? `Prazo fatal: ${new Date(act.due_date).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sem data limite"}
                     </p>
                   </div>
@@ -320,20 +321,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
         </div>
 
         {/* Quick Courses Grid */}
-        <div className="rounded-3xl bg-[#181826] border border-white/10 p-6">
+        <div className="rounded-3xl bg-[#121217] border border-white/10 p-6 shadow-xl shadow-black/40">
           <div className="flex items-center justify-between pb-4 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <BookOpen className="w-4 h-4" />
               </div>
               <div>
                 <h2 className="text-base font-bold text-white">Disciplinas Ativas</h2>
-                <p className="text-xs text-gray-400">{courses.length} matérias conectadas ao Virtual2</p>
+                <p className="text-xs text-zinc-400">{courses.length} matérias conectadas ao Virtual2</p>
               </div>
             </div>
             <button
               onClick={() => onNavigate("cursos")}
-              className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+              className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
             >
               Ver Todas <ArrowRight className="w-3 h-3" />
             </button>
@@ -341,7 +342,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
             {courses.length === 0 ? (
-              <div className="col-span-2 p-6 text-center text-gray-400 text-xs">
+              <div className="col-span-2 p-6 text-center text-zinc-400 text-xs">
                 Nenhuma disciplina sincronizada ainda. Conecte ao Virtual2 para carregar suas matérias.
               </div>
             ) : (
@@ -349,20 +350,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <div
                   key={crs.id}
                   onClick={() => openChat(crs.id)}
-                  className="p-3.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/40 hover:bg-white/10 transition cursor-pointer flex flex-col justify-between group"
+                  className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/30 hover:bg-white/[0.06] transition cursor-pointer flex flex-col justify-between group"
                 >
                   <div>
-                    <h4 className="text-xs font-semibold text-white group-hover:text-indigo-300 transition line-clamp-1">
+                    <h4 className="text-xs font-semibold text-white group-hover:text-emerald-300 transition line-clamp-1">
                       {crs.name}
                     </h4>
-                    <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5">
+                    <p className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
                       {crs.teacher || "Docente IFNMG"}
                     </p>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-indigo-400">
-                    <span className="text-gray-400">{crs.pending_activities || 0} pendentes</span>
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 group-hover:text-indigo-200">
-                      Tutor IA <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-emerald-400">
+                    <span className="text-zinc-400">{crs.pending_activities || 0} pendentes</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 group-hover:text-emerald-200">
+                      Mentor IA <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
                     </span>
                   </div>
                 </div>
