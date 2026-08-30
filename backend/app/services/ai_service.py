@@ -279,10 +279,15 @@ Tarefas: {activities_str if activities_str else 'Nenhuma tarefa pendente'}"""
                 ],
                 provider=provider,
                 custom_api_keys=custom_api_keys,
-                max_tokens=150,
-                temperature=0.4,
+                max_tokens=80,
+                temperature=0.3,
             )
-            if content and len(content.strip()) > 30:
+            if content and len(content.strip()) > 10:
+                # Hard cap: max 40 words, cut at last sentence
+                words = content.strip().split()
+                if len(words) > 40:
+                    words = words[:40]
+                    content = " ".join(words)
                 return content
         except Exception as e:
             logger.warning("Falha na geração com IA externa (%s). Acionando gerador inteligente acadêmico: %s", provider, e)
