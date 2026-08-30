@@ -228,36 +228,18 @@ class AIService:
         pending_activities: List[Dict],
         recent_materials: List[Dict],
     ) -> str:
-        """
-        Gera um briefing acadêmico ultra-curto e cirúrgico com dados reais do Virtual2.
-        Formato: 3 linhas compactas, direto ao ponto.
-        """
-        first_name = user_name.split()[0] if user_name else "Líder"
+        """Gera briefing curto e direto sem emojis."""
+        first_name = user_name.split()[0] if user_name else "Aluno"
+        pend = len(pending_activities)
 
-        # Linha 1: Saudação + Aulas + Contagem de pendências
         if today_courses:
-            c_names = ", ".join([f"**{c['name']}** ({c.get('start_time', '--:--')})" for c in today_courses[:2]])
-            p1 = f"Bom dia, **{first_name}**! Aulas hoje: {c_names}. Você tem **{len(pending_activities)} entrega(s)** no radar."
-        else:
-            p1 = f"Bom dia, **{first_name}**! Sem aulas hoje e com **{len(pending_activities)} entrega(s) pendente(s)** no Virtual2." if pending_activities else f"Bom dia, **{first_name}**! Sem aulas presenciais hoje e com todas as tarefas em dia."
-
-        # Linha 2: Foco principal e prazo
-        if pending_activities:
-            top_act = pending_activities[0]
-            course = top_act.get("course_name") or "Disciplina"
-            title = top_act.get("title") or "Atividade"
-            due = top_act.get("due_date") or "em breve"
-            p2 = f"Foco: **{course}** (*{title}*), prazo final `{due}`."
-        elif recent_materials:
-            top_mat = recent_materials[0]
-            p2 = f"Foco: revisar *\"{top_mat.get('title')}\"* de **{top_mat.get('course_name')}**."
-        else:
-            p2 = "Foco: revisar suas anotações da matéria principal."
-
-        # Linha 3: Ação rápida
-        p3 = "Dedique 25 minutos de foco agora para liquidar essa meta e começar o dia vencendo!" if pending_activities else "Aproveite para adiantar leituras e manter seu ritmo de alto rendimento!"
-
-        return f"{p1}\n\n{p2}\n\n{p3}"
+            c = today_courses[0]['name']
+            if pend > 0:
+                return f"{first_name}, voce tem {c} hoje e {pend} tarefa(s) pendente(s). Priorize o que vence primeiro."
+            return f"{first_name}, aula de {c} hoje. Nenhuma tarefa pendente no momento."
+        elif pend > 0:
+            return f"{first_name}, sem aulas hoje mas {pend} tarefa(s) pendente(s). Comece pela de prazo mais urgente."
+        return f"{first_name}, dia sem aulas e tudo em dia. Aproveite para revisar materiais."
 
     async def generate_daily_briefing(
         self,
@@ -272,15 +254,13 @@ class AIService:
         courses_str = ", ".join([f"{c['name']} ({c.get('start_time', '?')})" for c in today_courses[:2]])
         activities_str = ", ".join([f"[{a.get('course_name', 'Geral')}] {a['title']} (prazo: {a.get('due_date', '?')})" for a in pending_activities[:3]])
 
-        system_prompt = """Você é o Mentor Acadêmico IA do IFNMG.
-Gere um briefing acadêmico ULTRA-CURTO para o aluno.
+        system_prompt = """Gere um briefing diario para um estudante.
 
-REGRAS RÍGIDAS DE TAMANHO:
-- Exatamente 3 parágrafos de 1 frase curta cada (totalizando no máximo 35-40 palavras).
-- Sem títulos (#), sem bullets (-), sem introduções longas.
-- Parágrafo 1: Saudação com primeiro nome + aulas de hoje + pendências.
-- Parágrafo 2: Foco principal com matéria, título e prazo.
-- Parágrafo 3: Chamada para ação de 25 minutos."""
+REGRAS:
+- Maximo 2 frases curtas (20-25 palavras no total).
+- Sem emojis, sem titulos, sem bullets, sem saudacoes longas.
+- Frase 1: aulas de hoje + quantas tarefas pendentes.
+- Frase 2: qual tarefa priorizar e prazo."""
 
         user_prompt = f"""Aluno: {user_name}
 Aulas: {courses_str if courses_str else 'Nenhuma aula hoje'}
