@@ -235,11 +235,15 @@ class AIService:
         if today_courses:
             c = today_courses[0]['name']
             if pend > 0:
-                return f"{first_name}, voce tem {c} hoje e {pend} tarefa(s) pendente(s). Priorize o que vence primeiro."
-            return f"{first_name}, aula de {c} hoje. Nenhuma tarefa pendente no momento."
+                top = pending_activities[0]
+                due = top.get('due_date', 'em breve')
+                return f"{first_name}, voce tem {c} hoje e {pend} tarefa(s) pendente(s). Priorize \"{top.get('title', 'atividade')}\" com prazo em {due}. Estude 25 min sem distracoes."
+            return f"{first_name}, aula de {c} hoje e tudo em dia. Aproveite para adiantar leituras. Revise o conteudo antes da proxima aula."
         elif pend > 0:
-            return f"{first_name}, sem aulas hoje mas {pend} tarefa(s) pendente(s). Comece pela de prazo mais urgente."
-        return f"{first_name}, dia sem aulas e tudo em dia. Aproveite para revisar materiais."
+            top = pending_activities[0]
+            due = top.get('due_date', 'em breve')
+            return f"{first_name}, sem aulas hoje mas {pend} tarefa(s) pendente(s). Comece por \"{top.get('title', 'atividade')}\" com prazo em {due}. Bom estudo."
+        return f"{first_name}, dia sem aulas e tudo em dia. Aproveite para revisar materiais. Mantenha o ritmo de estudo."
 
     async def generate_daily_briefing(
         self,
@@ -257,10 +261,11 @@ class AIService:
         system_prompt = """Gere um briefing diario para um estudante.
 
 REGRAS:
-- Maximo 2 frases curtas (20-25 palavras no total).
+- Maximo 3 frases curtas (30-40 palavras no total).
 - Sem emojis, sem titulos, sem bullets, sem saudacoes longas.
 - Frase 1: aulas de hoje + quantas tarefas pendentes.
-- Frase 2: qual tarefa priorizar e prazo."""
+- Frase 2: qual tarefa priorizar e prazo.
+- Frase 3: dica rapida de estudo."""
 
         user_prompt = f"""Aluno: {user_name}
 Aulas: {courses_str if courses_str else 'Nenhuma aula hoje'}
