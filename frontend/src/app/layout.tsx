@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SyncProvider } from "@/contexts/SyncContext";
 import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -26,7 +27,9 @@ export default function RootLayout({
     <html lang="pt-BR" className="dark">
       <body className={`${inter.className} bg-[#0f0f13] text-white antialiased`}>
         <AuthProvider>
-          {children}
+          <SyncProvider>
+            {children}
+          </SyncProvider>
         </AuthProvider>
         <Analytics />
       </body>

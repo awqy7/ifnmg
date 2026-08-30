@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ViewType } from "./Dashboard";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSync } from "@/contexts/SyncContext";
 import {
   Sparkles,
   Clock,
@@ -24,6 +25,7 @@ interface DashboardHomeProps {
 
 export default function DashboardHome({ onNavigate, openChat, openActivity }: DashboardHomeProps) {
   const { user } = useAuth();
+  const { syncing } = useSync();
   const [briefing, setBriefing] = useState<string | null>(null);
   const [loadingBriefing, setLoadingBriefing] = useState(true);
   const [generatingBriefing, setGeneratingBriefing] = useState(false);
@@ -62,6 +64,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
   }, []);
 
   const handleGenerateBriefing = async () => {
+    if (syncing) return;
     setGeneratingBriefing(true);
     try {
       await briefingApi.generate();
@@ -133,13 +136,18 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
               </div>
               <button
                 onClick={handleGenerateBriefing}
-                disabled={generatingBriefing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition"
+                disabled={generatingBriefing || syncing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition disabled:opacity-50"
               >
                 {generatingBriefing ? (
                   <>
                     <CogSpinner size={16} className="text-indigo-400" />
                     <span>Gerando...</span>
+                  </>
+                ) : syncing ? (
+                  <>
+                    <CogSpinner size={14} className="text-amber-400" />
+                    <span>Sincronizando...</span>
                   </>
                 ) : (
                   <>
@@ -163,12 +171,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <div className="p-4 rounded-2xl bg-white/5 text-center text-gray-400 text-xs flex flex-col items-center gap-2">
                   <Sparkles className="w-6 h-6 text-indigo-400" />
                   <p>O briefing de hoje ainda não foi gerado.</p>
-                  <button
-                    onClick={handleGenerateBriefing}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition"
-                  >
-                    Gerar Briefing Agora
-                  </button>
+<button
+                      onClick={handleGenerateBriefing}
+                      disabled={syncing}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition disabled:opacity-50"
+                    >
+                      {syncing ? (
+                        <>
+                          <CogSpinner size={14} className="text-amber-400" />
+                          <span>Sincronizando...</span>
+                        </>
+                      ) : (
+                        "Gerar Briefing Agora"
+                      )}
+                    </button>
                 </div>
               )}
             </div>

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSync } from "@/contexts/SyncContext";
 import { ViewType } from "@/components/dashboard/Dashboard";
 import {
   Bell,
-  RefreshCw,
   Menu,
   GraduationCap,
   CheckCircle2,
@@ -14,8 +14,10 @@ import {
   Check,
   FileText,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { notificationsApi, moodleApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface TopBarProps {
   onMenuToggle: () => void;
@@ -26,8 +28,7 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true }: TopBarProps) {
   const { user } = useAuth();
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<string | null>(null);
+  const { syncing, syncProgress, triggerSync, setSyncing, setSyncProgress } = useSync();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -121,16 +122,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
   }, [syncing]);
 
   const handleSync = async () => {
-    setSyncing(true);
-    setSyncProgress("Sincronizando dados com o Virtual2... por favor aguarde");
-    try {
-      await moodleApi.forceSync();
-      // o polling acima cuida do restante
-    } catch (e: any) {
-      setSyncing(false);
-      setSyncProgress(e.message || "Erro ao sincronizar");
-      setTimeout(() => setSyncProgress(null), 4000);
-    }
+    await triggerSync();
   };
 
   // Auto-sync automático no primeiro carregamento pós-login
@@ -234,7 +226,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             aria-label="Sincronizar agora com o Moodle"
             title="Sincronizar agora com o Moodle"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-indigo-400" : "text-gray-400"}`} />
+            {syncing ? <CogSpinner size={18} className="text-indigo-400" /> : <RefreshCw className="w-3.5 h-3.5 text-gray-400" />}
             <span className="hidden sm:inline">{syncing ? "Sincronizando..." : "Sincronizar"}</span>
           </button>
 
@@ -325,7 +317,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
       {/* Banner de Sincronização em Andamento (Mobile & Desktop) */}
       {syncing && (
         <div className="bg-indigo-950/80 border-t border-indigo-500/30 px-4 py-2 flex items-center justify-center gap-2.5 text-xs text-indigo-200 animate-in fade-in slide-in-from-top-1">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
+          <CogSpinner size={16} className="text-indigo-400 shrink-0" />
           <span className="font-medium">
             Sincronizando dados com o Virtual2... por favor, aguarde alguns instantes enquanto atualizamos suas matérias e prazos.
           </span>
