@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { calendarApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface CalendarViewProps {
   openActivity?: (activityId: string) => void;
@@ -90,7 +91,9 @@ export default function CalendarView({ openActivity }: CalendarViewProps) {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-gray-500 text-sm">Carregando calendário...</div>
+        <div className="p-12 flex items-center justify-center">
+          <CogSpinner size={40} className="text-white" />
+        </div>
       ) : filteredEvents.length === 0 ? (
         <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
           Nenhum evento ou prazo agendado no momento.

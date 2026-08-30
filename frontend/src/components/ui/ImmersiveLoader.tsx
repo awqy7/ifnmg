@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, ReactNode } from 'react';
+import { CogSpinner } from './CogSpinner';
 
 export const SYNC_STEPS = [
   { id: 'auth', label: 'Autenticando no Virtual2...' },
@@ -50,12 +51,8 @@ export function LoginButton({
       setPhase('idle');
       setSyncProgress(null);
     } catch (error: any) {
-      setPhase('error');
-      await new Promise(r => setTimeout(r, 2000));
-      setLoading(false);
-      setPhase('idle');
-      setSyncProgress(null);
       onError?.(error.message || "Erro ao conectar. Tente novamente.");
+      setLoading(false);
     }
   };
 
@@ -67,7 +64,7 @@ export function LoginButton({
         className="relative w-full min-h-11 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center overflow-hidden"
       >
         {loading ? (
-          <ButtonSpinner />
+          <CogSpinner size={28} className="text-white" />
         ) : (
           children
         )}
@@ -76,131 +73,15 @@ export function LoginButton({
   );
 }
 
-function ButtonSpinner() {
-  return (
-    <svg
-      className="w-8 h-8 text-white pacman-spinner"
-      xmlns="http://www.w3.org/2000/svg"
-      version="1.1"
-      viewBox="50 0 500 300"
-      aria-hidden="true"
-      style={{ width: '32px', height: '32px', display: 'block' }}
-    >
-      <style>{`
-        .pacman3351-dot {
-          fill: #ffffff;
-        }
-        .pacman3351-open,
-        .pacman3351-mouth-top,
-        .pacman3351-mouth-bottom {
-          fill: #ffffff;
-        }
-        .pacman3351-mouth-top,
-        .pacman3351-mouth-bottom {
-          animation-duration: 175ms;
-          animation-timing-function: linear;
-          animation-direction: alternate;
-          animation-iteration-count: infinite;
-          transform-origin: 150px 150px;
-        }
-        .pacman3351-mouth-top {
-          animation-name: rotate3351-counterclockwise;
-        }
-        .pacman3351-mouth-bottom {
-          animation-name: rotate3351-clockwise;
-        }
-        @keyframes rotate3351-counterclockwise {
-          100% { transform: rotate(-30deg); }
-        }
-        @keyframes rotate3351-clockwise {
-          100% { transform: rotate(30deg); }
-        }
-        .pacman3351-dot {
-          animation-name: dot3351-motion;
-          animation-duration: 600ms;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        @keyframes dot3351-motion {
-          100% { transform: translateX(-100px); }
-        }
-      `}</style>
-      <circle className="pacman3351-dot" cx="250" cy="50%" r="10"/>
-      <circle className="pacman3351-dot" cx="350" cy="50%" r="10"/>
-      <circle className="pacman3351-dot" cx="450" cy="50%" r="10"/>
-      <circle className="pacman3351-dot" cx="550" cy="50%" r="10"/>
-      <circle className="pacman3351-dot" cx="650" cy="50%" r="10"/>
-      <path className="pacman3351-mouth-bottom" d="M 150,150 L 220.4,221.0 A 100 100 0 0 0 250,150 Z"/>
-      <path className="pacman3351-mouth-top" d="M 150,150 L 220.4,79.0 A 100 100 0 0 1 250,150 Z"/>
-      <path className="pacman3351-open" d="M 150,150 L 236.6,100 A 100 100 0 1 0 236.6,200 Z"/>
-    </svg>
-  );
-}
-
 /**
  * Initial loading screen - shows while the app is loading for the first time
- * Shows a large Pac-Man animation centered on screen
+ * Shows a large CogSpinner centered on screen
  */
 export function InitialLoadingScreen() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08080f]">
-      <div className="flex flex-col items-center justify-center gap-8">
-        <svg
-          className="pacman-spinner-large"
-          xmlns="http://www.w3.org/2000/svg"
-          version="1.1"
-          viewBox="50 0 500 300"
-          aria-hidden="true"
-          style={{ width: '200px', height: '120px', display: 'block' }}
-        >
-          <style>{`
-            .pacman-large-dot {
-              fill: #ffffff;
-            }
-            .pacman-large-open,
-            .pacman-large-mouth-top,
-            .pacman-large-mouth-bottom {
-              fill: #ffffff;
-            }
-            .pacman-large-mouth-top,
-            .pacman-large-mouth-bottom {
-              animation-duration: 200ms;
-              animation-timing-function: linear;
-              animation-direction: alternate;
-              animation-iteration-count: infinite;
-              transform-origin: 250px 150px;
-            }
-            .pacman-large-mouth-top {
-              animation-name: rotate-large-counterclockwise;
-            }
-            .pacman-large-mouth-bottom {
-              animation-name: rotate-large-clockwise;
-            }
-            @keyframes rotate-large-counterclockwise {
-              100% { transform: rotate(-30deg); }
-            }
-            @keyframes rotate-large-clockwise {
-              100% { transform: rotate(30deg); }
-            }
-            .pacman-large-dot {
-              animation-name: dot-large-motion;
-              animation-duration: 800ms;
-              animation-timing-function: linear;
-              animation-iteration-count: infinite;
-            }
-            @keyframes dot-large-motion {
-              100% { transform: translateX(-150px); }
-            }
-          `}</style>
-          <circle className="pacman-large-dot" cx="200" cy="50%" r="14"/>
-          <circle className="pacman-large-dot" cx="320" cy="50%" r="14"/>
-          <circle className="pacman-large-dot" cx="440" cy="50%" r="14"/>
-          <circle className="pacman-large-dot" cx="560" cy="50%" r="14"/>
-          <circle className="pacman-large-dot" cx="680" cy="50%" r="14"/>
-          <path className="pacman-large-mouth-bottom" d="M 100,150 L 180.8,258.2 A 150 150 0 0 0 250,150 Z"/>
-          <path className="pacman-large-mouth-top" d="M 100,150 L 180.8,41.8 A 150 150 0 0 1 250,150 Z"/>
-          <path className="pacman-large-open" d="M 100,150 L 195.4,80 A 150 150 0 1 0 195.4,220 Z"/>
-        </svg>
+      <div className="flex flex-col items-center justify-center gap-6">
+        <CogSpinner size={80} className="text-white" />
         <p className="text-white/60 text-sm font-medium tracking-wide">IFNMG Assistente</p>
       </div>
     </div>

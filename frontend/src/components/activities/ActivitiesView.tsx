@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface ActivitiesViewProps {
   openActivity?: (activityId: string) => void;
@@ -94,7 +95,9 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
       {/* Activities List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="p-12 text-center text-gray-500 text-sm">Carregando atividades...</div>
+          <div className="p-12 flex items-center justify-center">
+            <CogSpinner size={40} className="text-white" />
+          </div>
         ) : sortedActivities.length === 0 ? (
           <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
             Nenhuma atividade encontrada no Virtual2.

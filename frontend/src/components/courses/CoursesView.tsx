@@ -11,6 +11,7 @@ import {
   Download,
 } from "lucide-react";
 import { coursesApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface CoursesViewProps {
   openChat: (courseId?: string) => void;
@@ -77,7 +78,9 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-gray-500 text-sm">Carregando disciplinas...</div>
+        <div className="p-12 flex items-center justify-center">
+          <CogSpinner size={40} className="text-white" />
+        </div>
       ) : courses.length === 0 ? (
         <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
           Nenhuma disciplina sincronizada. Conecte sua conta do Virtual2 nas Configurações.
@@ -145,7 +148,9 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                     </div>
 
                     {isLoadingMats ? (
-                      <div className="py-6 text-center text-xs text-gray-500">Carregando conteúdos...</div>
+                      <div className="py-6 flex items-center justify-center">
+                        <CogSpinner size={28} className="text-white" />
+                      </div>
                     ) : materials.length === 0 ? (
                       <div className="py-6 text-center text-xs text-gray-500">
                         Nenhum material cadastrado nesta disciplina.

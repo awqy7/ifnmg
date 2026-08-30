@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { GraduationCap, TrendingUp } from "lucide-react";
 import { gradesApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function GradesView() {
   const [gradesData, setGradesData] = useState<any[]>([]);
@@ -33,7 +34,9 @@ export default function GradesView() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-gray-500 text-sm">Carregando notas...</div>
+        <div className="p-12 flex items-center justify-center">
+          <CogSpinner size={40} className="text-white" />
+        </div>
       ) : gradesData.length === 0 ? (
         <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
           Nenhuma nota registrada no momento. Sincronize o Moodle para puxar seu boletim.

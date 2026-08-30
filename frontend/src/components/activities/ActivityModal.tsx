@@ -10,11 +10,11 @@ import {
   ExternalLink,
   Download,
   Bot,
-  Loader2,
   Calendar,
   Award,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface ActivityModalProps {
   activityId: string | null;
@@ -136,7 +136,7 @@ export default function ActivityModal({
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm text-gray-300">
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3 text-gray-400">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+              <CogSpinner size={32} className="text-indigo-400" />
               <p className="text-xs">Lendo atividade diretamente do Virtual2...</p>
             </div>
           ) : (

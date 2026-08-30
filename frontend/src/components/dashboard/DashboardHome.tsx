@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { briefingApi, scheduleApi, activitiesApi, coursesApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface DashboardHomeProps {
   onNavigate: (view: ViewType) => void;
@@ -135,15 +136,24 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 disabled={generatingBriefing}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${generatingBriefing ? "animate-spin text-indigo-400" : ""}`} />
-                <span>{generatingBriefing ? "Gerando..." : "Regerar"}</span>
+                {generatingBriefing ? (
+                  <>
+                    <CogSpinner size={16} className="text-indigo-400" />
+                    <span>Gerando...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Regerar</span>
+                  </>
+                )}
               </button>
             </div>
 
             <div className="mt-4 text-sm text-gray-300 leading-relaxed min-h-[140px] whitespace-pre-line">
               {loadingBriefing ? (
                 <div className="flex items-center justify-center h-32 gap-2 text-gray-500 text-xs">
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Carregando briefing diário...
+                  <CogSpinner size={20} className="text-white" />
                 </div>
               ) : briefing ? (
                 <div className="max-w-none text-gray-300">

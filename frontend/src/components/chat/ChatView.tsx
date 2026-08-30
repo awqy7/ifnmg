@@ -7,7 +7,6 @@ import {
   Plus,
   Bot,
   User as UserIcon,
-  Loader2,
   Database,
   FileText,
   BookOpen,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 /** Mensagens rotativas durante o loading — mostram que a IA está lendo os dados reais */
 const LOADING_MESSAGES = [
@@ -364,7 +364,7 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
               </div>
               <div className="p-3 sm:p-3.5 rounded-2xl rounded-bl-sm bg-[#13131c] border border-white/10 flex flex-col gap-1.5 max-w-[75%]">
                 <div className="flex items-center gap-2 text-xs text-indigo-300">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  <CogSpinner size={16} className="text-indigo-400 shrink-0" />
                   <span className="transition-all duration-300">
                     {LOADING_MESSAGES[loadingMsgIdx]}
                   </span>
@@ -405,16 +405,15 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
               className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition resize-none overflow-hidden leading-relaxed min-h-[48px]"
               style={{ height: "48px" }}
             />
-            <button
+<button
               type="submit"
               disabled={loading || !input.trim()}
               className="w-11 h-11 flex items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition shadow-lg shadow-indigo-600/20 shrink-0"
               aria-label="Enviar mensagem"
             >
               {loading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Send className="w-4 h-4" />
-              }
+                ? <CogSpinner size={18} className="text-white" />
+                : <Send className="w-4 h-4" />}
             </button>
           </form>
           <p className="text-[10px] text-gray-600 mt-1.5 text-center">

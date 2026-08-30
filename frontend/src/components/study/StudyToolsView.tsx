@@ -10,9 +10,9 @@ import {
   XCircle,
   ArrowRight,
   ArrowLeft,
-  Loader2,
 } from "lucide-react";
 import { chatApi, coursesApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function StudyToolsView() {
   const [courses, setCourses] = useState<any[]>([]);
@@ -161,7 +161,8 @@ export default function StudyToolsView() {
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Gerando com IA...
+                <CogSpinner size={18} className="text-white" />
+                <span>Gerando com IA...</span>
               </>
             ) : (
               <>
