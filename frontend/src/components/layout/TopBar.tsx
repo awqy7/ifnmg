@@ -173,12 +173,6 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {syncProgress && (
-            <span className="text-[11px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-lg hidden md:inline-block max-w-56 truncate">
-              {syncProgress}
-            </span>
-          )}
-
           {/* Sync Button */}
           <button
             onClick={handleSync}
@@ -274,16 +268,6 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           </div>
         </div>
       </div>
-
-      {/* Banner de Sincronização em Andamento (Mobile & Desktop) */}
-      {syncing && (
-        <div className="bg-indigo-950/80 border-t border-indigo-500/30 px-4 py-2 flex items-center justify-center gap-2.5 text-xs text-indigo-200 animate-in fade-in slide-in-from-top-1">
-          <CogSpinner size={16} className="text-indigo-400 shrink-0" />
-          <span className="font-medium">
-            Sincronizando dados com o Virtual2... por favor, aguarde alguns instantes enquanto atualizamos suas matérias e prazos.
-          </span>
-        </div>
-      )}
     </header>
   );
 }
