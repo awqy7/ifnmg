@@ -79,20 +79,21 @@ export function LoginButton({
 function ButtonSpinner() {
   return (
     <svg
-      className="w-10 h-10 text-white pacman-spinner"
+      className="w-8 h-8 text-white pacman-spinner"
       xmlns="http://www.w3.org/2000/svg"
       version="1.1"
       viewBox="50 0 500 300"
       aria-hidden="true"
+      style={{ width: '32px', height: '32px', display: 'block' }}
     >
       <style>{`
         .pacman3351-dot {
-          fill: currentColor;
+          fill: #ffffff;
         }
         .pacman3351-open,
         .pacman3351-mouth-top,
         .pacman3351-mouth-bottom {
-          fill: currentColor;
+          fill: #ffffff;
         }
         .pacman3351-mouth-top,
         .pacman3351-mouth-bottom {
@@ -133,5 +134,75 @@ function ButtonSpinner() {
       <path className="pacman3351-mouth-top" d="M 150,150 L 220.4,79.0 A 100 100 0 0 1 250,150 Z"/>
       <path className="pacman3351-open" d="M 150,150 L 236.6,100 A 100 100 0 1 0 236.6,200 Z"/>
     </svg>
+  );
+}
+
+/**
+ * Initial loading screen - shows while the app is loading for the first time
+ * Shows a large Pac-Man animation centered on screen
+ */
+export function InitialLoadingScreen() {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08080f]">
+      <div className="flex flex-col items-center justify-center gap-8">
+        <svg
+          className="pacman-spinner-large"
+          xmlns="http://www.w3.org/2000/svg"
+          version="1.1"
+          viewBox="50 0 500 300"
+          aria-hidden="true"
+          style={{ width: '200px', height: '120px', display: 'block' }}
+        >
+          <style>{`
+            .pacman-large-dot {
+              fill: #ffffff;
+            }
+            .pacman-large-open,
+            .pacman-large-mouth-top,
+            .pacman-large-mouth-bottom {
+              fill: #ffffff;
+            }
+            .pacman-large-mouth-top,
+            .pacman-large-mouth-bottom {
+              animation-duration: 200ms;
+              animation-timing-function: linear;
+              animation-direction: alternate;
+              animation-iteration-count: infinite;
+              transform-origin: 250px 150px;
+            }
+            .pacman-large-mouth-top {
+              animation-name: rotate-large-counterclockwise;
+            }
+            .pacman-large-mouth-bottom {
+              animation-name: rotate-large-clockwise;
+            }
+            @keyframes rotate-large-counterclockwise {
+              100% { transform: rotate(-30deg); }
+            }
+            @keyframes rotate-large-clockwise {
+              100% { transform: rotate(30deg); }
+            }
+            .pacman-large-dot {
+              animation-name: dot-large-motion;
+              animation-duration: 800ms;
+              animation-timing-function: linear;
+              animation-iteration-count: infinite;
+            }
+            @keyframes dot-large-motion {
+              100% { transform: translateX(-150px); }
+            }
+          `}</style>
+          <circle className="pacman-large-dot" cx="200" cy="50%" r="14"/>
+          <circle className="pacman-large-dot" cx="320" cy="50%" r="14"/>
+          <circle className="pacman-large-dot" cx="440" cy="50%" r="14"/>
+          <circle className="pacman-large-dot" cx="560" cy="50%" r="14"/>
+          <circle className="pacman-large-dot" cx="680" cy="50%" r="14"/>
+          <path className="pacman-large-mouth-bottom" d="M 100,150 L 180.8,258.2 A 150 150 0 0 0 250,150 Z"/>
+          <path className="pacman-large-mouth-top" d="M 100,150 L 180.8,41.8 A 150 150 0 0 1 250,150 Z"/>
+          <path className="pacman-large-open" d="M 100,150 L 195.4,80 A 150 150 0 1 0 195.4,220 Z"/>
+        </svg>
+        <p className="text-white/60 text-sm font-medium tracking-wide">IFNMG Assistente</p>
+      </div>
+    </div>
   );
 }
