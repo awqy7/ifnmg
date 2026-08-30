@@ -87,11 +87,13 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
     if (syncing || generatingBriefing) return;
     setGeneratingBriefing(true);
     try {
-      await briefingApi.generate();
-      // Aguarda o backend processar antes de buscar o resultado
-      await new Promise((r) => setTimeout(r, 4000));
-      const res = await briefingApi.getToday();
-      setBriefing(res.content);
+      const res: any = await briefingApi.generate();
+      if (res && res.content) {
+        setBriefing(res.content);
+      } else {
+        const today = await briefingApi.getToday();
+        setBriefing(today.content);
+      }
     } catch {
       // ignora silenciosamente
     } finally {

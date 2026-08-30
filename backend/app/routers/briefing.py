@@ -109,22 +109,24 @@ async def get_today_briefing(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Retorna o briefing matinal do dia de hoje (ou gera se não existir)."""
+    """Retorna o briefing matinal do dia de hoje (ou gera se não existir ou se for placeholder)."""
     date_str = datetime.now().strftime("%Y-%m-%d")
     briefing = db.query(DailyBriefing).filter(
         DailyBriefing.user_id == current_user.id,
         DailyBriefing.date == date_str,
     ).first()
 
-    if not briefing:
-        try:
-            briefing = await _generate_user_briefing(db, current_user)
-        except Exception as e:
-            return {
-                "date": date_str,
-                "content": f"Olá, {current_user.name.split()[0]}! Seu painel está pronto. Consulte suas atividades e horários abaixo.",
-                "courses_today": [],
-            }
+    # Se não existe OU se for o texto genérico antigo / resposta truncada de thinking, regenera
+    is_legacy_placeholder = (
+        not briefing
+        or not briefing.content
+        or len(briefing.content.strip()) < 120
+        or "Seu painel está pronto" in briefing.content
+        or "<think>" in briefing.content
+    )
+
+    if is_legacy_placeholder:
+        briefing = await _generate_user_briefing(db, current_user)
 
     return {
         "id": briefing.id,

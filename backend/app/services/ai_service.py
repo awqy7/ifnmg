@@ -221,6 +221,103 @@ class AIService:
     # PROMPTS ESPECIALIZADOS
     # ─────────────────────────────────────────────────────────────
 
+    def generate_smart_fallback_briefing(
+        self,
+        user_name: str,
+        today_courses: List[Dict],
+        pending_activities: List[Dict],
+        recent_materials: List[Dict],
+    ) -> str:
+        """
+        Gera um briefing acadêmico real, rico e persuasivo estruturado em Markdown,
+        utilizando os dados reais do aluno extraídos do Virtual2 IFNMG.
+        Garante entrega consistente mesmo se o provedor de IA externo estiver offline ou com quota esgotada.
+        """
+        from datetime import datetime
+        now = datetime.now()
+        weekdays = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+        weekday_name = weekdays[now.weekday()]
+        first_name = user_name.split()[0] if user_name else "Líder"
+
+        lines = []
+
+        # 1. Visão Estratégica do Dia
+        lines.append(f"### 🎯 **Visão Estratégica do Dia — {weekday_name}**")
+        if pending_activities:
+            lines.append(
+                f"Bom dia, **{first_name}**! Hoje é dia de foco estratégico e alta execução. "
+                f"Você tem **{len(pending_activities)} entrega(s) pendente(s)** no radar. "
+                "O sucesso no IFNMG não depende de sorte, mas da consistência com que você antecipa seus prazos e domina os conteúdos."
+            )
+        else:
+            lines.append(
+                f"Excelente dia, **{first_name}**! Todas as suas atividades cadastradas estão em dia — esse é o padrão de quem se destaca. "
+                "Aproveite a tranquilidade de hoje para aprofundar tópicos complexos e sair na frente no semestre."
+            )
+
+        if today_courses:
+            courses_str = ", ".join([
+                f"**{c['name']}** ({c.get('start_time', '--:--')} às {c.get('end_time', '--:--')})"
+                for c in today_courses
+            ])
+            lines.append(f"\n📚 **Grade de Aulas Hoje:** {courses_str}. Esteja presente com atenção ativa para absorver os conceitos direto na fonte.")
+        else:
+            lines.append("\n📚 **Grade de Aulas Hoje:** Nenhuma aula presencial agendada para hoje — uma excelente oportunidade para adiantar estudos e projetos sem interrupções.")
+
+        # 2. Prazos & Entregas Críticas
+        lines.append("\n### ⚠️ **Prazos & Entregas Críticas no Virtual2**")
+        if pending_activities:
+            lines.append("Não deixe para a última hora. Cada atividade enviada no prazo garante sua nota e elimina a sobrecarga mental:")
+            for act in pending_activities[:6]:
+                course = act.get("course_name") or "Disciplina Geral"
+                title = act.get("title") or "Atividade Avaliativa"
+                due = act.get("due_date") or "Sem prazo fixado"
+                status = act.get("status", "pending")
+                desc = act.get("description")
+
+                badge = "🚨 **[ATRASADA]**" if status == "late" else "⏳ **[PENDENTE]**"
+                act_line = f"- {badge} **{course}**: *{title}* — Prazo final: `{due}`"
+                if desc and len(desc) > 10:
+                    clean_desc = desc.replace("\n", " ").strip()
+                    if len(clean_desc) > 90:
+                        clean_desc = clean_desc[:90] + "..."
+                    act_line += f"\n  - *Resumo:* {clean_desc}"
+                lines.append(act_line)
+
+            if len(pending_activities) > 6:
+                lines.append(f"- *... e mais {len(pending_activities) - 6} atividade(s) monitorada(s) no seu painel.*")
+        else:
+            lines.append("🎉 **Tudo limpo no radar!** Nenhuma atividade pendente no momento. Mantenha essa disciplina!")
+
+        # 3. Tópico em Foco para Dominar Hoje
+        lines.append("\n### 💡 **Tópico em Foco para Dominar Hoje**")
+        if pending_activities:
+            focus_act = pending_activities[0]
+            focus_course = focus_act.get("course_name") or "sua matéria prioritária"
+            focus_title = focus_act.get("title") or "o conteúdo da atividade"
+            lines.append(f"Direcione sua energia principal para **{focus_course}** (*{focus_title}*).")
+            lines.append("👉 **Por que dominar agora?** A compreensão prática desse tópico é cumulativa. Ao resolver essa pendência hoje, você consolida a base teórica e evita acumular dúvidas para as semanas de prova.")
+            lines.append("👉 **Como estudar com máxima eficiência:** Separe 15 minutos para reler as anotações e os slides da disciplina no Virtual2, identifique os critérios centrais exigidos e construa a resposta de forma estruturada.")
+        elif recent_materials:
+            mat = recent_materials[0]
+            lines.append(f"Aprofunde seus estudos em **{mat.get('course_name', 'suas disciplinas')}**, revisando o material recente: *\"{mat.get('title', 'Conteúdo da disciplina')}\"*.")
+            lines.append("👉 **Dica de estudo ativo:** Faça um resumo esquemático de 5 tópicos principais para fixar o aprendizado na memória de longo prazo.")
+        else:
+            lines.append("Selecione a disciplina com maior peso ou dificuldade do seu semestre e faça uma sessão de leitura ativa e resolução de exercícios práticos.")
+
+        # 4. Ação de Impacto Imediato
+        lines.append("\n### 🔥 **Ação de Impacto Imediato (Desafio dos 25 Minutos)**")
+        if pending_activities:
+            first_act = pending_activities[0]
+            lines.append(
+                f"Ative o modo foco, abra a atividade **\"{first_act.get('title')}\"** de **{first_act.get('course_name', 'sua disciplina')}** "
+                "e dedique um bloco ininterrupto de 25 minutos (Pomodoro) para rascunhar a solução. Começar é vencer 80% da batalha!"
+            )
+        else:
+            lines.append("Dedique um bloco de 25 minutos para organizar suas anotações da semana, revisar pendências futuras e planejar suas próximas metas.")
+
+        return "\n".join(lines)
+
     async def generate_daily_briefing(
         self,
         user_name: str,
@@ -230,7 +327,7 @@ class AIService:
         provider: AIProvider = AIProvider.GROQ,
         custom_api_keys: Optional[Dict] = None,
     ) -> str:
-        """Gera o resumo diário personalizado."""
+        """Gera o resumo diário personalizado via IA, com fallback dinâmico inteligente."""
         courses_str = "\n".join([
             f"- {c['name']} ({c.get('start_time', '?')} - {c.get('end_time', '?')})"
             for c in today_courses
@@ -272,15 +369,28 @@ ESTRUTURA DO BRIEFING:
 
 Elabore um briefing envolvente, interativo e persuasivo seguindo a estrutura."""
 
-        return await self.chat(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            provider=provider,
-            custom_api_keys=custom_api_keys,
-            max_tokens=650,
-            temperature=0.7,
+        try:
+            content = await self.chat(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                provider=provider,
+                custom_api_keys=custom_api_keys,
+                max_tokens=800,
+                temperature=0.7,
+            )
+            if content and len(content.strip()) > 100:
+                return content
+        except Exception as e:
+            logger.warning("Falha na geração com IA externa (%s). Acionando gerador inteligente acadêmico: %s", provider, e)
+
+        # Fallback de alta qualidade estruturado com dados reais do aluno
+        return self.generate_smart_fallback_briefing(
+            user_name=user_name,
+            today_courses=today_courses,
+            pending_activities=pending_activities,
+            recent_materials=recent_materials,
         )
 
     async def generate_course_summary(
