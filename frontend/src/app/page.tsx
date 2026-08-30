@@ -3,15 +3,16 @@
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/dashboard/Dashboard";
 import LoginPage from "@/components/auth/LoginPage";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function Home() {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Carregando IFNMG Assistente...</p>
+      <div className="fixed inset-0 bg-[#08080f] flex items-center justify-center z-[100]">
+        <div className="flex flex-col items-center gap-6">
+          <CogSpinner size={80} className="text-white" />
+          <p className="text-white/60 text-sm font-medium tracking-wide">IFNMG Assistente</p>
         </div>
       </div>
     );

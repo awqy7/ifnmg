@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ViewType } from "./Dashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSync } from "@/contexts/SyncContext";
@@ -32,6 +32,8 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
   const [todaySchedule, setTodaySchedule] = useState<any>({ day: "", slots: [] });
   const [pendingActivities, setPendingActivities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  // Controle para não carregar dados enquanto a sincronização inicial está ativa
+  const initialSyncDone = useRef(false);
 
   const loadData = async () => {
     try {
@@ -59,21 +61,40 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
     }
   };
 
+  // Carrega dados no mount, mas SÓ depois que o sync inicial terminar
   useEffect(() => {
-    loadData();
+    if (!syncing) {
+      // Se o sync já terminou (ou nunca começou), carrega imediatamente
+      if (!initialSyncDone.current) {
+        initialSyncDone.current = true;
+        loadData();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncing]);
+
+  // Recarrega dados quando o evento "data-refresh" é disparado pelo SyncContext
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadData();
+    };
+    window.addEventListener("data-refresh", handleRefresh);
+    return () => window.removeEventListener("data-refresh", handleRefresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGenerateBriefing = async () => {
-    if (syncing) return;
+    if (syncing || generatingBriefing) return;
     setGeneratingBriefing(true);
     try {
       await briefingApi.generate();
-      setTimeout(async () => {
-        const res = await briefingApi.getToday();
-        setBriefing(res.content);
-        setGeneratingBriefing(false);
-      }, 4000);
+      // Aguarda o backend processar antes de buscar o resultado
+      await new Promise((r) => setTimeout(r, 4000));
+      const res = await briefingApi.getToday();
+      setBriefing(res.content);
     } catch {
+      // ignora silenciosamente
+    } finally {
       setGeneratingBriefing(false);
     }
   };
@@ -159,8 +180,13 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
             </div>
 
             <div className="mt-4 text-sm text-gray-300 leading-relaxed min-h-[140px] whitespace-pre-line">
-              {loadingBriefing ? (
-                <div className="flex items-center justify-center h-32 gap-2 text-gray-500 text-xs">
+              {syncing ? (
+                // Durante o sync: mostra somente o spinner, sem texto de "carregando"
+                <div className="flex items-center justify-center h-32">
+                  <CogSpinner size={24} className="text-indigo-400" />
+                </div>
+              ) : loadingBriefing ? (
+                <div className="flex items-center justify-center h-32">
                   <CogSpinner size={20} className="text-white" />
                 </div>
               ) : briefing ? (
@@ -171,20 +197,17 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <div className="p-4 rounded-2xl bg-white/5 text-center text-gray-400 text-xs flex flex-col items-center gap-2">
                   <Sparkles className="w-6 h-6 text-indigo-400" />
                   <p>O briefing de hoje ainda não foi gerado.</p>
-<button
-                      onClick={handleGenerateBriefing}
-                      disabled={syncing}
-                      className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition disabled:opacity-50"
-                    >
-                      {syncing ? (
-                        <>
-                          <CogSpinner size={14} className="text-amber-400" />
-                          <span>Sincronizando...</span>
-                        </>
-                      ) : (
-                        "Gerar Briefing Agora"
-                      )}
-                    </button>
+                  <button
+                    onClick={handleGenerateBriefing}
+                    disabled={syncing}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition disabled:opacity-50"
+                  >
+                    {syncing ? (
+                      <CogSpinner size={14} className="text-white" />
+                    ) : (
+                      "Gerar Briefing Agora"
+                    )}
+                  </button>
                 </div>
               )}
             </div>

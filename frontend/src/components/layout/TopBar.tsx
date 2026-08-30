@@ -13,10 +13,9 @@ import {
   Sparkles,
   Check,
   FileText,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
-import { notificationsApi, moodleApi } from "@/lib/api";
+import { notificationsApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface TopBarProps {
@@ -28,7 +27,8 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true }: TopBarProps) {
   const { user } = useAuth();
-  const { syncing, syncProgress, triggerSync, setSyncing, setSyncProgress } = useSync();
+  // Usa APENAS o contexto global — não duplica polling aqui
+  const { syncing, syncProgress, triggerSync } = useSync();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -81,56 +81,17 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
     };
   }, [fetchUnread]);
 
-  // Polling do status real de sincronização no backend
-  useEffect(() => {
-    if (!syncing && !syncProgress?.includes("Sincronizado")) return;
-    let active = true;
-
-    const poll = async () => {
-      try {
-        const st = await moodleApi.getSyncStatus();
-        if (!active) return;
-
-        if (st.running) {
-          setSyncProgress(
-            `Sincronizando dados... ${st.courses_done ? `${st.courses_done} disciplinas` : "iniciando"}`
-          );
-          setTimeout(poll, 2000);
-        } else {
-          setSyncing(false);
-          if (st.error) {
-            setSyncProgress("Erro na sincronização");
-          } else {
-            setSyncProgress(
-              `Sincronizado com sucesso! ${st.courses_done || 0} disciplinas · ${st.materials || 0} materiais`
-            );
-            window.dispatchEvent(new CustomEvent("data-refresh"));
-          }
-          setTimeout(() => active && setSyncProgress(null), 5000);
-        }
-      } catch {
-        if (active) {
-          setTimeout(() => active && poll(), 3000);
-        }
-      }
-    };
-
-    poll();
-    return () => { active = false; };
-    // O texto de progresso é saída deste polling, não um gatilho para reiniciá-lo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncing]);
-
   const handleSync = async () => {
     await triggerSync();
   };
 
-  // Auto-sync automático no primeiro carregamento pós-login
+  // Auto-sync automático no primeiro carregamento pós-login (apenas uma vez)
   useEffect(() => {
     if (user?.moodle_connected && !hasAutoSynced.current && !syncing) {
       hasAutoSynced.current = true;
       handleSync();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.moodle_connected]);
 
   const toggleNotifications = () => {

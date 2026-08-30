@@ -9,10 +9,10 @@ import {
   Bell,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Shield,
 } from "lucide-react";
 import { moodleApi, chatApi, notificationsApi } from "@/lib/api";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function SettingsView() {
   const { user, refreshUser } = useAuth();
@@ -169,7 +169,7 @@ export default function SettingsView() {
             >
               {savingMoodle ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Conectando...
+                  <CogSpinner size={16} className="text-white" /> Conectando...
                 </>
               ) : (
                 "Salvar & Conectar"
@@ -242,7 +242,7 @@ export default function SettingsView() {
             >
               {savingAI ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Testando & Salvando...
+                  <CogSpinner size={16} className="text-white" /> Testando & Salvando...
                 </>
               ) : (
                 "Atualizar Chave de IA"
