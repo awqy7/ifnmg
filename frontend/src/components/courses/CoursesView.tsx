@@ -104,7 +104,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm"
-                      style={{ backgroundColor: course.color || "#10b981" }}
+                      style={{ backgroundColor: "#059669" }}
                     >
                       <BookOpen className="w-5 h-5 text-white/90" />
                     </div>
