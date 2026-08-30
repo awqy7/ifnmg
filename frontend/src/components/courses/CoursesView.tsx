@@ -52,9 +52,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
       setExpandedCourse(null);
       return;
     }
-
     setExpandedCourse(courseId);
-
     if (!courseMaterials[courseId]) {
       setLoadingMaterials((prev) => ({ ...prev, [courseId]: true }));
       try {
@@ -86,8 +84,8 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
           Nenhuma disciplina encontrada. Conecte o Virtual2 nas Configuracoes.
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {courses.map((course) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {courses.map((course, idx) => {
             const isExpanded = expandedCourse === course.id;
             const materials = courseMaterials[course.id] || [];
             const isLoadingMats = loadingMaterials[course.id];
@@ -95,64 +93,80 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
             return (
               <div
                 key={course.id}
-                className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden transition-colors"
+                className="card-enter rounded-2xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden transition-all duration-200 hover:border-emerald-500/[0.12] group"
+                style={{ animationDelay: `${idx * 50}ms` }}
               >
+                {/* Card Header — always visible */}
                 <div
                   onClick={() => toggleExpand(course.id)}
-                  className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors select-none"
+                  className="p-4 cursor-pointer select-none"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs shrink-0"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm"
                       style={{ backgroundColor: course.color || "#10b981" }}
                     >
-                      <BookOpen className="w-4 h-4 text-white" />
+                      <BookOpen className="w-5 h-5 text-white/90" />
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-medium text-neutral-200 truncate">{course.name}</h3>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300/90 transition-colors truncate">
+                        {course.name}
+                      </h3>
                       <p className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5">
                         <User className="w-3 h-3" />
                         {course.teacher || "Docente IFNMG"}
                       </p>
                     </div>
+                    <div className="shrink-0">
+                      <div className={`p-1 rounded-md transition-all duration-200 ${isExpanded ? "bg-white/[0.06] text-neutral-300 rotate-180" : "bg-white/[0.03] text-neutral-600"}`}>
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="p-1 rounded-md bg-white/[0.03] text-neutral-600">
-                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {/* Material count preview */}
+                  <div className="mt-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-600">
+                      <FileText className="w-3 h-3" />
+                      <span>{materials.length || course.total_materials || "0"} materiais</span>
                     </div>
+                    <span className="text-[10px] text-emerald-400/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                      {isExpanded ? "Recolher" : "Ver materiais"}
+                    </span>
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-2 border-t border-[var(--border)] space-y-2.5">
-                    <div className="flex items-center justify-between text-[11px] pb-1">
-                      <span className="font-medium text-neutral-500 uppercase tracking-wider">
-                        Materiais
-                      </span>
-                      <span className="text-emerald-400/70 font-medium">{materials.length} itens</span>
-                    </div>
-
-                    {isLoadingMats ? (
-                      <div className="py-5 flex items-center justify-center">
-                        <CogSpinner size={20} className="text-neutral-600" />
-                      </div>
-                    ) : materials.length === 0 ? (
-                      <div className="py-5 text-center text-[11px] text-neutral-600">
-                        Nenhum material disponivel nesta disciplina.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {materials.map((mat) => (
+                {/* Expanded Materials Section */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    isExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="px-4 pb-4 pt-0 border-t border-[var(--border)]">
+                    <div className="pt-2.5 space-y-2">
+                      {isLoadingMats ? (
+                        <div className="py-5 flex items-center justify-center">
+                          <CogSpinner size={18} className="text-neutral-600" />
+                        </div>
+                      ) : materials.length === 0 ? (
+                        <div className="py-5 text-center text-[11px] text-neutral-600">
+                          Nenhum material disponivel.
+                        </div>
+                      ) : (
+                        materials.map((mat) => (
                           <div
                             key={mat.id}
-                            className="p-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.12] flex items-center justify-between gap-2 transition-colors"
+                            className="p-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:bg-white/[0.04] flex items-center justify-between gap-2 transition-colors"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <FileText className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
                               <div className="min-w-0">
-                                <h4 className="text-[11px] font-medium text-neutral-300 truncate">{mat.title}</h4>
-                                <p className="text-[9px] text-neutral-600 truncate">{mat.topic_name || "Geral"}</p>
+                                <h4 className="text-[11px] font-medium text-neutral-300 truncate">
+                                  {mat.title}
+                                </h4>
+                                <p className="text-[9px] text-neutral-600 truncate">
+                                  {mat.topic_name || "Geral"}
+                                </p>
                               </div>
                             </div>
                             {mat.url && (
@@ -160,18 +174,18 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                                 href={mat.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-1.5 rounded-md bg-white/[0.03] hover:bg-white/[0.06] text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
+                                className="p-1.5 rounded-md bg-white/[0.03] hover:bg-emerald-500/[0.08] text-neutral-500 hover:text-emerald-400/80 transition-colors shrink-0"
                                 title="Abrir arquivo"
                               >
                                 <Download className="w-3 h-3" />
                               </a>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
