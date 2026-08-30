@@ -70,10 +70,10 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-white flex items-center gap-2.5">
-          <BookOpen className="w-7 h-7 text-indigo-400" /> Disciplinas & Conteúdos
+          <BookOpen className="w-7 h-7 text-indigo-400" /> Suas Disciplinas & Acervo Didático
         </h1>
         <p className="text-sm text-gray-400">
-          Navegue pelas suas matérias e estude materiais com auxílio de IA
+          Acesse instantaneamente todos os materiais, PDFs e aulas organizados para acelerar seu aprendizado
         </p>
       </div>
 
@@ -82,8 +82,8 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
           <CogSpinner size={40} className="text-white" />
         </div>
       ) : courses.length === 0 ? (
-        <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
-          Nenhuma disciplina sincronizada. Conecte sua conta do Virtual2 nas Configurações.
+        <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm leading-relaxed">
+          Nenhuma matéria encontrada. Conecte suas credenciais do Virtual2 nas Configurações para sincronizar seu plano curricular.
         </div>
       ) : (
         <div className="space-y-4">

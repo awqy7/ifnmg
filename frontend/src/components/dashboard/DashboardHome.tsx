@@ -116,22 +116,22 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
               {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
             </span>
             <h1 className="text-2xl lg:text-3xl font-extrabold text-white mt-1">
-              {getGreeting()}, {user?.name ? user.name.split(" ")[0] : "Estudante"}! 👋
+              {getGreeting()}, {user?.name ? user.name.split(" ")[0] : "Campeão"}! 🚀
             </h1>
-            <p className="text-sm text-gray-300 mt-1 max-w-xl">
-              Seu painel acadêmico integrado está sincronizado. Você tem{" "}
+            <p className="text-sm text-gray-300 mt-1 max-w-xl leading-relaxed">
+              Tudo pronto para dominar o seu dia. Você tem{" "}
               <strong className="text-indigo-300 font-semibold">{todaySchedule.slots?.length || 0} aulas hoje</strong> e{" "}
-              <strong className="text-amber-300 font-semibold">{pendingActivities.length} atividades pendentes</strong>.
+              <strong className="text-amber-300 font-semibold">{pendingActivities.length} metas a cumprir</strong>. Mantenha o foco e avance rumo ao topo!
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => openChat()}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-bold shadow-lg shadow-indigo-600/30 transition hover:scale-105 active:scale-95"
             >
               <Sparkles className="w-4 h-4" />
-              Estudar com IA
+              Acelerar com Tutor IA
             </button>
           </div>
         </div>
@@ -151,19 +151,19 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   <Zap className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white">Briefing Matinal da IA</h2>
-                  <p className="text-xs text-gray-400">Resumo personalizado do seu dia acadêmico</p>
+                  <h2 className="text-base font-bold text-white">Briefing Estratégico Diário</h2>
+                  <p className="text-xs text-gray-400">Direcionamento inteligente de prioridades, prazos e estudo focado</p>
                 </div>
               </div>
               <button
                 onClick={handleGenerateBriefing}
                 disabled={generatingBriefing || syncing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-200 transition disabled:opacity-50"
               >
                 {generatingBriefing ? (
                   <>
                     <CogSpinner size={16} className="text-indigo-400" />
-                    <span>Gerando...</span>
+                    <span>Elaborando...</span>
                   </>
                 ) : syncing ? (
                   <>
@@ -173,7 +173,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 ) : (
                   <>
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Regerar</span>
+                    <span>Atualizar Briefing</span>
                   </>
                 )}
               </button>
@@ -194,18 +194,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   <Markdown content={briefing} />
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-white/5 text-center text-gray-400 text-xs flex flex-col items-center gap-2">
+                <div className="p-5 rounded-2xl bg-white/5 text-center text-gray-400 text-xs flex flex-col items-center gap-3">
                   <Sparkles className="w-6 h-6 text-indigo-400" />
-                  <p>O briefing de hoje ainda não foi gerado.</p>
+                  <p className="max-w-md text-gray-300">
+                    O seu briefing estratégico de hoje ainda não foi montado. Gere agora para mapear prioridades e destravar seu estudo.
+                  </p>
                   <button
                     onClick={handleGenerateBriefing}
                     disabled={syncing}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:from-indigo-500 hover:to-purple-500 shadow-md transition disabled:opacity-50"
                   >
                     {syncing ? (
                       <CogSpinner size={14} className="text-white" />
                     ) : (
-                      "Gerar Briefing Agora"
+                      "Gerar Plano Estratégico Agora"
                     )}
                   </button>
                 </div>
@@ -229,16 +231,16 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
               </div>
               <button
                 onClick={() => onNavigate("horarios")}
-                className="text-xs text-indigo-400 hover:underline flex items-center gap-1"
+                className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
               >
-                Grade <ArrowRight className="w-3 h-3" />
+                Grade Completa <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto">
               {!todaySchedule.slots || todaySchedule.slots.length === 0 ? (
-                <div className="p-6 text-center text-gray-500 text-xs">
-                  Nenhuma aula agendada para hoje! 🎉
+                <div className="p-6 text-center text-gray-400 text-xs">
+                  Sem aulas presenciais hoje! Aproveite o dia para colocar suas metas em dia e sair na frente. 🎯
                 </div>
               ) : (
                 todaySchedule.slots.map((slot: any) => (
@@ -271,22 +273,22 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Próximos Prazos & Entregas</h2>
-                <p className="text-xs text-gray-400">{pendingActivities.length} pendências</p>
+                <h2 className="text-base font-bold text-white">Prazos & Missões Críticas</h2>
+                <p className="text-xs text-gray-400">{pendingActivities.length} entregas requerem sua atenção</p>
               </div>
             </div>
             <button
               onClick={() => onNavigate("atividades")}
-              className="text-xs text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
             >
-              Ver todas <ArrowRight className="w-3 h-3" />
+              Ver Todas <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           <div className="mt-4 space-y-2.5 max-h-72 overflow-y-auto">
             {pendingActivities.length === 0 ? (
-              <div className="p-6 text-center text-gray-500 text-xs">
-                Tudo em dia! Nenhuma atividade pendente. 🚀
+              <div className="p-6 text-center text-emerald-400/90 text-xs font-medium">
+                Excelente! Todas as suas atividades estão entregues e em dia. Continue nesse ritmo! 🏆
               </div>
             ) : (
               pendingActivities.slice(0, 5).map((act) => (
@@ -305,7 +307,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                       {act.title}
                     </h4>
                     <p className="text-[11px] text-gray-400 truncate mt-0.5">
-                      {act.due_date ? `Vence em: ${new Date(act.due_date).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sem data limite"}
+                      {act.due_date ? `Prazo fatal: ${new Date(act.due_date).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sem data limite"}
                     </p>
                   </div>
                   <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
@@ -325,22 +327,22 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <BookOpen className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Minhas Disciplinas</h2>
-                <p className="text-xs text-gray-400">{courses.length} matriculadas</p>
+                <h2 className="text-base font-bold text-white">Disciplinas Ativas</h2>
+                <p className="text-xs text-gray-400">{courses.length} matérias conectadas ao Virtual2</p>
               </div>
             </div>
             <button
               onClick={() => onNavigate("cursos")}
-              className="text-xs text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
             >
-              Ver matérias <ArrowRight className="w-3 h-3" />
+              Ver Todas <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
             {courses.length === 0 ? (
-              <div className="col-span-2 p-6 text-center text-gray-500 text-xs">
-                Nenhuma disciplina sincronizada ainda.
+              <div className="col-span-2 p-6 text-center text-gray-400 text-xs">
+                Nenhuma disciplina sincronizada ainda. Conecte ao Virtual2 para carregar suas matérias.
               </div>
             ) : (
               courses.slice(0, 6).map((crs) => (
@@ -354,13 +356,13 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                       {crs.name}
                     </h4>
                     <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5">
-                      {crs.teacher || "Professor IFNMG"}
+                      {crs.teacher || "Docente IFNMG"}
                     </p>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-[11px] text-indigo-400">
-                    <span>{crs.pending_activities || 0} pendentes</span>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold">
-                      Chat <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+                    <span className="text-gray-400">{crs.pending_activities || 0} pendentes</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 group-hover:text-indigo-200">
+                      Tutor IA <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
                     </span>
                   </div>
                 </div>

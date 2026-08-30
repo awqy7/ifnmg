@@ -48,10 +48,10 @@ export default function LoginPage() {
         <div className="bg-[#181826] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="space-y-1">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-indigo-400" /> Acesso com Virtual2
+              <Lock className="w-4 h-4 text-indigo-400" /> Acesso Direto via Virtual2
             </h2>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Entre diretamente com suas credenciais do portal do IFNMG.
+              Sincronize suas disciplinas, prazos e notas instantaneamente com seu login oficial do IFNMG.
             </p>
           </div>
 
@@ -67,6 +67,7 @@ export default function LoginPage() {
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Seu usuário do Virtual2"
                   required
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
                 />
@@ -107,13 +108,13 @@ export default function LoginPage() {
             )}
 
             <LoginButton onLogin={handleLogin} onError={handleError}>
-              Entrar no Sistema
+              Entrar e Potencializar Meus Estudos
             </LoginButton>
           </form>
 
           <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400">
             <span className="flex items-center gap-1 text-emerald-400/90 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Criptografia AES-128
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Criptografia Ponta a Ponta AES-128
             </span>
             <a
               href="https://virtual2.ifnmg.edu.br"
@@ -128,10 +129,10 @@ export default function LoginPage() {
 
         {/* Footer: crédito + privacidade */}
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
-          <p className="text-[11px] text-gray-600">
-            IFNMG Assistente — Plataforma independente para estudantes.
+          <p className="text-[11px] text-gray-500">
+            IFNMG Assistente — Plataforma acadêmica independente criada para impulsionar seus resultados.
           </p>
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
             <span>Desenvolvido e criado por</span>
             <a
               href="https://instagram.com/vinicius.tsx"
@@ -142,9 +143,8 @@ export default function LoginPage() {
               @vinicius.tsx
             </a>
           </div>
-          <p className="text-[10px] text-gray-600 leading-relaxed max-w-xs">
-            🔒 Nosso sistema segue todas as diretrizes de privacidade —{" "}
-            <span className="text-gray-500">não armazenamos nenhum dado seu.</span>
+          <p className="text-[10px] text-gray-500 leading-relaxed max-w-xs">
+            🔒 <strong className="text-gray-400">Privacidade 100% Garantida:</strong> seus dados pertencem a você e são processados de forma privada e segura.
           </p>
         </div>
       </div>

@@ -31,16 +31,20 @@ async def _generate_user_briefing(db: Session, current_user: User) -> DailyBrief
         for s in schedules
     ]
 
-    pending = db.query(Activity).filter(
+    pending = db.query(Activity, Course.name.label("course_name")).outerjoin(
+        Course, Activity.course_id == Course.id
+    ).filter(
         Activity.user_id == current_user.id,
         Activity.status.in_(["pending", "late"]),
     ).order_by(Activity.due_date.asc().nullslast()).limit(10).all()
 
     pending_data = [
         {
-            "title": a.title,
-            "due_date": a.due_date.strftime("%d/%m/%Y %H:%M") if a.due_date else None,
-            "status": a.status,
+            "title": a[0].title,
+            "course_name": a[1] or "Disciplina",
+            "description": a[0].description[:300] if a[0].description else None,
+            "due_date": a[0].due_date.strftime("%d/%m/%Y %H:%M") if a[0].due_date else None,
+            "status": a[0].status,
         }
         for a in pending
     ]

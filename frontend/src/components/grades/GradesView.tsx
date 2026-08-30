@@ -26,10 +26,10 @@ export default function GradesView() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-white flex items-center gap-2.5">
-          <GraduationCap className="w-7 h-7 text-indigo-400" /> Boletim & Desempenho
+          <GraduationCap className="w-7 h-7 text-indigo-400" /> Boletim & Métricas de Desempenho
         </h1>
         <p className="text-sm text-gray-400">
-          Acompanhe suas notas, médias e feedbacks de avaliações do Virtual2
+          Monitore suas notas, visualize sua evolução por disciplina e mantenha sua média sempre acima do alvo
         </p>
       </div>
 
@@ -38,8 +38,8 @@ export default function GradesView() {
           <CogSpinner size={40} className="text-white" />
         </div>
       ) : gradesData.length === 0 ? (
-        <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm">
-          Nenhuma nota registrada no momento. Sincronize o Moodle para puxar seu boletim.
+        <div className="p-12 rounded-3xl bg-[#181826] border border-white/10 text-center text-gray-400 text-sm leading-relaxed">
+          Nenhuma nota registrada no momento. Clique no botão de sincronizar para importar seu histórico e boletim do Virtual2.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">

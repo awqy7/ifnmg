@@ -84,10 +84,10 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white flex items-center gap-2.5">
-            <CheckSquare className="w-7 h-7 text-indigo-400" /> Atividades & Tarefas
+            <CheckSquare className="w-7 h-7 text-indigo-400" /> Central de Atividades & Prazos
           </h1>
           <p className="text-sm text-gray-400">
-            Clique em qualquer atividade para ler as orientações e estudar com IA direto no app
+            Acompanhe cada entrega, estude as instruções com o Tutor IA e garanta 100% de aproveitamento acadêmico
           </p>
         </div>
       </div>
