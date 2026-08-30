@@ -35,7 +35,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       nodes.push(
         <code
           key={`${keyPrefix}-c${i++}`}
-          className="px-1.5 py-0.5 rounded-md bg-white/10 text-indigo-300 text-[0.85em] font-mono"
+          className="px-1.5 py-0.5 rounded-md bg-white/10 text-emerald-300 text-[0.85em] font-mono"
         >
           {match[4]}
         </code>
@@ -61,7 +61,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           href={safeHref}
           target="_blank"
           rel="noreferrer"
-          className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+          className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
         >
           {match[5]}
         </a>
@@ -132,7 +132,7 @@ export default function Markdown({ content }: { content: string }) {
       blocks.push(
         <blockquote
           key={key++}
-          className="my-2 pl-3 border-l-2 border-indigo-500/50 text-gray-300"
+          className="my-2 pl-3 border-l-2 border-emerald-500/50 text-gray-300"
         >
           {renderInline(quoteLines.join(" "), `q${key}`)}
         </blockquote>
