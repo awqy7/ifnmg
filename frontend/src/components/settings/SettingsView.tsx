@@ -17,19 +17,16 @@ import { CogSpinner } from "@/components/ui/CogSpinner";
 export default function SettingsView() {
   const { user, refreshUser } = useAuth();
 
-  // Moodle credentials form
   const [moodleUser, setMoodleUser] = useState("");
   const [moodlePass, setMoodlePass] = useState("");
   const [savingMoodle, setSavingMoodle] = useState(false);
   const [moodleMessage, setMoodleMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // AI Config
   const [selectedProvider, setSelectedProvider] = useState("groq");
   const [apiKey, setApiKey] = useState("");
   const [savingAI, setSavingAI] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
 
-  // Notifications preferences
   const [notifSettings, setNotifSettings] = useState({
     new_activity: true,
     deadline_7d: true,
@@ -46,11 +43,11 @@ export default function SettingsView() {
     setMoodleMessage(null);
     try {
       const res = await moodleApi.saveCredentials(moodleUser, moodlePass);
-      setMoodleMessage({ type: "success", text: res.message || "Conectado ao Virtual2 com sucesso! ✅" });
+      setMoodleMessage({ type: "success", text: res.message || "Conectado ao Virtual2!" });
       setMoodlePass("");
       refreshUser();
     } catch (err: any) {
-      setMoodleMessage({ type: "error", text: err.message || "Falha ao conectar no Virtual2." });
+      setMoodleMessage({ type: "error", text: err.message || "Falha ao conectar." });
     }
     setSavingMoodle(false);
   };
@@ -61,11 +58,11 @@ export default function SettingsView() {
     setAiMessage(null);
     try {
       await chatApi.configureAI(selectedProvider, apiKey, true);
-      setAiMessage(`Chave do ${selectedProvider.toUpperCase()} configurada com sucesso! ✅`);
+      setAiMessage(`Chave do ${selectedProvider.toUpperCase()} configurada!`);
       setApiKey("");
       refreshUser();
     } catch (err: any) {
-      setAiMessage(`Erro: ${err.message || "Chave inválida"}`);
+      setAiMessage(`Erro: ${err.message || "Chave invalida"}`);
     }
     setSavingAI(false);
   };
@@ -79,219 +76,184 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-black text-white flex items-center gap-2.5 tracking-tight">
-          <Settings className="w-7 h-7 text-emerald-400" /> Configurações do Sistema
+        <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
+          <Settings className="w-5 h-5 text-emerald-400/80" />
+          Configuracoes
         </h1>
-        <p className="text-sm text-zinc-400">
-          Gerencie suas credenciais do Moodle, provedores de inteligência e preferências de alertas
+        <p className="text-xs text-neutral-500 mt-0.5">
+          Credenciais, provedores de IA e preferencias
         </p>
       </div>
 
-      {/* SECTION 1: Virtual2 Moodle Authentication */}
-      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
-        <div className="flex items-center justify-between pb-4 border-b border-white/10">
+      {/* Virtual2 Credentials */}
+      <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Lock className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.1]">
+              <Lock className="w-3.5 h-3.5 text-emerald-400/80" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Credenciais do Virtual2 IFNMG</h2>
-              <p className="text-xs text-zinc-400">Sincronização em tempo real das suas disciplinas, tarefas e notas</p>
+              <h2 className="text-sm font-semibold text-white">Virtual2 IFNMG</h2>
+              <p className="text-[10px] text-neutral-500">Credenciais de sincronizacao</p>
             </div>
           </div>
 
           {user?.moodle_connected ? (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              <CheckCircle2 className="w-4 h-4" /> Conectado
+            <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400/80 bg-emerald-500/[0.06] px-2 py-0.5 rounded-full border border-emerald-500/[0.1]">
+              <CheckCircle2 className="w-3 h-3" /> Conectado
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-              <AlertCircle className="w-4 h-4" /> Desconectado
+            <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400/80 bg-amber-500/[0.06] px-2 py-0.5 rounded-full border border-amber-500/[0.1]">
+              <AlertCircle className="w-3 h-3" /> Desconectado
             </span>
           )}
         </div>
 
-        <form onSubmit={handleSaveMoodle} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSaveMoodle} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                Usuário / CPF (Virtual2)
-              </label>
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Usuario / CPF</label>
               <input
                 type="text"
                 value={moodleUser}
                 onChange={(e) => setMoodleUser(e.target.value)}
-                placeholder="Seu login no virtual2.ifnmg.edu.br"
+                placeholder="Seu login no Virtual2"
                 required
-                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                Senha (Virtual2)
-              </label>
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Senha</label>
               <input
                 type="password"
                 value={moodlePass}
                 onChange={(e) => setMoodlePass(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder="Sua senha"
                 required
-                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
               />
             </div>
           </div>
 
           {moodleMessage && (
             <div
-              className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+              className={`p-2.5 rounded-lg text-[11px] ${
                 moodleMessage.type === "success"
-                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-                  : "bg-red-500/10 border border-red-500/20 text-red-400"
+                  ? "bg-emerald-500/[0.06] border border-emerald-500/[0.1] text-emerald-400/80"
+                  : "bg-red-500/[0.06] border border-red-500/[0.1] text-red-400/80"
               }`}
             >
               {moodleMessage.text}
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-[11px] text-zinc-500 flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-emerald-400" />
-              Credenciais criptografadas em repouso com algoritmo Fernet (AES-128).
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-[10px] text-neutral-600 flex items-center gap-1">
+              <Shield className="w-3 h-3" /> Credenciais criptografadas
             </p>
-
             <button
               type="submit"
               disabled={savingMoodle}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-950/40 transition"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
             >
-              {savingMoodle ? (
-                <>
-                  <CogSpinner size={16} className="text-white" /> Conectando...
-                </>
-              ) : (
-                "Salvar & Conectar"
-              )}
+              {savingMoodle ? <CogSpinner size={14} className="text-white" /> : "Conectar"}
             </button>
           </div>
         </form>
       </div>
 
-      {/* SECTION 2: AI Multi-Provider Config */}
-      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
-        <div className="flex items-center justify-between pb-4 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-zinc-800 text-zinc-300 border border-zinc-700/50">
-              <Cpu className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Provedores de Inteligência Artificial</h2>
-              <p className="text-xs text-zinc-400">
-                Padrão inteligente de alta performance com Groq e Google Gemini, ou conecte sua própria chave
-              </p>
-            </div>
+      {/* AI Provider */}
+      <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-[var(--border)]">
+          <div className="p-1.5 rounded-lg bg-white/[0.03] border border-[var(--border)]">
+            <Cpu className="w-3.5 h-3.5 text-neutral-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white">Provedor de IA</h2>
+            <p className="text-[10px] text-neutral-500">Configure a chave de API</p>
           </div>
         </div>
 
-        <form onSubmit={handleSaveAI} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSaveAI} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                Provedor de Inteligência Artificial
-              </label>
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Provedor</label>
               <select
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30 transition-colors"
               >
-                <option value="groq">Groq GPT-OSS 120B (Ultra Rápido, Padrão)</option>
-                <option value="gemini">Google Gemini 1.5 Flash (Gratuito)</option>
-                <option value="openai">OpenAI GPT-4o Mini (Chave Própria)</option>
-                <option value="anthropic">Anthropic Claude 3 Haiku (Chave Própria)</option>
-                <option value="ollama">Ollama Local (Localhost:11434)</option>
+                <option value="groq">Groq (Padrao)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="ollama">Ollama Local</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                Chave de API (Opcional)
-              </label>
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Chave de API</label>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Insira sua chave de API personalizada..."
-                className="w-full min-h-11 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition"
+                placeholder="Sua chave"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
               />
             </div>
           </div>
 
           {aiMessage && (
-            <div className="p-3 rounded-xl text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+            <div className="p-2.5 rounded-lg text-[11px] bg-emerald-500/[0.06] border border-emerald-500/[0.1] text-emerald-400/80">
               {aiMessage}
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <button
               type="submit"
               disabled={savingAI || !apiKey}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-950/40 transition"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
             >
-              {savingAI ? (
-                <>
-                  <CogSpinner size={16} className="text-white" /> Validando & Salvando...
-                </>
-              ) : (
-                "Atualizar Chave de IA"
-              )}
+              {savingAI ? <CogSpinner size={14} className="text-white" /> : "Salvar"}
             </button>
           </div>
         </form>
       </div>
 
-      {/* SECTION 3: Notifications Preferences */}
-      <div className="rounded-3xl bg-[#121217] border border-white/10 p-4 sm:p-6 space-y-5 shadow-xl shadow-black/40">
-        <div className="flex items-center gap-2.5 pb-4 border-b border-white/10">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Bell className="w-4 h-4" />
+      {/* Notification Preferences */}
+      <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-[var(--border)]">
+          <div className="p-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/[0.1]">
+            <Bell className="w-3.5 h-3.5 text-amber-400/80" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">Preferências de Notificação</h2>
-            <p className="text-xs text-zinc-400">Personalize a frequência e o tipo de avisos acadêmicos</p>
+            <h2 className="text-sm font-semibold text-white">Notificacoes</h2>
+            <p className="text-[10px] text-neutral-500">Preferencias de alertas</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[
-            { key: "new_activity", label: "Novas tarefas postadas pelos professores" },
-            { key: "deadline_7d", label: "Antecipação estratégica: 7 dias antes do prazo" },
-            { key: "deadline_3d", label: "Alerta de foco: 3 dias antes do prazo" },
-            { key: "deadline_1d", label: "Alerta prioritário: 1 dia antes do prazo" },
-            { key: "deadline_6h", label: "Alerta de urgência máxima: 6 horas antes" },
-            { key: "grade_released", label: "Lançamento de novas notas e correções" },
-            { key: "daily_briefing", label: "Briefing diário com IA às 6h da manhã" },
+            { key: "new_activity", label: "Novas tarefas publicadas" },
+            { key: "deadline_7d", label: "Prazo em 7 dias" },
+            { key: "deadline_3d", label: "Prazo em 3 dias" },
+            { key: "deadline_1d", label: "Prazo em 1 dia" },
+            { key: "deadline_6h", label: "Prazo em 6 horas" },
+            { key: "grade_released", label: "Notas lancadas" },
+            { key: "daily_briefing", label: "Briefing diario" },
           ].map((item) => {
             const active = notifSettings[item.key as keyof typeof notifSettings];
             return (
               <div
                 key={item.key}
                 onClick={() => handleToggleNotif(item.key)}
-                className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/20 flex items-center justify-between gap-3 cursor-pointer transition select-none"
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.12] flex items-center justify-between gap-2 cursor-pointer transition-colors select-none"
               >
-                <span className="text-xs text-zinc-300">{item.label}</span>
-                <div
-                  className={`w-9 h-5 rounded-full p-0.5 transition ${
-                    active ? "bg-emerald-500" : "bg-white/10"
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      active ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
+                <span className="text-[11px] text-neutral-400">{item.label}</span>
+                <div className={`w-8 h-4.5 rounded-full p-0.5 transition-colors ${active ? "bg-emerald-500/80" : "bg-neutral-700"}`}>
+                  <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${active ? "translate-x-3.5" : "translate-x-0"}`} />
                 </div>
               </div>
             );
