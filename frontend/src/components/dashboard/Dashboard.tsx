@@ -42,7 +42,7 @@ export default function Dashboard() {
     setMobileMenuOpen(false);
     setTopBarVisible(true);
     lastScrollTop.current = 0;
-    mainRef.current?.scrollTo({ top: 0 });
+    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleMainScroll = (event: React.UIEvent<HTMLElement>) => {
@@ -90,7 +90,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-dvh bg-[#0f0f13] overflow-hidden">
+    <div className="flex h-dvh bg-[var(--background)] overflow-hidden">
       <Sidebar
         currentView={currentView}
         onNavigate={handleNavigate}
@@ -110,22 +110,23 @@ export default function Dashboard() {
         <main
           ref={mainRef}
           onScroll={handleMainScroll}
-          className="flex-1 overflow-y-auto overscroll-contain pb-20 lg:pb-0"
+          className="flex-1 overflow-y-auto overscroll-contain pb-24 lg:pb-0"
         >
-          <div className="max-w-7xl mx-auto p-3 sm:p-4 lg:p-6">
-            {viewMap[currentView]}
+          <div className="max-w-6xl mx-auto p-4 sm:p-5 lg:p-6">
+            {/* Key forces remount → triggers view-enter animation */}
+            <div key={currentView} className="view-enter">
+              {viewMap[currentView]}
+            </div>
           </div>
         </main>
       </div>
 
-      {/* Global Activity Viewer Modal */}
       <ActivityModal
         activityId={selectedActivityId}
         onClose={() => setSelectedActivityId(null)}
         openChatWithContext={openChat}
       />
 
-      {/* WebSocket: notificações em tempo real + toasts */}
       <NotificationSocket />
 
       <MobileBottomNav

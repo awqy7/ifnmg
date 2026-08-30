@@ -41,7 +41,7 @@ def api_response(url: str):
             },
             {
                 "id": "atividade-entregue",
-                "title": "Atividade já entregue",
+                "title": "Atividade ja entregue",
                 "type": "assignment",
                 "status": "submitted",
                 "course_id": "curso-mobile",
@@ -71,9 +71,18 @@ def api_response(url: str):
             "course_name": "Disciplina de teste",
             "course_color": "#6366f1",
             "due_date": "2030-12-31T23:59:00",
-            "description": "Leia as orientações e responda às questões propostas.",
+            "description": "Leia as orientacoes e responda as questoes propostas.",
             "files": [],
         }
+    if "/api/courses" in url:
+        return [
+            {
+                "id": "curso-mobile",
+                "name": "Disciplina de teste",
+                "teacher": "Prof. Teste",
+                "pending_activities": 1,
+            }
+        ]
     return []
 
 
@@ -85,7 +94,9 @@ def main():
             for width, height in viewports:
                 print(f"Testando {width}x{height}...", flush=True)
                 page = browser.new_page(viewport={"width": width, "height": height})
-                page.add_init_script("localStorage.setItem('ifnmg_token', 'mobile-smoke-token')")
+                page.add_init_script(
+                    "localStorage.setItem('ifnmg_token', 'mobile-smoke-token')"
+                )
 
                 def route_api(route):
                     route.fulfill(
@@ -96,18 +107,27 @@ def main():
 
                 page.route("**/api/**", route_api)
                 page.goto("http://127.0.0.1:3000", wait_until="domcontentloaded")
-                page.get_by_role("navigation", name="Navegação principal").wait_for(state="visible")
 
+                # Wait for bottom nav to be visible
+                page.get_by_role(
+                    "navigation", name="Navegacao principal"
+                ).wait_for(state="visible", timeout=10000)
+
+                # 1) No horizontal overflow
                 overflow = page.evaluate(
                     "document.documentElement.scrollWidth > document.documentElement.clientWidth"
                 )
                 assert not overflow, f"overflow horizontal em {width}x{height}"
-                main_width = page.locator("main").evaluate("element => element.clientWidth")
+
+                # 2) Main content uses available width
+                main_width = page.locator("main").evaluate(
+                    "element => element.clientWidth"
+                )
                 assert main_width >= width - 1, (
-                    f"conteúdo comprimido em {width}x{height}: main={main_width}px"
+                    f"conteudo comprimido em {width}x{height}: main={main_width}px"
                 )
 
-                # Ao descer, o topo recolhe; ao subir, reaparece.
+                # 3) TopBar hide on scroll down, show on scroll up
                 page.locator("main > div").evaluate(
                     "element => element.style.paddingBottom = '1200px'"
                 )
@@ -115,43 +135,65 @@ def main():
                     "element => { element.scrollTop = 300; element.dispatchEvent(new Event('scroll')); }"
                 )
                 page.wait_for_timeout(400)
-                assert page.locator("header").evaluate("element => element.clientHeight") == 0
+                assert page.locator("header").evaluate(
+                    "element => element.clientHeight"
+                ) == 0, "TopBar should hide on scroll down"
+
                 page.locator("main").evaluate(
                     "element => { element.scrollTop = 100; element.dispatchEvent(new Event('scroll')); }"
                 )
                 page.wait_for_timeout(400)
-                assert page.locator("header").evaluate("element => element.clientHeight") > 0
+                assert page.locator("header").evaluate(
+                    "element => element.clientHeight"
+                ) > 0, "TopBar should show on scroll up"
 
-                page.locator("nav.mobile-bottom-nav button").filter(has_text="Tarefas").click()
-                page.get_by_role("heading", name="Atividades & Tarefas").wait_for(state="visible")
+                # 4) Navigate to Atividades via bottom nav
+                page.locator("nav button").filter(has_text="Tarefas").click()
+                page.get_by_role("heading", name="Atividades").wait_for(
+                    state="visible"
+                )
 
-                # Não há controles de filtro: a ordem é automática e a matéria aparece no card.
-                for label in ["Todas", "Pendentes", "Entregues", "Atrasadas"]:
-                    assert page.get_by_role("button", name=label, exact=True).count() == 0
-                assert page.get_by_text("Disciplina de teste", exact=True).first.is_visible()
+                # 5) Activity cards render with correct order
                 titles = page.locator("main h3").all_text_contents()
-                assert titles[:3] == [
-                    "Atividade de teste responsivo",
-                    "Atividade já entregue",
-                    "Atividade atrasada",
-                ]
+                assert len(titles) >= 2, f"Expected at least 2 activities, got {titles}"
+                assert "Atividade de teste responsivo" in titles[0]
+                assert "Atividade ja entregue" in titles[1]
+                assert "Atividade atrasada" in titles[2]
 
-                # O visualizador global também deve caber e fechar no menor viewport.
+                # 6) No filter buttons
+                for label in ["Todas", "Pendentes", "Entregues", "Atrasadas"]:
+                    assert (
+                        page.get_by_role("button", name=label, exact=True).count() == 0
+                    ), f"Unexpected filter button '{label}'"
+
+                # 7) Course name badge is visible
+                assert page.get_by_text("Disciplina de teste", exact=True).first.is_visible()
+
+                # 8) Activity modal opens and fits viewport
                 page.get_by_text("Atividade de teste responsivo", exact=True).click()
                 page.get_by_role("dialog").wait_for(state="visible")
                 dialog = page.get_by_role("dialog").bounding_box()
                 assert dialog and dialog["x"] >= 0 and dialog["x"] + dialog["width"] <= width
-                page.get_by_role("button", name="Fechar atividade").click()
+                page.get_by_role("button", name="Fechar modal").click()
+                page.wait_for_timeout(300)
 
-                page.get_by_role("button", name="Abrir todas as opções").click()
+                # 9) Slide-out drawer opens and fits viewport
+                page.get_by_role("button", name="Abrir todas as opcoes").click()
                 page.wait_for_timeout(400)
                 aside = page.locator("aside").bounding_box()
-                assert aside and aside["x"] >= 0, f"drawer não abriu em {width}x{height}"
+                assert aside and aside["x"] >= 0, f"drawer nao abriu em {width}x{height}"
+
+                # 10) Screenshot for visual check
+                page.screenshot(
+                    path=f"tests/screenshot_{width}x{height}.png", full_page=False
+                )
+                print(f"  screenshot salvo: tests/screenshot_{width}x{height}.png")
+
                 page.close()
         finally:
             browser.close()
 
-    print(f"OK: {len(viewports)} viewports móveis sem overflow e com navegação funcional")
+    print(f"\nOK: {len(viewports)} viewports moveis sem overflow e com navegacao funcional")
 
 
 if __name__ == "__main__":

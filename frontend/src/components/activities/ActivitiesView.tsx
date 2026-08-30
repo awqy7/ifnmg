@@ -56,7 +56,6 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
     return act.status;
   };
 
-  // Ordem definida para leitura rápida: pendentes, entregues e atrasadas.
   const statusOrder: Record<string, number> = { pending: 0, submitted: 1, late: 2 };
   const sortedActivities = [...activities].sort((a, b) => {
     const statusDifference =
@@ -70,37 +69,36 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "quiz":
-        return <HelpCircle className="w-4 h-4 text-emerald-400" />;
+        return <HelpCircle className="w-3.5 h-3.5 text-emerald-400/80" />;
       case "forum":
-        return <MessageCircle className="w-4 h-4 text-teal-400" />;
+        return <MessageCircle className="w-3.5 h-3.5 text-emerald-400/80" />;
       default:
-        return <FileText className="w-4 h-4 text-emerald-400" />;
+        return <FileText className="w-3.5 h-3.5 text-emerald-400/80" />;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2.5 tracking-tight">
-            <CheckSquare className="w-7 h-7 text-emerald-400" /> Central de Atividades & Prazos
-          </h1>
-          <p className="text-sm text-zinc-400">
-            Acompanhe cada entrega, estude as instruções com o Mentor IA e garanta 100% de aproveitamento acadêmico
-          </p>
-        </div>
+      <div>
+        <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
+          <CheckSquare className="w-5 h-5 text-emerald-400/80" />
+          Atividades
+        </h1>
+        <p className="text-xs text-neutral-500 mt-0.5">
+          Acompanhe suas entregas e prazos
+        </p>
       </div>
 
       {/* Activities List */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {loading ? (
           <div className="p-12 flex items-center justify-center">
-            <CogSpinner size={40} className="text-white" />
+            <CogSpinner size={32} className="text-neutral-600" />
           </div>
         ) : sortedActivities.length === 0 ? (
-          <div className="p-12 rounded-3xl bg-[#121217] border border-white/10 text-center text-zinc-400 text-sm leading-relaxed shadow-xl shadow-black/40">
-            Nenhuma atividade pendente encontrada no Virtual2. Parabéns pela organização! 🚀
+          <div className="p-10 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-center text-neutral-500 text-sm">
+            Nenhuma atividade encontrada.
           </div>
         ) : (
           sortedActivities.map((act) => {
@@ -111,50 +109,47 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
               <div
                 key={act.id}
                 onClick={() => openActivity && openActivity(act.id)}
-                className="bg-[#121217] border border-white/10 hover:border-emerald-500/30 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition cursor-pointer group shadow-lg shadow-black/30"
+                className="bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500/[0.12] p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors cursor-pointer group"
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <button
                     onClick={(e) => handleToggleStatus(e, act.id, act.status)}
-                    className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 ${
+                    className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
                       isSubmitted
-                        ? "bg-emerald-500 border-emerald-400 text-black font-black"
-                        : "border-white/20 hover:border-emerald-500 bg-white/5"
+                        ? "bg-emerald-500 border-emerald-500 text-black"
+                        : "border-neutral-700 hover:border-emerald-500/50 bg-white/[0.02]"
                     }`}
                     title={isSubmitted ? "Marcar como pendente" : "Marcar como entregue"}
                   >
-                    {isSubmitted && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {isSubmitted && <CheckCircle2 className="w-3 h-3" />}
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <div className="mb-2">
-                      <span
-                        className="inline-flex max-w-full items-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300 shadow-sm"
-                      >
+                    <div className="mb-1">
+                      <span className="inline-flex max-w-full items-center rounded-md border border-emerald-500/[0.12] bg-emerald-500/[0.05] px-2 py-0.5 text-[10px] font-medium text-emerald-400/80">
                         <span className="truncate">{act.course_name || "Disciplina"}</span>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="p-1 rounded-md bg-white/[0.04] border border-white/5">{getTypeIcon(act.type)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="p-0.5 rounded bg-white/[0.02]">{getTypeIcon(act.type)}</span>
                       <h3
-                        className={`text-sm font-semibold text-white group-hover:text-emerald-300 transition ${
-                          isSubmitted ? "line-through text-zinc-500" : ""
+                        className={`text-xs font-medium text-neutral-200 group-hover:text-emerald-300/90 transition-colors ${
+                          isSubmitted ? "line-through text-neutral-600" : ""
                         }`}
                       >
                         {act.title}
                       </h3>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-400 flex-wrap">
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-neutral-500 flex-wrap">
                       {act.due_date ? (
                         <span
                           className={`flex items-center gap-1 font-medium ${
-                            isLate ? "text-red-400" : isSubmitted ? "text-zinc-500" : "text-amber-400"
+                            isLate ? "text-red-400/80" : isSubmitted ? "text-neutral-600" : "text-amber-400/80"
                           }`}
                         >
-                          <Clock className="w-3.5 h-3.5" />
-                          Prazo:{" "}
+                          <Clock className="w-3 h-3" />
                           {new Date(act.due_date).toLocaleDateString("pt-BR", {
                             day: "numeric",
                             month: "short",
@@ -163,23 +158,23 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                           })}
                         </span>
                       ) : (
-                        <span className="text-zinc-500">Sem prazo definido</span>
+                        <span className="text-neutral-600">Sem prazo</span>
                       )}
 
                       {act.grade !== null && act.grade !== undefined && (
-                        <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                          Nota: {act.grade} {act.max_grade ? `/ ${act.max_grade}` : ""}
+                        <span className="text-emerald-400/80 font-medium bg-emerald-500/[0.06] px-1.5 py-0.5 rounded border border-emerald-500/[0.1]">
+                          {act.grade} {act.max_grade ? `/ ${act.max_grade}` : ""}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 group-hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-semibold text-emerald-300 transition">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Detalhes & IA</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:translate-x-0.5 transition" />
+                <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+                  <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] group-hover:bg-white/[0.06] border border-[var(--border)] text-[10px] font-medium text-neutral-400 transition-colors">
+                    <Sparkles className="w-3 h-3 text-emerald-400/60" />
+                    <span>Detalhes</span>
+                    <ChevronRight className="w-3 h-3 text-neutral-600 group-hover:translate-x-0.5 transition-transform" />
                   </span>
                 </div>
               </div>

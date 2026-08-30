@@ -10,11 +10,6 @@ interface Toast {
   message: string;
 }
 
-/**
- * Conecta ao WebSocket /ws do backend quando há usuário logado.
- * Recebe notificações em tempo real, mostra toast e dispara
- * o evento 'notif-refresh' para o TopBar atualizar o contador.
- */
 export default function NotificationSocket() {
   const { user, loading } = useAuth();
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -50,12 +45,14 @@ export default function NotificationSocket() {
             if (data.type === "notification" && data.data) {
               const notif = data.data;
               const id = Date.now() + Math.random();
-              setToasts((prev) => [...prev.slice(-2), {
-                id,
-                title: notif.title || "Notificação",
-                message: notif.message || "",
-              }]);
-              // auto-dismiss em 6s
+              setToasts((prev) => [
+                ...prev.slice(-2),
+                {
+                  id,
+                  title: notif.title || "Notificacao",
+                  message: notif.message || "",
+                },
+              ]);
               setTimeout(() => {
                 setToasts((prev) => prev.filter((t) => t.id !== id));
               }, 6000);
@@ -84,24 +81,24 @@ export default function NotificationSocket() {
   if (!user || toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 lg:bottom-5 right-3 sm:right-5 z-[100] space-y-2 max-w-[calc(100vw-1.5rem)] sm:max-w-sm">
+    <div className="fixed bottom-24 lg:bottom-5 right-3 sm:right-4 z-[100] space-y-2 max-w-[calc(100vw-1.5rem)] sm:max-w-xs">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-start gap-3 p-4 rounded-2xl bg-[#1c1c2e] border border-indigo-500/40 shadow-2xl shadow-indigo-950/50 animate-in"
+          className="toast-enter flex items-start gap-3 p-3 rounded-xl bg-[#1c1c20] border border-[var(--border-strong)] shadow-xl shadow-black/50"
         >
-          <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 shrink-0">
-            <Bell className="w-4 h-4" />
+          <div className="p-1.5 rounded-lg bg-emerald-500/[0.08] text-emerald-400/70 shrink-0">
+            <Bell className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-xs font-bold text-white truncate">{toast.title}</h4>
-            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{toast.message}</p>
+            <h4 className="text-[11px] font-semibold text-white truncate">{toast.title}</h4>
+            <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-2">{toast.message}</p>
           </div>
           <button
             onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-            className="text-gray-500 hover:text-white transition shrink-0"
+            className="text-neutral-600 hover:text-neutral-400 transition-colors shrink-0"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ))}

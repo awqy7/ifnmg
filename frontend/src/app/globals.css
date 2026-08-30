@@ -3,8 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --background: #08080c;
-  --foreground: #f8fafc;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --surface: #18181b;
+  --surface-hover: #1e1e22;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.1);
+  --accent: #34d399;
+  --accent-dim: rgba(52, 211, 153, 0.08);
+  --accent-border: rgba(52, 211, 153, 0.15);
 }
 
 html {
@@ -15,7 +22,7 @@ html {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   -webkit-tap-highlight-color: transparent;
   tap-highlight-color: transparent;
   overscroll-behavior-y: none;
@@ -41,7 +48,7 @@ body {
   }
 }
 
-/* Telefones estreitos: preserva ações essenciais sem estourar o cabeçalho. */
+/* Telefones estreitos */
 @media (max-width: 380px) {
   .mobile-brand {
     display: none;
@@ -54,7 +61,7 @@ body {
   }
 }
 
-/* Em paisagem baixa, o drawer e o chat usam toda a altura disponível. */
+/* Em paisagem baixa */
 @media (max-height: 520px) and (orientation: landscape) {
   .mobile-bottom-nav span {
     display: none;
@@ -65,32 +72,109 @@ body {
   }
 }
 
+/* ─── Animations ─── */
+
+/* Page transition: fade + subtle slide up */
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes view-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.view-enter {
+  animation: view-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered card entry */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-enter {
+  animation: card-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Subtle pulse for live indicators */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.soft-pulse {
+  animation: soft-pulse 2s ease-in-out infinite;
+}
+
+/* Toast slide in */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  *:not(.cog-spinner):not(.cog-spinner *),
-  *:not(.cog-spinner):not(.cog-spinner *)::before,
-  *:not(.cog-spinner):not(.cog-spinner *)::after {
-    scroll-behavior: auto !important;
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Custom scrollbars */
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(52, 211, 153, 0.2);
+  color: #ecfdf5;
 }
