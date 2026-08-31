@@ -9,6 +9,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, Co
 from jose import jwt, JWTError
 
 from app.config import settings
+from app.database import SessionLocal
+from app.models import User
 
 router = APIRouter(tags=["WebSocket"])
 logger = logging.getLogger(__name__)
@@ -71,9 +73,19 @@ async def get_ws_user_id(
         return None
     
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        decode_options = {"audience": "websocket"} if token_query and token == token_query else {}
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM], **decode_options)
+        if token_query and token == token_query and payload.get("scope") != "notifications:read":
+            return None
         user_id = payload.get("sub")
-        return user_id
+        if not user_id:
+            return None
+        db = SessionLocal()
+        try:
+            active = db.query(User.id).filter(User.id == user_id, User.is_active == True).first()
+            return user_id if active else None
+        finally:
+            db.close()
     except JWTError:
         return None
 

@@ -151,6 +151,7 @@ export const authApi = {
   logout: () => api.post<any>("/api/auth/logout"),
   getMe: () => api.get<any>("/api/auth/me"),
   updateMe: (data: any) => api.put<any>("/api/auth/me", data),
+  getWebSocketTicket: () => api.post<{ ticket: string; expires_in: number }>("/api/auth/websocket-ticket"),
 };
 
 export const moodleApi = {
@@ -175,8 +176,10 @@ export const activitiesApi = {
   explainWithAI: (id: string) =>
     api.post<any>(`/api/activities/${id}/explain-ai`),
   generateResponsePDF: async (id: string): Promise<Blob> => {
+    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}/api/activities/${id}/generate-response-pdf`, {
       method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: "include",
     });
     if (!res.ok) {
@@ -204,6 +207,10 @@ export const calendarApi = {
 export const briefingApi = {
   getToday: () => api.get<any>("/api/briefing/today"),
   generate: () => api.post("/api/briefing/generate"),
+};
+
+export const dashboardApi = {
+  getSnapshot: () => api.get<any>("/api/dashboard"),
 };
 
 export const chatApi = {

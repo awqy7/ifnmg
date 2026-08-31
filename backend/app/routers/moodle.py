@@ -88,27 +88,36 @@ async def get_status(current_user: User = Depends(get_current_user)):
 async def force_sync(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Força uma sincronização imediata com o Moodle."""
-    from app.services.scheduler import _sync_status
+    from app.services.scheduler import get_sync_status, mark_sync_queued
 
     if not current_user.moodle_username_enc:
         raise HTTPException(status_code=400, detail="Credenciais do Moodle não configuradas")
 
-    already = _sync_status.get(current_user.id, {}).get("running", False)
+    already = get_sync_status(current_user.id, db).get("running", False)
     if not already:
+        mark_sync_queued(db, current_user.id)
         background_tasks.add_task(sync_moodle_for_user, current_user.id)
-    return {"message": "Sincronização iniciada em background"}
+    return {
+        "message": "Sincronização já está em andamento" if already else "Sincronização iniciada em background",
+        "already_running": already,
+    }
 
 
 @router.get("/sync/status")
-async def sync_status(current_user: User = Depends(get_current_user)):
+async def sync_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Status da sincronização em tempo real (para feedback no frontend)."""
     from app.services.scheduler import get_sync_status
 
-    status = get_sync_status(current_user.id)
+    status = get_sync_status(current_user.id, db)
     return {
         "running": status.get("running", False),
+        "phase": status.get("phase"),
         "courses_done": status.get("courses_done", 0),
         "activities": status.get("activities", 0),
         "materials": status.get("materials", 0),

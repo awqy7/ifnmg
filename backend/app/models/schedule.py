@@ -116,3 +116,12 @@ class DailyBriefing(Base):
     content = Column(Text, nullable=False)  # Markdown gerado pela IA
     courses_today = Column(JSON)  # Lista de cursos do dia
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SyncState(Base):
+    """Estado persistente da sincronização, compartilhado entre workers."""
+    __tablename__ = "sync_states"
+
+    user_id = Column(String, ForeignKey("users.id"), primary_key=True)
+    status = Column(JSON, default=dict, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

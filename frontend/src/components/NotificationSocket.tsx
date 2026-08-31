@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/lib/api";
 
 interface Toast {
   id: number;
@@ -21,21 +22,14 @@ export default function NotificationSocket() {
 
     let closed = false;
 
-    const getCookie = (name: string): string | null => {
-      if (typeof document === "undefined") return null;
-      const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-      return match ? match[2] : null;
-    };
-
-    const connect = () => {
+    const connect = async () => {
       if (closed) return;
-      const token = getCookie("ifnmg_token");
-      if (!token) return;
-
-      const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(token)}`;
 
       try {
+        const { ticket } = await authApi.getWebSocketTicket();
+        if (closed) return;
+        const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(ticket)}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
@@ -63,13 +57,13 @@ export default function NotificationSocket() {
 
         ws.onclose = () => {
           if (!closed) {
-            reconnectTimer.current = setTimeout(connect, 15000);
+            reconnectTimer.current = setTimeout(() => void connect(), 15000);
           }
         };
       } catch {}
     };
 
-    connect();
+    void connect();
 
     return () => {
       closed = true;

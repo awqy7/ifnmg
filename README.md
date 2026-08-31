@@ -17,7 +17,8 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
 
 3. 🌅 **Briefing Matinal Diário com IA**:
    - Analisa sua grade de horários do dia, tarefas pendentes e materiais recentes.
-   - Gera um resumo motivador e focado no que você precisa estudar hoje.
+   - Exibe foco principal, métricas, urgências e um plano de estudo acionável.
+   - Abre instantaneamente com o último snapshot local enquanto atualiza em segundo plano.
 
 4. 💬 **Tutor IA Especialista por Disciplina**:
    - Chat com contexto real das suas disciplinas e materiais postados pelos professores.
@@ -132,8 +133,11 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
 
 ## 🔒 Segurança e Privacidade
 
-- **Criptografia ponta a ponta de credenciais**: As senhas do Virtual2 nunca são expostas nem salvas em texto puro.
-- **Autenticação JWT**: Sessões seguras com tokens criptografados.
+- **Criptografia em repouso de credenciais**: As senhas do Virtual2 não são salvas em texto puro e são descriptografadas somente no backend quando uma reconexão é necessária.
+- **Autenticação JWT**: Sessões com tokens assinados e cookie `httpOnly` quando suportado pelo navegador.
+- **Ticket WebSocket de curta duração**: notificações em tempo real não expõem o token principal da sessão na URL.
+- **Proteção de downloads**: arquivos têm limite de tamanho e redirecionamentos são validados contra SSRF.
+- **Sincronização coordenada**: estado persistente e lock por usuário evitam processamento duplicado entre workers.
 - **Desvinculação de credenciais**: É possível remover a conexão e as credenciais do Virtual2 pela API de Configurações.
 
 ## ✅ Validação

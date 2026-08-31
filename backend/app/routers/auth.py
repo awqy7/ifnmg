@@ -18,7 +18,7 @@ from app.database import get_db
 from app.models import User
 from app.services.moodle_auth import moodle_auth_service
 from app.services.crypto_service import crypto_service
-from app.services.scheduler import sync_moodle_for_user
+from app.services.scheduler import sync_moodle_for_user, get_sync_status, mark_sync_queued
 
 # ─── Schemas (definidos ANTES das rotas que os usam) ──────────────────────────
 
@@ -190,7 +190,9 @@ async def moodle_login(
         user = User(
             name=student_name,
             email=user_email,
-            hashed_password=hash_password(password),
+            # Não existe login por senha local. Mantemos um hash aleatório para
+            # compatibilidade com o schema sem criar um verificador da senha Moodle.
+            hashed_password=hash_password(secrets.token_urlsafe(32)),
             moodle_username_enc=crypto_service.encrypt(username),
             moodle_password_enc=crypto_service.encrypt(password),
             moodle_session_cookies=crypto_service.encrypt_json(session_data),
@@ -201,7 +203,6 @@ async def moodle_login(
         db.refresh(user)
     else:
         user.name = student_name
-        user.hashed_password = hash_password(password)
         user.moodle_username_enc = crypto_service.encrypt(username)
         user.moodle_password_enc = crypto_service.encrypt(password)
         user.moodle_session_cookies = crypto_service.encrypt_json(session_data)
@@ -220,7 +221,9 @@ async def moodle_login(
         user.ai_api_keys_enc = crypto_service.encrypt_json(existing_keys)
         db.commit()
 
-    background_tasks.add_task(sync_moodle_for_user, user.id)
+    if not get_sync_status(user.id, db).get("running", False):
+        mark_sync_queued(db, user.id)
+        background_tasks.add_task(sync_moodle_for_user, user.id)
 
     token = create_access_token(user.id)
     set_auth_cookie(response, token)
@@ -250,6 +253,25 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "theme": current_user.theme or "dark",
         "created_at": current_user.created_at,
     }
+
+
+@router.post("/websocket-ticket", response_model=dict)
+async def create_websocket_ticket(current_user: User = Depends(get_current_user)):
+    """Emite credencial curta e de uso exclusivo para abrir o WebSocket."""
+    now = datetime.utcnow()
+    ticket = jwt.encode(
+        {
+            "sub": current_user.id,
+            "iat": now,
+            "exp": now + timedelta(seconds=60),
+            "aud": "websocket",
+            "scope": "notifications:read",
+            "jti": secrets.token_hex(16),
+        },
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+    return {"ticket": ticket, "expires_in": 60}
 
 
 @router.put("/me", response_model=dict)
@@ -287,9 +309,6 @@ async def logout(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Desconecta a sessão do Virtual2."""
-    current_user.moodle_connected = False
-    current_user.moodle_session_cookies = None
-    db.commit()
+    """Encerra apenas a sessão do aplicativo, preservando a conexão ao Virtual2."""
     clear_auth_cookie(response)
     return {"message": "Sessão encerrada com sucesso"}

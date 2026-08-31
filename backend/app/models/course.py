@@ -112,3 +112,14 @@ class CalendarEvent(Base):
     end_date = Column(DateTime, nullable=True)
     url = Column(String(1000))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MaterialSyncMeta(Base):
+    """Fingerprint de extração para sincronização incremental de materiais."""
+    __tablename__ = "material_sync_meta"
+
+    material_id = Column(String, ForeignKey("materials.id", ondelete="CASCADE"), primary_key=True)
+    fingerprint = Column(String(64), nullable=False)
+    extraction_attempted = Column(Boolean, default=False, nullable=False)
+    extracted_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -15,7 +15,7 @@ import {
   FileText,
   RefreshCw,
 } from "lucide-react";
-import { notificationsApi } from "@/lib/api";
+import { moodleApi, notificationsApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
 interface TopBarProps {
@@ -27,7 +27,7 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true }: TopBarProps) {
   const { user } = useAuth();
-  const { syncing, syncProgress, triggerSync } = useSync();
+  const { syncing, syncProgress, triggerSync, setSyncing, setSyncProgress } = useSync();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -79,11 +79,27 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
   };
 
   useEffect(() => {
-    if (user?.moodle_connected && !hasAutoSynced.current && !syncing) {
-      hasAutoSynced.current = true;
-      handleSync();
-    }
-  }, [user?.moodle_connected]);
+    if (!user?.moodle_connected || hasAutoSynced.current) return;
+    hasAutoSynced.current = true;
+
+    const initializeSync = async () => {
+      try {
+        const status = await moodleApi.getSyncStatus();
+        if (status.running) {
+          setSyncProgress(status.phase === "queued" ? "Preparando sincronização..." : "Sincronizando dados...");
+          setSyncing(true);
+          return;
+        }
+        const lastSync = user.moodle_last_sync ? new Date(user.moodle_last_sync).getTime() : 0;
+        const isStale = !lastSync || Date.now() - lastSync > 10 * 60 * 1000;
+        if (isStale) await triggerSync();
+      } catch {
+        // A home continua disponível com o último snapshot local.
+      }
+    };
+
+    void initializeSync();
+  }, [user, setSyncProgress, setSyncing, triggerSync]);
 
   const toggleNotifications = () => {
     if (!showNotifications) loadNotifications();
@@ -110,7 +126,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
     if (notif.related_id && onOpenActivity) {
       onOpenActivity(notif.related_id);
     } else if (notif.related_url) {
-      window.open(notif.related_url, "_blank");
+      window.open(notif.related_url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -172,6 +188,11 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             )}
             <span className="hidden sm:inline">{syncing ? "Sincronizando" : "Sincronizar"}</span>
           </button>
+          {syncProgress && (
+            <span className="hidden xl:inline max-w-56 truncate text-[10px] text-neutral-500" title={syncProgress}>
+              {syncProgress}
+            </span>
+          )}
 
           {/* AI Tutor Quick Access */}
           <button

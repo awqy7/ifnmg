@@ -39,7 +39,7 @@ export default function CalendarView({ openActivity }: CalendarViewProps) {
       const actId = ev.id.replace("act_", "");
       openActivity(actId);
     } else if (ev.url) {
-      window.open(ev.url, "_blank");
+      window.open(ev.url, "_blank", "noopener,noreferrer");
     }
   };
 

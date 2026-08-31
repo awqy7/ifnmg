@@ -6,8 +6,8 @@ import {
   User,
   FileText,
   ChevronDown,
-  ChevronUp,
   Download,
+  MessageCircle,
 } from "lucide-react";
 import { coursesApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
@@ -117,6 +117,16 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                         {course.teacher || "Docente IFNMG"}
                       </p>
                     </div>
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openChat(course.id);
+                      }}
+                      className="p-2 rounded-lg bg-emerald-500/[0.06] hover:bg-emerald-500/[0.12] text-emerald-400/70 transition-colors shrink-0"
+                      aria-label={`Abrir tutor de ${course.name}`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                    </button>
                     <div className="shrink-0">
                       <div className={`p-1 rounded-md transition-all duration-200 ${isExpanded ? "bg-white/[0.06] text-neutral-300 rotate-180" : "bg-white/[0.03] text-neutral-600"}`}>
                         <ChevronDown className="w-4 h-4" />

@@ -34,6 +34,7 @@ async def list_notifications(
             "title": n.title,
             "message": n.message,
             "type": n.notification_type,
+            "related_id": n.related_id,
             "related_url": n.related_url,
             "is_read": n.is_read,
             "created_at": n.created_at.isoformat(),
@@ -217,7 +218,8 @@ async def get_today_schedule(
 ):
     """Retorna os horários de hoje."""
     from datetime import datetime
-    today = datetime.now().weekday()  # 0=Seg, 6=Dom
+    from zoneinfo import ZoneInfo
+    today = datetime.now(ZoneInfo("America/Sao_Paulo")).weekday()  # 0=Seg, 6=Dom
     if today > 5:
         return {"day": "Domingo", "slots": []}
 

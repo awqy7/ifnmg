@@ -21,6 +21,48 @@ def api_response(url: str):
         }
     if "/api/briefing/today" in url:
         return {"content": "Tudo pronto para estudar hoje."}
+    if url.endswith("/api/dashboard"):
+        return {
+            "briefing": {
+                "content": "Priorize a atividade de teste e reserve um bloco de estudo focado.",
+                "metrics": {"classes": 0, "pending": 1, "late": 0, "due_24h": 0},
+                "top_priority": {
+                    "id": "atividade-mobile",
+                    "title": "Atividade de teste responsivo",
+                    "course_name": "Disciplina de teste",
+                    "status": "pending",
+                    "due_date": "2030-12-31T23:59:00",
+                },
+                "study_plan": [
+                    {
+                        "id": "atividade-mobile",
+                        "label": "Avançar em Atividade de teste responsivo",
+                        "course_name": "Disciplina de teste",
+                        "minutes": 40,
+                    }
+                ],
+            },
+            "today_schedule": {"day": "Hoje", "slots": []},
+            "pending_activities": [
+                {
+                    "id": "atividade-mobile",
+                    "title": "Atividade de teste responsivo",
+                    "type": "assignment",
+                    "status": "pending",
+                    "course_id": "curso-mobile",
+                    "course_name": "Disciplina de teste",
+                    "due_date": "2030-12-31T23:59:00",
+                }
+            ],
+            "courses": [
+                {
+                    "id": "curso-mobile",
+                    "name": "Disciplina de teste",
+                    "teacher": "Prof. Teste",
+                    "pending_activities": 1,
+                }
+            ],
+        }
     if "/api/schedule/today" in url:
         return {"day": "Hoje", "slots": []}
     if "/api/notifications/unread-count" in url:
@@ -127,7 +169,7 @@ def main():
                     f"conteudo comprimido em {width}x{height}: main={main_width}px"
                 )
 
-                # 3) TopBar hide on scroll down, show on scroll up
+                # 3) TopBar and manual sync stay visible while scrolling
                 page.locator("main > div").evaluate(
                     "element => element.style.paddingBottom = '1200px'"
                 )
@@ -137,15 +179,8 @@ def main():
                 page.wait_for_timeout(400)
                 assert page.locator("header").evaluate(
                     "element => element.clientHeight"
-                ) == 0, "TopBar should hide on scroll down"
-
-                page.locator("main").evaluate(
-                    "element => { element.scrollTop = 100; element.dispatchEvent(new Event('scroll')); }"
-                )
-                page.wait_for_timeout(400)
-                assert page.locator("header").evaluate(
-                    "element => element.clientHeight"
-                ) > 0, "TopBar should show on scroll up"
+                ) > 0, "TopBar should remain visible"
+                assert page.get_by_role("button", name="Sincronizar dados").is_visible()
 
                 # 4) Navigate to Atividades via bottom nav
                 page.locator("nav button").filter(has_text="Tarefas").click()

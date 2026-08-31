@@ -12,7 +12,7 @@ import socket
 import zipfile
 from html import unescape
 from typing import Optional
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urljoin
 
 import httpx
 
@@ -94,7 +94,12 @@ def _is_url_allowed(url: str) -> bool:
         # Verifica se domínio é permitido (para URLs externas não-Moodle)
         if not _is_moodle_domain(hostname):
             # Permite apenas domínios explicitamente permitidos (YouTube)
-            allowed = any(hostname.lower().endswith(d) for d in ALLOWED_DOMAINS if d != "virtual2.ifnmg.edu.br")
+            host = hostname.lower().rstrip(".")
+            allowed = any(
+                host == domain or host.endswith(f".{domain}")
+                for domain in ALLOWED_DOMAINS
+                if domain != "virtual2.ifnmg.edu.br"
+            )
             if not allowed:
                 logger.warning("Domínio não permitido para download: %s", hostname)
                 return False
@@ -107,7 +112,8 @@ def _is_url_allowed(url: str) -> bool:
 
 def _is_moodle_domain(hostname: str) -> bool:
     """Verifica se o hostname é do Moodle IFNMG."""
-    return hostname.lower().endswith("virtual2.ifnmg.edu.br")
+    host = hostname.lower().rstrip(".")
+    return host == "virtual2.ifnmg.edu.br" or host.endswith(".virtual2.ifnmg.edu.br")
 
 
 def _clean_html(html: str) -> str:
@@ -240,7 +246,21 @@ async def extract_url_content(client: httpx.AsyncClient, url: str) -> str:
         return youtube_text
 
     try:
-        response = await client.get(url, follow_redirects=True)
+        current_url = url
+        response = None
+        for _ in range(6):
+            if not _is_url_allowed(current_url):
+                return ""
+            response = await client.get(current_url, follow_redirects=False)
+            if response.is_redirect:
+                location = response.headers.get("location")
+                if not location:
+                    return ""
+                current_url = urljoin(current_url, location)
+                continue
+            break
+        if response is None or response.is_redirect:
+            return ""
         if response.status_code != 200 or len(response.content) > MAX_FILE_BYTES:
             return ""
         
@@ -375,27 +395,33 @@ async def download_file_limited(client: httpx.AsyncClient, fileurl: str, max_byt
         return b"", ""
 
     try:
-        async with client.stream("GET", fileurl, follow_redirects=True) as response:
-            if response.status_code != 200:
+        current_url = fileurl
+        for _ in range(6):
+            if not _is_url_allowed(current_url):
                 return b"", ""
-            
-            final_url = str(response.url)
-            if not _is_url_allowed(final_url):
-                logger.warning("Redirect para URL não permitida durante download: %s", final_url)
-                return b"", ""
-
-            declared_size = response.headers.get("content-length")
-            if declared_size and int(declared_size) > max_bytes:
-                logger.info("Arquivo ignorado por tamanho declarado: %s", fileurl[:80])
-                return b"", ""
-
-            chunks = bytearray()
-            async for chunk in response.aiter_bytes():
-                chunks.extend(chunk)
-                if len(chunks) > max_bytes:
-                    logger.info("Arquivo interrompido por exceder limite: %s", fileurl[:80])
+            async with client.stream("GET", current_url, follow_redirects=False) as response:
+                if response.is_redirect:
+                    location = response.headers.get("location")
+                    if not location:
+                        return b"", ""
+                    current_url = urljoin(current_url, location)
+                    continue
+                if response.status_code != 200:
                     return b"", ""
-            return bytes(chunks), response.headers.get("content-type", "")
+
+                declared_size = response.headers.get("content-length")
+                if declared_size and int(declared_size) > max_bytes:
+                    logger.info("Arquivo ignorado por tamanho declarado: %s", fileurl[:80])
+                    return b"", ""
+
+                chunks = bytearray()
+                async for chunk in response.aiter_bytes():
+                    chunks.extend(chunk)
+                    if len(chunks) > max_bytes:
+                        logger.info("Arquivo interrompido por exceder limite: %s", fileurl[:80])
+                        return b"", ""
+                return bytes(chunks), response.headers.get("content-type", "")
+        return b"", ""
     except (ValueError, OSError, RuntimeError, httpx.HTTPError) as exc:
         logger.warning("Download de arquivo falhou (%s): %s", fileurl[:80], exc)
         return b"", ""

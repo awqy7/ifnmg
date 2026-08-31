@@ -83,20 +83,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const triggerSync = async () => {
+  const triggerSync = useCallback(async () => {
     if (syncing) return; // evita sync duplo
     setSyncing(true);
     setSyncProgress("Sincronizando dados com o Virtual2... aguarde");
     try {
       await moodleApi.forceSync();
       // O polling (startPolling) é ativado automaticamente pelo useEffect acima
-    } catch (e: any) {
+    } catch (e: unknown) {
       pollingRef.current = false;
       setSyncing(false);
-      setSyncProgress(e.message || "Erro ao sincronizar");
+      setSyncProgress(e instanceof Error ? e.message : "Erro ao sincronizar");
       setTimeout(() => setSyncProgress(null), 4000);
     }
-  };
+  }, [syncing]);
 
   return (
     <SyncContext.Provider value={{ syncing, syncProgress, triggerSync, setSyncing, setSyncProgress }}>

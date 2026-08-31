@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
@@ -32,45 +32,18 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>();
+  const [chatInitialCourseId, setChatInitialCourseId] = useState<string | undefined>();
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [topBarVisible, setTopBarVisible] = useState(true);
   const mainRef = useRef<HTMLElement>(null);
-  const lastScrollTop = useRef(0);
-  const lastToggleTime = useRef(0);
 
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
     setMobileMenuOpen(false);
-    setTopBarVisible(true);
-    lastScrollTop.current = 0;
-    lastToggleTime.current = 0;
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleMainScroll = useCallback((event: React.UIEvent<HTMLElement>) => {
-    const currentScrollTop = event.currentTarget.scrollTop;
-    const now = Date.now();
-    const difference = currentScrollTop - lastScrollTop.current;
-
-    // Always show near top
-    if (currentScrollTop < 16) {
-      if (!topBarVisible) setTopBarVisible(true);
-    } else if (now - lastToggleTime.current > 350) {
-      // Cooldown 350ms prevents rapid toggling on mouse wheel
-      if (difference > 8 && topBarVisible) {
-        setTopBarVisible(false);
-        lastToggleTime.current = now;
-      } else if (difference < -8 && !topBarVisible) {
-        setTopBarVisible(true);
-        lastToggleTime.current = now;
-      }
-    }
-
-    lastScrollTop.current = currentScrollTop;
-  }, [topBarVisible]);
-
   const openChat = (courseId?: string, prompt?: string) => {
-    void courseId;
+    setChatInitialCourseId(courseId);
     setChatInitialPrompt(prompt);
     setCurrentView("chat");
     setMobileMenuOpen(false);
@@ -92,7 +65,7 @@ export default function Dashboard() {
     cursos: <CoursesView openChat={openChat} />,
     notas: <GradesView />,
     calendario: <CalendarView openActivity={openActivityModal} />,
-    chat: <ChatView initialPrompt={chatInitialPrompt} />,
+    chat: <ChatView initialPrompt={chatInitialPrompt} initialCourseId={chatInitialCourseId} />,
     horarios: <ScheduleView />,
     estudo: <StudyToolsView />,
     configuracoes: <SettingsView />,
@@ -114,11 +87,10 @@ export default function Dashboard() {
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           onNavigate={handleNavigate}
           onOpenActivity={openActivityModal}
-          isVisible={topBarVisible}
+          isVisible
         />
         <main
           ref={mainRef}
-          onScroll={handleMainScroll}
           className="flex-1 overflow-y-auto overscroll-contain pb-24 lg:pb-0"
         >
           <div className="max-w-6xl mx-auto p-4 sm:p-5 lg:p-6">

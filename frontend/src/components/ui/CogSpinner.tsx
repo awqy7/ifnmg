@@ -1,7 +1,5 @@
 'use client';
 
-import { ReactNode } from 'react';
-
 /**
  * CogSpinner - A gear/cog loading spinner component
  * Replaces all previous loading animations (Pac-Man, etc.)

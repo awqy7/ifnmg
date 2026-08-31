@@ -69,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe()
       .then((me) => setUser(me))
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (username: string, password: string) => {

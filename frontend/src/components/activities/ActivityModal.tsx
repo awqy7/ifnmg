@@ -221,8 +221,25 @@ export default function ActivityModal({
 
         {/* Footer */}
         <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div />
+          <button
+            onClick={() => openChatWithContext?.(
+              details?.course_id,
+              `Ajude-me a entender e planejar a atividade: ${details?.title || "atividade"}`
+            )}
+            disabled={!details || !openChatWithContext}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--border)] text-neutral-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
+          >
+            <Bot className="w-3.5 h-3.5 text-emerald-400" /> Conversar com tutor
+          </button>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              onClick={handleGeneratePDF}
+              disabled={generatingPdf || !details}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--border)] text-neutral-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
+            >
+              {generatingPdf ? <CogSpinner size={13} className="text-emerald-400" /> : <Download className="w-3.5 h-3.5" />}
+              {generatingPdf ? "Gerando" : pdfUrl ? "Gerar novamente" : "Gerar rascunho PDF"}
+            </button>
             {details?.url && (
               <a
                 href={details.url}

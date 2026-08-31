@@ -59,9 +59,10 @@ def clean_moodle_text(value: Any, limit: int = 15_000) -> str:
 class MoodleWebService:
     """Wrapper dos web services oficiais do Moodle via token."""
 
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str, client: Optional[httpx.AsyncClient] = None):
         self.base_url = base_url.rstrip("/")
         self.token = token
+        self.client = client
         self._userid: Optional[int] = None
 
     async def _call(self, wsfunction: str, params: Optional[Dict] = None) -> Any:
@@ -73,9 +74,12 @@ class MoodleWebService:
         if params:
             payload.update(params)
 
-        async with httpx.AsyncClient(timeout=40.0) as client:
-            resp = await client.post(f"{self.base_url}/webservice/rest/server.php", data=payload)
-            data = resp.json()
+        if self.client:
+            resp = await self.client.post(f"{self.base_url}/webservice/rest/server.php", data=payload)
+        else:
+            async with httpx.AsyncClient(timeout=40.0) as client:
+                resp = await client.post(f"{self.base_url}/webservice/rest/server.php", data=payload)
+        data = resp.json()
 
         if isinstance(data, dict) and data.get("exception"):
             raise RuntimeError(f"MoodleWS[{wsfunction}]: {data.get('message', 'erro desconhecido')}")
@@ -217,14 +221,20 @@ class MoodleWebService:
         """Baixa um arquivo do Moodle usando o token. Retorna None se falhar/exceder limite."""
         url = self.build_file_download_url(fileurl)
         try:
-            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
-                resp = await client.get(url)
-                if resp.status_code != 200:
-                    return None
-                if len(resp.content) > max_bytes:
-                    logger.warning(f"Arquivo excede {max_bytes} bytes: {fileurl[:100]}")
-                    return None
-                return resp.content
+            if self.client:
+                resp = await self.client.get(url, follow_redirects=False)
+            else:
+                async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+                    resp = await client.get(url, follow_redirects=False)
+            if resp.is_redirect:
+                logger.warning("Download do Moodle redirecionado e bloqueado: %s", fileurl[:100])
+                return None
+            if resp.status_code != 200:
+                return None
+            if len(resp.content) > max_bytes:
+                logger.warning(f"Arquivo excede {max_bytes} bytes: {fileurl[:100]}")
+                return None
+            return resp.content
         except Exception as e:
             logger.warning(f"Falha ao baixar {fileurl[:100]}: {e}")
             return None

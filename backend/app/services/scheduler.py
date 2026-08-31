@@ -5,6 +5,8 @@ HTML scraper como fallback. Sincroniza cursos, atividades (com UPDATE),
 materiais (com extração de texto p/ IA), notas, calendário e notificações
 escalonadas de prazo.
 """
+import hashlib
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
@@ -13,6 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database import SessionLocal
 from app.config import settings
@@ -25,8 +28,89 @@ scheduler = AsyncIOScheduler(timezone="America/Sao_Paulo")
 _sync_status: Dict[str, dict] = {}
 
 
-def get_sync_status(user_id: str) -> dict:
-    return _sync_status.get(user_id, {"running": False})
+def _persist_sync_status(db: Session, user_id: str) -> None:
+    """Espelha o progresso no banco para polling funcionar entre workers."""
+    from app.models import SyncState
+
+    state = db.query(SyncState).filter(SyncState.user_id == user_id).first()
+    payload = dict(_sync_status.get(user_id, {"running": False}))
+    if state:
+        state.status = payload
+        state.updated_at = datetime.utcnow()
+    else:
+        db.add(SyncState(user_id=user_id, status=payload))
+    db.commit()
+
+
+def mark_sync_queued(db: Session, user_id: str) -> None:
+    """Publica o estado antes da resposta HTTP, eliminando a corrida do polling."""
+    from app.models import SyncState
+
+    payload = {
+        "running": True,
+        "phase": "queued",
+        "started_at": datetime.utcnow().isoformat(),
+        "courses_done": 0,
+        "activities": 0,
+        "materials": 0,
+        "source": None,
+        "error": None,
+    }
+    state = db.query(SyncState).filter(SyncState.user_id == user_id).first()
+    if state:
+        state.status = payload
+        state.updated_at = datetime.utcnow()
+    else:
+        db.add(SyncState(user_id=user_id, status=payload))
+    db.commit()
+
+
+def get_sync_status(user_id: str, db: Optional[Session] = None) -> dict:
+    memory_status = _sync_status.get(user_id)
+    if memory_status and memory_status.get("running"):
+        return memory_status
+
+    from app.models import SyncState
+    owns_session = db is None
+    session = db or SessionLocal()
+    try:
+        state = session.query(SyncState).filter(SyncState.user_id == user_id).first()
+        if not state or not state.status:
+            return memory_status or {"running": False}
+        status = dict(state.status)
+        started_at = status.get("started_at")
+        if status.get("running") and started_at:
+            try:
+                if datetime.utcnow() - datetime.fromisoformat(started_at) > timedelta(minutes=45):
+                    status["running"] = False
+                    status["error"] = "Sincronização anterior interrompida"
+            except (TypeError, ValueError):
+                pass
+        return status
+    finally:
+        if owns_session:
+            session.close()
+
+
+def _acquire_distributed_lock(db: Session, user_id: str) -> bool:
+    """Usa advisory lock no PostgreSQL; SQLite continua protegido pelo estado local."""
+    if db.bind and db.bind.dialect.name == "postgresql":
+        return bool(db.execute(
+            text("SELECT pg_try_advisory_lock(hashtext(:lock_key))"),
+            {"lock_key": f"moodle-sync:{user_id}"},
+        ).scalar())
+    return not _sync_status.get(user_id, {}).get("running", False)
+
+
+def _release_distributed_lock(db: Session, user_id: str) -> None:
+    if db.bind and db.bind.dialect.name == "postgresql":
+        try:
+            db.execute(
+                text("SELECT pg_advisory_unlock(hashtext(:lock_key))"),
+                {"lock_key": f"moodle-sync:{user_id}"},
+            )
+        except Exception:
+            logger.warning("Não foi possível liberar o lock de sync do usuário %s", user_id)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -65,6 +149,7 @@ async def _upsert_activity(
     is_new_course: bool,
     ws=None,
     client=None,
+    extraction_budget: Optional[list] = None,
 ):
     from app.models import Activity
 
@@ -133,7 +218,14 @@ async def _upsert_activity(
         files_list = activity.raw_data.get("files") or []
 
     raw_data = dict(activity.raw_data or {})
-    if files_list and not raw_data.get("content_text") and (ws or client):
+    files_fingerprint = hashlib.sha256(
+        json.dumps(files_list, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest() if files_list else None
+    source_changed = bool(files_fingerprint and raw_data.get("content_fingerprint") != files_fingerprint)
+    has_budget = extraction_budget is None or extraction_budget[0] > 0
+    if files_list and source_changed and has_budget and (ws or client):
+        if extraction_budget is not None:
+            extraction_budget[0] -= 1
         try:
             from app.services.material_extractor import extract_material_content
             extracted_parts = []
@@ -153,7 +245,9 @@ async def _upsert_activity(
                         extracted_parts.append(f"[{f_name}]:\n{text_extracted}")
             if extracted_parts:
                 raw_data["content_text"] = "\n\n".join(extracted_parts)[:25000]
-                activity.raw_data = raw_data
+            raw_data["content_fingerprint"] = files_fingerprint
+            raw_data["content_extraction_at"] = datetime.utcnow().isoformat()
+            activity.raw_data = raw_data
         except Exception as e:
             logger.debug(f"Erro ao extrair anexo da atividade {mid}: {e}")
 
@@ -181,9 +275,10 @@ async def _sync_materials(
     ws=None,
     client=None,
     extract_text: bool = True,
+    extraction_budget: Optional[list] = None,
 ):
     """Cria/atualiza materiais do curso e extrai texto dos arquivos para a IA."""
-    from app.models import Material
+    from app.models import Material, MaterialSyncMeta
     from app.services.material_extractor import extract_material_content, extract_url_content
 
     synced = 0
@@ -194,6 +289,23 @@ async def _sync_materials(
             continue
 
         files_meta = mat_data.get("files", []) or []
+        fingerprint_payload = {
+            "title": title,
+            "url": mat_data.get("url", ""),
+            "description": mat_data.get("description", ""),
+            "files": [
+                {
+                    "url": item.get("fileurl") or item.get("url"),
+                    "name": item.get("filename") or item.get("name"),
+                    "size": item.get("filesize"),
+                    "modified": item.get("timemodified") or item.get("timecreated"),
+                }
+                for item in files_meta
+            ],
+        }
+        fingerprint = hashlib.sha256(
+            json.dumps(fingerprint_payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()
 
         # chave de dedupe por módulo
         mat_key = f"mod_{mid}" if mid else f"url_{mat_data.get('url', '')[:200]}"
@@ -228,8 +340,17 @@ async def _sync_materials(
             material.topic_number = mat_data.get("topic_number")
             material.url = mat_data.get("url", "") or material.url
 
-        # Extração de texto: só quando ainda não tem conteúdo
-        if extract_text and not material.content_text:
+        extraction_meta = db.query(MaterialSyncMeta).filter(
+            MaterialSyncMeta.material_id == material.id
+        ).first()
+        source_changed = not extraction_meta or extraction_meta.fingerprint != fingerprint
+        has_budget = extraction_budget is None or extraction_budget[0] > 0
+
+        # Extrai apenas materiais novos/alterados e respeita o orçamento global
+        # para que OCR não atrase indefinidamente a sincronização principal.
+        if extract_text and source_changed and has_budget:
+            if extraction_budget is not None:
+                extraction_budget[0] -= 1
             text_parts = []
             description = (mat_data.get("description") or "").strip()
             if description:
@@ -259,6 +380,18 @@ async def _sync_materials(
             if text_parts:
                 material.content_text = "\n\n".join(text_parts)[:15000]
                 material.file_size = sum(f.get("filesize") or 0 for f in files_meta)
+
+            if extraction_meta:
+                extraction_meta.fingerprint = fingerprint
+                extraction_meta.extraction_attempted = True
+                extraction_meta.extracted_at = datetime.utcnow() if text_parts else extraction_meta.extracted_at
+            else:
+                db.add(MaterialSyncMeta(
+                    material_id=material.id,
+                    fingerprint=fingerprint,
+                    extraction_attempted=True,
+                    extracted_at=datetime.utcnow() if text_parts else None,
+                ))
 
         synced += 1
 
@@ -347,21 +480,31 @@ async def sync_moodle_for_user(user_id: str):
     from app.services.moodle_webservice import MoodleWebService, collect_course_data
     from app.services.moodle_scraper import MoodleScraper
 
-    _sync_status[user_id] = {
-        "running": True,
-        "started_at": datetime.utcnow().isoformat(),
-        "courses_done": 0,
-        "activities": 0,
-        "materials": 0,
-        "source": None,
-        "error": None,
-    }
-
     db: Session = SessionLocal()
+    lock_acquired = False
     try:
+        lock_acquired = _acquire_distributed_lock(db, user_id)
+        if not lock_acquired:
+            logger.info("Sync já em andamento para %s; chamada duplicada ignorada", user_id)
+            return
+
+        _sync_status[user_id] = {
+            "running": True,
+            "phase": "syncing",
+            "started_at": datetime.utcnow().isoformat(),
+            "courses_done": 0,
+            "activities": 0,
+            "materials": 0,
+            "source": None,
+            "error": None,
+        }
+        _persist_sync_status(db, user_id)
+
         user = db.query(User).filter(User.id == user_id).first()
         if not user or not user.moodle_username_enc or not user.moodle_password_enc:
             _sync_status[user_id]["running"] = False
+            _sync_status[user_id]["error"] = "Credenciais não configuradas"
+            _persist_sync_status(db, user_id)
             return
 
         username = crypto_service.decrypt(user.moodle_username_enc)
@@ -384,6 +527,7 @@ async def sync_moodle_for_user(user_id: str):
                 db.commit()
                 logger.warning(f"Falha ao reconectar usuário {user_id} ao Moodle")
                 _sync_status[user_id].update({"running": False, "error": "login"})
+                _persist_sync_status(db, user_id)
                 return
             user.moodle_session_cookies = crypto_service.encrypt_json(session_data)
             user.moodle_connected = True
@@ -402,8 +546,8 @@ async def sync_moodle_for_user(user_id: str):
                 keys["moodle_token"] = moodle_token
                 user.ai_api_keys_enc = crypto_service.encrypt_json(keys)
 
-        ws = MoodleWebService(settings.MOODLE_BASE_URL, moodle_token) if moodle_token else None
         client = moodle_auth_service.build_httpx_client(session_data)
+        ws = MoodleWebService(settings.MOODLE_BASE_URL, moodle_token, client=client) if moodle_token else None
         scraper = MoodleScraper(client, moodle_token)
 
         use_ws = False
@@ -432,6 +576,10 @@ async def sync_moodle_for_user(user_id: str):
             }
 
             new_activities_all = []
+            # No máximo oito extrações/OCR pesados por ciclo. Os demais materiais
+            # ficam para o ciclo seguinte sem bloquear os dados essenciais.
+            extraction_budget = [8]
+            activity_extraction_budget = [4]
 
             for idx, course_data in enumerate(courses_data):
                 moodle_id = course_data["moodle_id"]
@@ -483,7 +631,8 @@ async def sync_moodle_for_user(user_id: str):
                 # Atividades (cria OU atualiza + extrai anexos)
                 for act_data in content.get("activities", []):
                     activity = await _upsert_activity(
-                        db, user_id, course, act_data, is_new_course, ws=ws, client=client
+                        db, user_id, course, act_data, is_new_course, ws=ws, client=client,
+                        extraction_budget=activity_extraction_budget,
                     )
                     if activity and activity.is_new and activity.status in ("pending", "late"):
                         existing_ids = {a.id for a in new_activities_all}
@@ -497,6 +646,7 @@ async def sync_moodle_for_user(user_id: str):
                         content.get("materials", []),
                         ws=ws if (use_ws and source == "ws") else None,
                         client=client,
+                        extraction_budget=extraction_budget,
                     )
                     _sync_status[user_id]["materials"] += n_mat
                 except Exception as e:
@@ -516,6 +666,7 @@ async def sync_moodle_for_user(user_id: str):
                 db.commit()
                 _sync_status[user_id]["courses_done"] = idx + 1
                 _sync_status[user_id]["activities"] += len(content.get("activities", []))
+                _persist_sync_status(db, user_id)
 
             # Notifica novas atividades
             for act in new_activities_all:
@@ -596,6 +747,7 @@ async def sync_moodle_for_user(user_id: str):
                 "running": False,
                 "finished_at": datetime.utcnow().isoformat(),
             })
+            _persist_sync_status(db, user_id)
             logger.info(f"Sync concluído para {user_id}: {_sync_status[user_id]}")
 
     except Exception as e:
@@ -606,7 +758,13 @@ async def sync_moodle_for_user(user_id: str):
             "error": str(e)[:300],
             "finished_at": datetime.utcnow().isoformat(),
         })
+        try:
+            _persist_sync_status(db, user_id)
+        except Exception:
+            logger.warning("Falha ao persistir erro de sincronização do usuário %s", user_id)
     finally:
+        if lock_acquired:
+            _release_distributed_lock(db, user_id)
         db.close()
 
 
@@ -706,74 +864,32 @@ async def sync_all_users():
 
 async def generate_daily_briefings():
     """Job agendado: briefing diário às 6h."""
-    from app.models import User, Schedule, Activity, DailyBriefing
-    from app.services.ai_service import ai_service, AIProvider
-    from app.services.crypto_service import crypto_service
+    from app.models import User, DailyBriefing
+    from app.routers.briefing import _generate_user_briefing, _local_now
 
     db: Session = SessionLocal()
-    today = datetime.now()
-    day_of_week = today.weekday()
-    date_str = today.strftime("%Y-%m-%d")
+    date_str = _local_now().strftime("%Y-%m-%d")
 
     try:
         users = db.query(User).filter(User.is_active == True).all()
 
         for user in users:
-            existing = db.query(DailyBriefing).filter(
-                DailyBriefing.user_id == user.id,
-                DailyBriefing.date == date_str,
-            ).first()
-            if existing:
+            briefing_lock_key = f"briefing:{user.id}"
+            if not _acquire_distributed_lock(db, briefing_lock_key):
                 continue
-
-            schedules = db.query(Schedule).filter(
-                Schedule.user_id == user.id,
-                Schedule.day_of_week == day_of_week,
-            ).all()
-
-            today_courses = [
-                {"name": s.course_name or "Sem nome", "start_time": s.start_time, "end_time": s.end_time}
-                for s in schedules
-            ]
-
-            pending = db.query(Activity).filter(
-                Activity.user_id == user.id,
-                Activity.status.in_(["pending", "late"]),
-            ).order_by(Activity.due_date).limit(10).all()
-
-            pending_data = [
-                {
-                    "title": a.title,
-                    "due_date": a.due_date.strftime("%d/%m/%Y %H:%M") if a.due_date else None,
-                    "status": a.status,
-                }
-                for a in pending
-            ]
-
             try:
-                provider = AIProvider(user.ai_provider or "groq")
-                custom_keys = {}
-                if user.ai_api_keys_enc:
-                    custom_keys = crypto_service.decrypt_json(user.ai_api_keys_enc)
-
-                briefing = DailyBriefing(
-                    user_id=user.id,
-                    date=date_str,
-                    content=await ai_service.generate_daily_briefing(
-                        user_name=user.name.split()[0],
-                        today_courses=today_courses,
-                        pending_activities=pending_data,
-                        recent_materials=[],
-                        provider=provider,
-                        custom_api_keys=custom_keys,
-                    ),
-                    courses_today=today_courses,
-                )
-                db.add(briefing)
-                db.commit()
+                existing = db.query(DailyBriefing).filter(
+                    DailyBriefing.user_id == user.id,
+                    DailyBriefing.date == date_str,
+                ).first()
+                if existing:
+                    continue
+                await _generate_user_briefing(db, user)
                 logger.info(f"Briefing gerado para {user.name}")
             except Exception as e:
                 logger.error(f"Erro briefing {user.id}: {e}")
+            finally:
+                _release_distributed_lock(db, briefing_lock_key)
     finally:
         db.close()
 

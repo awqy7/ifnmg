@@ -75,11 +75,33 @@ class ActivityResponsePdfTests(unittest.TestCase):
                 )
             )
             async with httpx.AsyncClient(transport=transport) as client:
-                return await download_file_limited(client, "https://example.test/file.pdf", max_bytes=10)
+                return await download_file_limited(
+                    client,
+                    "https://virtual2.ifnmg.edu.br/file.pdf",
+                    max_bytes=10,
+                )
 
         data, content_type = asyncio.run(run())
         self.assertEqual(data, b"")
         self.assertEqual(content_type, "")
+
+    def test_download_blocks_redirect_to_internal_network_before_request(self):
+        requested_urls = []
+
+        def handler(request):
+            requested_urls.append(str(request.url))
+            return httpx.Response(302, headers={"location": "http://127.0.0.1/private"})
+
+        async def run():
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+                return await download_file_limited(
+                    client,
+                    "https://virtual2.ifnmg.edu.br/file.pdf",
+                )
+
+        data, content_type = asyncio.run(run())
+        self.assertEqual((data, content_type), (b"", ""))
+        self.assertEqual(requested_urls, ["https://virtual2.ifnmg.edu.br/file.pdf"])
 
     def test_endpoint_returns_named_pdf_from_extracted_activity_source(self):
         activity = Activity(

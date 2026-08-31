@@ -36,7 +36,7 @@ interface ChatViewProps {
   initialCourseId?: string;
 }
 
-export default function ChatView({ initialPrompt }: ChatViewProps) {
+export default function ChatView({ initialPrompt, initialCourseId }: ChatViewProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -79,7 +79,7 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
 
   const loadSessions = useCallback(async () => {
     try {
-      const list = await chatApi.getSessions();
+      const list = await chatApi.getSessions(initialCourseId);
       setSessions(list);
       setCurrentSessionId((cur) => {
         if (!cur && list.length > 0) {
@@ -88,7 +88,7 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
         return cur;
       });
     } catch {}
-  }, [selectSession]);
+  }, [initialCourseId, selectSession]);
 
   useEffect(() => {
     loadSessions();
@@ -100,7 +100,7 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
 
   const handleNewSession = async () => {
     try {
-      const res = await chatApi.createSession(undefined, "Nova conversa");
+      const res = await chatApi.createSession(initialCourseId, "Nova conversa");
       setSessions((prev) => [
         { id: res.id, title: res.title, created_at: new Date().toISOString() },
         ...prev,
@@ -131,7 +131,7 @@ export default function ChatView({ initialPrompt }: ChatViewProps) {
     }, 30);
 
     try {
-      const res = await chatApi.sendMessage(userText, currentSessionId || undefined, undefined);
+      const res = await chatApi.sendMessage(userText, currentSessionId || undefined, initialCourseId);
       if (!currentSessionId && res.session_id) {
         setCurrentSessionId(res.session_id);
       }

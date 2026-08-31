@@ -19,19 +19,26 @@ async def list_courses(
     db: Session = Depends(get_db),
 ):
     """Lista todas as disciplinas do usuário com contagem de pendências."""
-    courses = db.query(Course).filter(
+    pending_counts = db.query(
+        Activity.course_id.label("course_id"),
+        func.count(Activity.id).label("pending_count"),
+    ).filter(
+        Activity.user_id == current_user.id,
+        Activity.status.in_(["pending", "late"]),
+    ).group_by(Activity.course_id).subquery()
+
+    courses = db.query(
+        Course,
+        func.coalesce(pending_counts.c.pending_count, 0),
+    ).outerjoin(
+        pending_counts, pending_counts.c.course_id == Course.id,
+    ).filter(
         Course.user_id == current_user.id,
         Course.is_active == True,
     ).order_by(Course.name).all()
 
     result = []
-    for c in courses:
-        pending_count = db.query(func.count(Activity.id)).filter(
-            Activity.course_id == c.id,
-            Activity.user_id == current_user.id,
-            Activity.status.in_(["pending", "late"]),
-        ).scalar() or 0
-
+    for c, pending_count in courses:
         result.append({
             "id": c.id,
             "moodle_id": c.moodle_id,
