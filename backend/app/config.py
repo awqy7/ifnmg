@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = 12
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
     RATE_LIMIT_SYNC_PER_HOUR: int = 10
+    AI_REQUESTS_PER_DAY: int = 200
 
     class Config:
         env_file = str(BASE_DIR / ".env")

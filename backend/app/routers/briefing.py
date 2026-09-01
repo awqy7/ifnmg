@@ -34,10 +34,21 @@ def _load_context(db: Session, current_user: User) -> dict:
         Activity.status.in_(["pending", "late"]),
     ).order_by(Activity.due_date.asc().nullslast()).limit(20).all()
 
+    manual_rows = db.query(Activity, Course.name.label("course_name")).outerjoin(
+        Course, Activity.course_id == Course.id
+    ).filter(
+        Activity.user_id == current_user.id,
+        Activity.status == "manual_completed",
+        Activity.removed_at == None,
+    ).order_by(Activity.manual_completed_at.desc()).limit(10).all()
+
     materials = db.query(Material, Course.name.label("course_name")).join(
         Course, Material.course_id == Course.id
-    ).filter(Material.user_id == current_user.id).order_by(
-        Material.created_at.desc()
+    ).filter(
+        Material.user_id == current_user.id,
+        Material.is_active == True,
+    ).order_by(
+        Material.updated_at.desc()
     ).limit(8).all()
 
     courses = [
@@ -68,15 +79,26 @@ def _load_context(db: Session, current_user: User) -> dict:
             "id": material.id,
             "title": material.title,
             "course_name": course_name or "Disciplina",
-            "created_at": material.created_at,
+            "created_at": material.updated_at or material.created_at,
         }
         for material, course_name in materials
+    ]
+    awaiting_confirmation = [
+        {
+            "id": activity.id,
+            "title": activity.title,
+            "course_name": course_name or "Disciplina",
+            "manual_completed_at": activity.manual_completed_at,
+            "note": activity.manual_completion_note,
+        }
+        for activity, course_name in manual_rows
     ]
     return {
         "now": local_now,
         "courses": courses,
         "pending": pending,
         "recent_materials": recent_materials,
+        "awaiting_confirmation": awaiting_confirmation,
     }
 
 
@@ -190,11 +212,20 @@ def build_briefing_snapshot(
             "pending": len(pending),
             "late": late_count,
             "due_24h": due_24h,
+            "awaiting_confirmation": len(context.get("awaiting_confirmation", [])),
         },
         "top_priority": top_priority,
         "urgent_activities": [serialize_activity(item) for item in pending[:5]],
         "timeline": timeline,
         "study_plan": study_plan,
+        "awaiting_confirmation": [
+            {
+                **{k: value for k, value in item.items() if k != "manual_completed_at"},
+                "manual_completed_at": item["manual_completed_at"].isoformat()
+                if item["manual_completed_at"] else None,
+            }
+            for item in context.get("awaiting_confirmation", [])[:5]
+        ],
         "recent_materials": [
             {
                 **{k: value for k, value in item.items() if k != "created_at"},
@@ -228,6 +259,7 @@ async def _generate_user_briefing(db: Session, current_user: User) -> DailyBrief
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 

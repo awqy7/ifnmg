@@ -20,7 +20,7 @@ const mainItems: Array<{
   { id: "home", label: "Inicio", icon: Home },
   { id: "atividades", label: "Tarefas", icon: CheckSquare },
   { id: "cursos", label: "Materias", icon: BookOpen },
-  { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA", disabled: true },
+  { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA" },
 ];
 
 export default function MobileBottomNav({

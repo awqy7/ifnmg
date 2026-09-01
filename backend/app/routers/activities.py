@@ -4,12 +4,12 @@ Rotas completas de Atividades: Listagem, Detalhes, Resumo, Atualização de Stat
 import logging
 import re
 from pathlib import PurePosixPath
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urljoin
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Body, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -27,6 +27,11 @@ from app.services.moodle_auth import moodle_auth_service
 from app.services.moodle_scraper import MoodleScraper
 from app.services.moodle_webservice import MoodleWebService
 from app.services.pdf_service import generate_activity_response_pdf
+from app.services.activity_status import (
+    MANUAL_COMPLETION_REASONS,
+    completion_source,
+    effective_activity_status,
+)
 
 router = APIRouter(prefix="/api/activities", tags=["Atividades"])
 logger = logging.getLogger(__name__)
@@ -41,6 +46,29 @@ SUPPORTED_ACTIVITY_FILE_EXTENSIONS = {
 
 class StatusUpdateBody(BaseModel):
     status: str
+
+
+class ManualCompletionBody(BaseModel):
+    completed: bool
+    reason: Literal["group_member_submitted", "submitted_elsewhere", "other"] = "group_member_submitted"
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+def _status_payload(activity: Activity) -> dict:
+    return {
+        "status": activity.status,
+        "status_source": completion_source(activity.status),
+        "moodle_status": activity.moodle_status or "unknown",
+        "moodle_submission_at": (
+            activity.moodle_submission_at.isoformat() if activity.moodle_submission_at else None
+        ),
+        "manual_completed_at": (
+            activity.manual_completed_at.isoformat() if activity.manual_completed_at else None
+        ),
+        "manual_completion_reason": activity.manual_completion_reason,
+        "manual_completion_note": activity.manual_completion_note,
+        "is_group_activity": bool(activity.is_group_activity),
+    }
 
 
 def _sanitize_data_field(text: str, max_len: int) -> str:
@@ -113,6 +141,8 @@ async def _collect_activity_source(activity: Activity, user: User, db: Session) 
         try:
             session_data = crypto_service.decrypt_json(user.moodle_session_cookies)
             moodle_token = session_data.get("moodle_token")
+            if not moodle_token and user.moodle_token_enc:
+                moodle_token = crypto_service.decrypt(user.moodle_token_enc)
             client = moodle_auth_service.build_httpx_client(session_data)
             async with client:
                 scraper = MoodleScraper(client)
@@ -136,11 +166,17 @@ async def _collect_activity_source(activity: Activity, user: User, db: Session) 
     if description:
         source_parts.append(f"ENUNCIADO DA ATIVIDADE:\n{description}")
 
+    cached_content = _sanitize_data_field(str(raw_data.get("content_text") or ""), 25_000)
+    if cached_content:
+        source_parts.append(f"ANEXOS JÁ INDEXADOS:\n{cached_content}")
+
     extracted_files = []
-    if attachments and user.moodle_session_cookies:
+    if attachments and user.moodle_session_cookies and not cached_content:
         try:
             session_data = crypto_service.decrypt_json(user.moodle_session_cookies)
             moodle_token = session_data.get("moodle_token")
+            if not moodle_token and user.moodle_token_enc:
+                moodle_token = crypto_service.decrypt(user.moodle_token_enc)
             ws = MoodleWebService(settings.MOODLE_BASE_URL, moodle_token) if moodle_token else None
             client = moodle_auth_service.build_httpx_client(session_data)
             async with client:
@@ -187,7 +223,11 @@ async def list_activities(
     """Lista atividades do usuário com filtros opcionais de status e disciplina."""
     query = db.query(Activity, Course.name.label("course_name"), Course.color.label("course_color")).join(
         Course, Activity.course_id == Course.id
-    ).filter(Activity.user_id == current_user.id)
+    ).filter(
+        Activity.user_id == current_user.id,
+        Activity.removed_at == None,
+        Course.is_active == True,
+    )
 
     if status:
         query = query.filter(Activity.status == status)
@@ -204,7 +244,7 @@ async def list_activities(
             "type": a.activity_type or "assign",
             "description": a.description or "",
             "due_date": a.due_date.isoformat() if a.due_date else None,
-            "status": "submitted" if a.status == "graded" else a.status,
+            **_status_payload(a),
             "url": a.url or "",
             "course_id": a.course_id,
             "course_name": course_name or "Disciplina",
@@ -222,7 +262,8 @@ async def activities_summary(
 ):
     """Retorna contagem agregada de atividades por status."""
     rows = db.query(Activity.status, func.count(Activity.id)).filter(
-        Activity.user_id == current_user.id
+        Activity.user_id == current_user.id,
+        Activity.removed_at == None,
     ).group_by(Activity.status).all()
     return {status: count for status, count in rows}
 
@@ -256,6 +297,7 @@ async def get_activity_details(
     status_text_map = {
         "pending": "Pendente",
         "submitted": "Enviado para avaliação",
+        "manual_completed": "Grupo entregou (informado por você)",
         "late": "Atrasado",
         "graded": "Enviado para avaliação",
         "closed": "Finalizado",
@@ -268,7 +310,7 @@ async def get_activity_details(
         "type": act.activity_type or "assign",
         "description": act.description or "Sem orientações adicionais informadas pelo professor.",
         "due_date": act.due_date.isoformat() if act.due_date else None,
-        "status": "submitted" if act.status == "graded" else act.status,
+        **_status_payload(act),
         "status_text": status_text_map.get(act.status, "Pendente"),
         "time_remaining": "Prazo encerrado" if act.status == "late" else None,
         "url": act.url or "",
@@ -304,10 +346,63 @@ async def update_activity_status(
     if not activity:
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
-    activity.status = target_status
+    if target_status == "submitted":
+        activity.manual_completed_at = datetime.utcnow()
+        activity.manual_completion_reason = "other"
+    elif target_status in {"pending", "late"}:
+        activity.manual_completed_at = None
+        activity.manual_completion_reason = None
+        activity.manual_completion_note = None
+    activity.status = effective_activity_status(
+        activity.moodle_status,
+        activity.manual_completed_at,
+        activity.due_date,
+        removed_at=activity.removed_at,
+    )
     activity.updated_at = datetime.utcnow()
     db.commit()
-    return {"id": activity.id, "status": activity.status}
+    return {"id": activity.id, **_status_payload(activity)}
+
+
+@router.patch("/{activity_id}/manual-completion")
+async def update_manual_completion(
+    activity_id: str,
+    data: ManualCompletionBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Registra entrega pelo grupo sem afirmar que o Moodle a confirmou."""
+    activity = db.query(Activity).filter(
+        Activity.id == activity_id,
+        Activity.user_id == current_user.id,
+        Activity.removed_at == None,
+    ).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Atividade não encontrada")
+    if data.reason not in MANUAL_COMPLETION_REASONS:
+        raise HTTPException(status_code=400, detail="Motivo de conclusão inválido")
+
+    if data.completed:
+        activity.manual_completed_at = datetime.utcnow()
+        activity.manual_completion_reason = data.reason
+        activity.manual_completion_note = (data.note or "").strip() or None
+        if data.reason == "group_member_submitted":
+            activity.is_group_activity = True
+    else:
+        activity.manual_completed_at = None
+        activity.manual_completion_reason = None
+        activity.manual_completion_note = None
+
+    activity.status = effective_activity_status(
+        activity.moodle_status,
+        activity.manual_completed_at,
+        activity.due_date,
+        removed_at=activity.removed_at,
+    )
+    activity.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(activity)
+    return {"id": activity.id, **_status_payload(activity)}
 
 
 @router.post("/{activity_id}/explain-ai")
@@ -369,6 +464,7 @@ Seja direto, didático e encorajador."""
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 
@@ -428,6 +524,7 @@ async def generate_activity_response_pdf_endpoint(
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 

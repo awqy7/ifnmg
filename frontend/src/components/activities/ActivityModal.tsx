@@ -10,9 +10,11 @@ import {
   Download,
   Bot,
   Calendar,
+  Users,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import ManualCompletionDialog, { ManualCompletionReason } from "./ManualCompletionDialog";
 
 interface ActivityModalProps {
   activityId: string | null;
@@ -29,6 +31,9 @@ export default function ActivityModal({
   const [loading, setLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const pdfUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -79,10 +84,44 @@ export default function ActivityModal({
   };
 
   const isSubmitted = details?.status === "submitted";
+  const isManualCompleted = details?.status === "manual_completed";
   const isLate =
-    details?.status === "pending" &&
-    details?.due_date &&
-    new Date(details.due_date) < new Date();
+    details?.status === "late" || (
+      details?.status === "pending" &&
+      details?.due_date &&
+      new Date(details.due_date) < new Date()
+    );
+
+  const handleManualCompletion = async (
+    completed: boolean,
+    reason: ManualCompletionReason,
+    note?: string
+  ) => {
+    if (!activityId) return;
+    setUpdatingStatus(true);
+    setStatusError(null);
+    try {
+      const result = await activitiesApi.updateManualCompletion(activityId, completed, reason, note);
+      setDetails((current: any) => ({
+        ...current,
+        ...result,
+        status_text: result.status === "manual_completed"
+          ? "Grupo entregou (informado por você)"
+          : result.status === "submitted"
+          ? "Enviado para avaliação"
+          : result.status === "late"
+          ? "Atrasado"
+          : "Pendente",
+      }));
+      setShowCompletionDialog(false);
+      window.dispatchEvent(new CustomEvent("activity-status-changed"));
+      window.dispatchEvent(new CustomEvent("data-refresh"));
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : "Não foi possível atualizar a atividade.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-y-auto">
@@ -133,12 +172,14 @@ export default function ActivityModal({
                     className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                       isSubmitted
                         ? "bg-emerald-500/[0.08] text-emerald-400/80"
+                        : isManualCompleted
+                        ? "bg-sky-500/[0.08] text-sky-400/80"
                         : isLate
                         ? "bg-red-500/[0.08] text-red-400/80"
                         : "bg-amber-500/[0.06] text-amber-400/80"
                     }`}
                   >
-                    {isSubmitted ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                    {isSubmitted || isManualCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                   </div>
                   <div>
                     <p className="text-[9px] text-neutral-500 uppercase tracking-wider">Status</p>
@@ -179,6 +220,20 @@ export default function ActivityModal({
               </div>
 
               {/* Description */}
+              {isManualCompleted && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-sky-500/15 bg-sky-500/[0.05] p-3 text-sky-200/80">
+                  <Users className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-semibold">Entrega do grupo informada por você</p>
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-sky-300/60">Ainda não é uma confirmação oficial do Virtual2.</p>
+                    {details?.manual_completion_note && <p className="mt-1 text-[10px]">{details.manual_completion_note}</p>}
+                  </div>
+                </div>
+              )}
+              {statusError && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/[0.05] p-3 text-[11px] text-red-300">{statusError}</div>
+              )}
+
               <div className="space-y-1.5">
                 <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
                   <FileText className="w-3 h-3" /> Enunciado
@@ -216,16 +271,27 @@ export default function ActivityModal({
 
         {/* Footer */}
         <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-2">
-          <button
-            onClick={() => openChatWithContext?.(
-              details?.course_id,
-              `Ajude-me a entender e planejar a atividade: ${details?.title || "atividade"}`
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {!isSubmitted && details && (
+              <button
+                type="button"
+                onClick={() => setShowCompletionDialog(true)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${isManualCompleted ? "border-sky-500/20 bg-sky-500/[0.06] text-sky-300" : "border-[var(--border)] bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]"}`}
+              >
+                <Users className="h-3.5 w-3.5" /> {isManualCompleted ? "Reabrir" : "Grupo já entregou"}
+              </button>
             )}
-            disabled={!details || !openChatWithContext}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--border)] text-neutral-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
-          >
-            <Bot className="w-3.5 h-3.5 text-emerald-400" /> Conversar com tutor
-          </button>
+            <button
+              onClick={() => openChatWithContext?.(
+                details?.course_id,
+                `Ajude-me a entender e planejar a atividade: ${details?.title || "atividade"}`
+              )}
+              disabled={!details || !openChatWithContext}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--border)] text-neutral-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
+            >
+              <Bot className="w-3.5 h-3.5 text-emerald-400" /> Tutor
+            </button>
+          </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={handleGeneratePDF}
@@ -248,6 +314,14 @@ export default function ActivityModal({
           </div>
         </div>
       </div>
+      <ManualCompletionDialog
+        open={showCompletionDialog}
+        activityTitle={details?.title || "Atividade"}
+        alreadyCompleted={isManualCompleted}
+        loading={updatingStatus}
+        onClose={() => !updatingStatus && setShowCompletionDialog(false)}
+        onConfirm={handleManualCompletion}
+      />
     </div>
   );
 }

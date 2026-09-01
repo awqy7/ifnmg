@@ -16,6 +16,15 @@ export const metadata: Metadata = {
   title: "IFNMG Assistente — Seu Tutor Acadêmico de Elite",
   description: "Plataforma avançada de inteligência acadêmica para estudantes do IFNMG: sincronização inteligente com Virtual2, tutoria com IA e gestão de alto desempenho.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "IFNMG Assistente",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({

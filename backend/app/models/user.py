@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON
+from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -17,12 +17,14 @@ class User(Base):
     email = Column(String(200), unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    session_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Credenciais do Moodle (criptografadas)
     moodle_username_enc = Column(Text, nullable=True)
     moodle_password_enc = Column(Text, nullable=True)
+    moodle_token_enc = Column(Text, nullable=True)
     moodle_session_cookies = Column(Text, nullable=True)  # JSON criptografado
     moodle_connected = Column(Boolean, default=False)
     moodle_last_sync = Column(DateTime, nullable=True)

@@ -317,10 +317,10 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
             ]
 
     # ── Status REAL de envio das tarefas (o que o aluno já entregou) ──
-    submission_map: Dict[int, str] = {}
+    submission_map: Dict[int, Dict] = {}
     submission_limit = asyncio.Semaphore(6)
 
-    async def fetch_submission_status(assignment: Dict) -> tuple[Optional[int], Optional[str]]:
+    async def fetch_submission_status(assignment: Dict) -> tuple[Optional[int], Optional[Dict]]:
         instance_id = assignment.get("id")
         cmid = assignment.get("cmid")
         if not instance_id or not cmid:
@@ -334,8 +334,27 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
             last_attempt = status_data.get("lastattempt") or {}
             submission = last_attempt.get("submission") or {}
             team_submission = last_attempt.get("teamsubmission") or {}
-            status = submission.get("status") or team_submission.get("status") or "new"
-            return cmid, status
+            individual_status = submission.get("status")
+            team_status = team_submission.get("status")
+            # Uma entrega do grupo vale para o aluno mesmo quando a tentativa
+            # individual ainda aparece como "new".
+            status = (
+                "submitted"
+                if "submitted" in {individual_status, team_status}
+                else individual_status or team_status or "new"
+            )
+            submission_time = max(
+                int(submission.get("timemodified") or 0),
+                int(team_submission.get("timemodified") or 0),
+            ) or None
+            return cmid, {
+                "status": status,
+                "individual_status": individual_status,
+                "team_status": team_status,
+                "is_group_activity": bool(team_submission),
+                "submission_time": submission_time,
+                "grading_status": last_attempt.get("gradingstatus"),
+            }
         except Exception:
             return cmid, None
 
@@ -343,7 +362,7 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
         submission_results = await asyncio.gather(
             *(fetch_submission_status(assignment) for assignment in assignments)
         )
-        submission_map.update({cmid: status for cmid, status in submission_results if cmid and status})
+        submission_map.update({cmid: data for cmid, data in submission_results if cmid and data})
 
     for quiz in quizzes:
         cmid = quiz.get("coursemodule") or quiz.get("cmid")
@@ -394,7 +413,8 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
             # limpa html da description do módulo
             description = clean_moodle_text(description)
 
-            sub_status = submission_map.get(cmid)
+            submission_info = submission_map.get(cmid) or {}
+            sub_status = submission_info.get("status")
             completed = sub_status == "submitted"
 
             item = {
@@ -408,6 +428,11 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 "due_date": due_dates[cmid].isoformat() if cmid in due_dates else None,
                 "is_completed": completed,
                 "submission_status": sub_status,
+                "individual_submission_status": submission_info.get("individual_status"),
+                "team_submission_status": submission_info.get("team_status"),
+                "is_group_activity": bool(submission_info.get("is_group_activity")),
+                "submission_time": submission_info.get("submission_time"),
+                "grading_status": submission_info.get("grading_status"),
                 "files": assignment_files.get(cmid, []),
                 "availability": mod.get("availabilityinfo") or "",
                 "visible": mod.get("visible", 1),
@@ -462,4 +487,5 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
     return {
         "activities": list(activities.values()),
         "materials": materials,
+        "collection_complete": True,
     }

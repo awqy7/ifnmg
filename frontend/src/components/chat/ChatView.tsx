@@ -131,11 +131,28 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
     }, 30);
 
     try {
-      const res = await chatApi.sendMessage(userText, currentSessionId || undefined, initialCourseId);
-      if (!currentSessionId && res.session_id) {
-        setCurrentSessionId(res.session_id);
+      let activeSessionId = currentSessionId;
+      if (!activeSessionId) {
+        const created = await chatApi.createSession(
+          initialCourseId,
+          userText.length > 50 ? `${userText.slice(0, 50)}...` : userText
+        );
+        activeSessionId = created.id;
+        setCurrentSessionId(created.id);
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
+      if (!activeSessionId) throw new Error("Não foi possível criar a conversa.");
+
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      for await (const chunk of chatApi.streamMessage(userText, activeSessionId, initialCourseId)) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last?.role === "assistant") {
+            updated[updated.length - 1] = { ...last, content: `${last.content}${chunk}` };
+          }
+          return updated;
+        });
+      }
       loadSessions();
     } catch (err: any) {
       setMessages((prev) => [

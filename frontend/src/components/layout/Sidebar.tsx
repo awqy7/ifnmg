@@ -42,8 +42,8 @@ export default function Sidebar({
     { id: "atividades", label: "Atividades", icon: CheckSquare },
     { id: "cursos", label: "Disciplinas", icon: BookOpen },
     { id: "horarios", label: "Horarios", icon: Clock },
-    { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA", disabled: true },
-    { id: "estudo", label: "Estudo", icon: Sparkles, badge: "BETA", disabled: true },
+    { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA" },
+    { id: "estudo", label: "Estudo", icon: Sparkles, badge: "BETA" },
     { id: "configuracoes", label: "Configuracoes", icon: Settings },
   ];
 

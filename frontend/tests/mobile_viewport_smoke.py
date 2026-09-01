@@ -69,6 +69,14 @@ def api_response(url: str):
         return {"count": 0}
     if "/api/activities/summary" in url:
         return {}
+    if "/manual-completion" in url:
+        return {
+            "status": "manual_completed",
+            "status_source": "manual",
+            "manual_completed_at": "2026-09-01T12:00:00",
+            "manual_completion_reason": "group_member_submitted",
+            "is_group_activity": True,
+        }
     if url.endswith("/api/activities"):
         return [
             {
@@ -191,20 +199,26 @@ def main():
                 # 5) Activity cards render with correct order
                 titles = page.locator("main h3").all_text_contents()
                 assert len(titles) >= 2, f"Expected at least 2 activities, got {titles}"
-                assert "Atividade de teste responsivo" in titles[0]
-                assert "Atividade ja entregue" in titles[1]
-                assert "Atividade atrasada" in titles[2]
+                assert "Atividade atrasada" in titles[0]
+                assert "Atividade de teste responsivo" in titles[1]
+                assert "Atividade ja entregue" in titles[2]
 
-                # 6) No filter buttons
+                # 6) Manual group delivery is explicit and reversible
+                page.get_by_role("button", name="Informar que o grupo entregou").first.click()
+                page.get_by_role("heading", name="Confirmar entrega do grupo").wait_for(state="visible")
+                page.get_by_role("button", name="Confirmar entrega").click()
+                page.get_by_text("Grupo entregou · informado por você", exact=True).wait_for(state="visible")
+
+                # 7) No filter buttons
                 for label in ["Todas", "Pendentes", "Entregues", "Atrasadas"]:
                     assert (
                         page.get_by_role("button", name=label, exact=True).count() == 0
                     ), f"Unexpected filter button '{label}'"
 
-                # 7) Course name badge is visible
+                # 8) Course name badge is visible
                 assert page.get_by_text("Disciplina de teste", exact=True).first.is_visible()
 
-                # 8) Activity modal opens and fits viewport
+                # 9) Activity modal opens and fits viewport
                 page.get_by_text("Atividade de teste responsivo", exact=True).click()
                 page.get_by_role("dialog").wait_for(state="visible")
                 dialog = page.get_by_role("dialog").bounding_box()
@@ -212,13 +226,13 @@ def main():
                 page.get_by_role("button", name="Fechar modal").click()
                 page.wait_for_timeout(300)
 
-                # 9) Slide-out drawer opens and fits viewport
+                # 10) Slide-out drawer opens and fits viewport
                 page.get_by_role("button", name="Abrir todas as opcoes").click()
                 page.wait_for_timeout(400)
                 aside = page.locator("aside").bounding_box()
                 assert aside and aside["x"] >= 0, f"drawer nao abriu em {width}x{height}"
 
-                # 10) Screenshot for visual check
+                # 11) Screenshot for visual check
                 page.screenshot(
                     path=f"tests/screenshot_{width}x{height}.png", full_page=False
                 )

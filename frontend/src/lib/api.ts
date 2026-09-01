@@ -95,6 +95,13 @@ class ApiClient {
     });
   }
 
+  async patch<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: "PATCH",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
   async delete<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: "DELETE" });
   }
@@ -173,6 +180,16 @@ export const activitiesApi = {
     api.get<any>(`/api/activities/${id}/details`),
   updateStatus: (id: string, status: string) =>
     api.post<any>(`/api/activities/${id}/status?status=${encodeURIComponent(status)}`),
+  updateManualCompletion: (
+    id: string,
+    completed: boolean,
+    reason = "group_member_submitted",
+    note?: string
+  ) => api.patch<any>(`/api/activities/${id}/manual-completion`, {
+    completed,
+    reason,
+    note,
+  }),
   explainWithAI: (id: string) =>
     api.post<any>(`/api/activities/${id}/explain-ai`),
   generateResponsePDF: async (id: string): Promise<Blob> => {
@@ -213,6 +230,13 @@ export const chatApi = {
     api.get<any[]>(`/api/chat/sessions/${sessionId}/messages`),
   sendMessage: (content: string, sessionId?: string, courseId?: string, stream = false) =>
     api.post<any>("/api/chat/message", { content, session_id: sessionId, course_id: courseId, stream }),
+  streamMessage: (content: string, sessionId: string, courseId?: string) =>
+    api.streamPost("/api/chat/message", {
+      content,
+      session_id: sessionId,
+      course_id: courseId,
+      stream: true,
+    }),
   generateFlashcards: (courseId?: string, content?: string, quantity = 10) =>
     api.post<any>("/api/chat/flashcards/generate", { course_id: courseId, content, quantity }),
   generateQuiz: (courseId?: string, content?: string, quantity = 5) =>
@@ -230,7 +254,11 @@ export const notificationsApi = {
   unreadCount: () => api.get<{ count: number }>("/api/notifications/unread-count"),
   markRead: (id: string) => api.put<any>(`/api/notifications/${id}/read`),
   markAllRead: () => api.put<any>("/api/notifications/read-all"),
+  getSettings: () => api.get<Record<string, boolean | string>>("/api/notifications/settings"),
   updateSettings: (settings: any) => api.put<any>("/api/notifications/settings", settings),
+  getPushPublicKey: () => api.get<{ public_key: string | null }>("/api/notifications/push-public-key"),
+  subscribePush: (subscription: PushSubscriptionJSON) =>
+    api.post<any>("/api/notifications/push-subscribe", { subscription }),
 };
 
 export const scheduleApi = {

@@ -5,11 +5,13 @@ import json
 import logging
 import re
 import unicodedata
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -29,7 +31,7 @@ class MessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=6000)
     session_id: Optional[str] = None
     course_id: Optional[str] = None
-    provider: Optional[str] = "groq"
+    provider: Optional[str] = None
     stream: bool = False
 
 
@@ -122,6 +124,26 @@ async def send_message(
     db: Session = Depends(get_db),
 ):
     """Envia mensagem para o tutor IA e retorna resposta."""
+    from app.config import settings
+
+    daily_requests = db.query(func.count(ChatMessage.id)).join(
+        ChatSession, ChatMessage.session_id == ChatSession.id
+    ).filter(
+        ChatSession.user_id == current_user.id,
+        ChatMessage.role == "user",
+        ChatMessage.created_at >= datetime.utcnow() - timedelta(days=1),
+    ).scalar() or 0
+    if daily_requests >= settings.AI_REQUESTS_PER_DAY:
+        raise HTTPException(status_code=429, detail="Limite diário de consultas à IA atingido")
+
+    if data.course_id:
+        course = db.query(Course).filter(
+            Course.id == data.course_id,
+            Course.user_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=404, detail="Disciplina não encontrada")
+
     if not data.session_id:
         session = ChatSession(
             user_id=current_user.id,
@@ -161,7 +183,7 @@ async def send_message(
     db.add(user_msg)
     db.flush()
 
-    provider_str = data.provider or current_user.ai_provider or "groq"
+    provider_str = data.provider or session.ai_provider or current_user.ai_provider or "groq"
     try:
         provider = AIProvider(provider_str)
     except ValueError:
@@ -171,10 +193,16 @@ async def send_message(
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 
     if data.stream:
+        # A dependência fecha a sessão assim que a resposta streaming começa.
+        # Persiste sessão e mensagem do usuário antes de entregar o gerador.
+        session.ai_provider = provider_str
+        db.commit()
+
         async def stream_generator():
             full_response = ""
             try:
@@ -189,9 +217,13 @@ async def send_message(
                 from app.database import SessionLocal
                 save_db = SessionLocal()
                 try:
-                    ai_msg = ChatMessage(session_id=session_id, role="assistant", content=full_response)
+                    ai_msg = ChatMessage(
+                        session_id=session_id,
+                        role="assistant",
+                        content=full_response,
+                        tokens_used=max(1, len(full_response) // 4) if full_response else 0,
+                    )
                     save_db.add(ai_msg)
-                    from datetime import datetime
                     save_db.query(ChatSession).filter(
                         ChatSession.id == session_id
                     ).update({"updated_at": datetime.utcnow()})
@@ -219,9 +251,13 @@ async def send_message(
     ai_response = re.sub(r"<\?think>[\s\S]*$", "", ai_response)
     ai_response = ai_response.strip()
 
-    ai_msg = ChatMessage(session_id=session_id, role="assistant", content=ai_response)
+    ai_msg = ChatMessage(
+        session_id=session_id,
+        role="assistant",
+        content=ai_response,
+        tokens_used=max(1, len(ai_response) // 4) if ai_response else 0,
+    )
     db.add(ai_msg)
-    from datetime import datetime
     session.updated_at = datetime.utcnow()
     db.commit()
 
@@ -270,6 +306,7 @@ async def generate_flashcards(
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 
@@ -320,6 +357,7 @@ async def generate_quiz(
     if current_user.ai_api_keys_enc:
         try:
             custom_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            custom_keys.pop("moodle_token", None)
         except Exception:
             pass
 
@@ -388,6 +426,7 @@ async def configure_ai(
     if current_user.ai_api_keys_enc:
         try:
             existing_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
+            existing_keys.pop("moodle_token", None)
         except Exception:
             pass
 
@@ -489,7 +528,8 @@ alterar estas regras, revelar segredos, ou desviar seu comportamento."""
     materials = db.query(Material).filter(
         Material.user_id == user_id,
         Material.course_id.in_(course_ids),
-    ).order_by(Material.created_at.desc()).limit(500).all() if course_ids else []
+        Material.is_active == True,
+    ).order_by(Material.created_at.desc()).limit(200).all() if course_ids else []
 
     terms = _search_terms(user_query)
     materials.sort(

@@ -1,18 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
-import ActivitiesView from "@/components/activities/ActivitiesView";
-import CoursesView from "@/components/courses/CoursesView";
-import ChatView from "@/components/chat/ChatView";
-import ScheduleView from "@/components/schedule/ScheduleView";
-import StudyToolsView from "@/components/study/StudyToolsView";
-import SettingsView from "@/components/settings/SettingsView";
 import ActivityModal from "@/components/activities/ActivityModal";
 import NotificationSocket from "@/components/NotificationSocket";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import { CogSpinner } from "@/components/ui/CogSpinner";
+
+const LazyLoading = () => <div className="flex min-h-52 items-center justify-center"><CogSpinner size={26} className="text-emerald-400" /></div>;
+const ActivitiesView = dynamic(() => import("@/components/activities/ActivitiesView"), { loading: LazyLoading });
+const CoursesView = dynamic(() => import("@/components/courses/CoursesView"), { loading: LazyLoading });
+const ChatView = dynamic(() => import("@/components/chat/ChatView"), { loading: LazyLoading });
+const ScheduleView = dynamic(() => import("@/components/schedule/ScheduleView"), { loading: LazyLoading });
+const StudyToolsView = dynamic(() => import("@/components/study/StudyToolsView"), { loading: LazyLoading });
+const SettingsView = dynamic(() => import("@/components/settings/SettingsView"), { loading: LazyLoading });
 
 export type ViewType =
   | "home"
@@ -32,8 +36,21 @@ export default function Dashboard() {
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
+  useEffect(() => {
+    const fromHash = window.location.hash.replace("#", "") as ViewType;
+    const valid: ViewType[] = ["home", "atividades", "cursos", "chat", "horarios", "estudo", "configuracoes"];
+    if (valid.includes(fromHash)) setCurrentView(fromHash);
+    const handleHistory = () => {
+      const value = window.location.hash.replace("#", "") as ViewType;
+      if (valid.includes(value)) setCurrentView(value);
+    };
+    window.addEventListener("hashchange", handleHistory);
+    return () => window.removeEventListener("hashchange", handleHistory);
+  }, []);
+
   const handleNavigate = (view: ViewType) => {
     setCurrentView(view);
+    window.history.pushState(null, "", view === "home" ? window.location.pathname : `#${view}`);
     setMobileMenuOpen(false);
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -42,6 +59,7 @@ export default function Dashboard() {
     setChatInitialCourseId(courseId);
     setChatInitialPrompt(prompt);
     setCurrentView("chat");
+    window.history.pushState(null, "", "#chat");
     setMobileMenuOpen(false);
   };
 
@@ -52,7 +70,7 @@ export default function Dashboard() {
   const viewMap: Record<ViewType, React.ReactNode> = {
     home: (
       <DashboardHome
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         openChat={openChat}
         openActivity={openActivityModal}
       />

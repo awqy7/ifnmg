@@ -103,6 +103,7 @@ async def get_course_materials(
     materials = db.query(Material).filter(
         Material.course_id == course_id,
         Material.user_id == current_user.id,
+        Material.is_active == True,
     ).order_by(Material.topic_number.asc().nullslast(), Material.created_at.desc()).all()
 
     return [

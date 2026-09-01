@@ -3,7 +3,9 @@ Serviço de notificações: in-app, Web Push e Telegram.
 """
 import json
 import logging
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationService:
+
+    @staticmethod
+    def _is_quiet_time(user) -> bool:
+        settings_map = (user.notification_settings or {}) if user else {}
+        start = str(settings_map.get("quiet_start") or "22:00")
+        end = str(settings_map.get("quiet_end") or "07:00")
+        current = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%H:%M")
+        if start == end:
+            return False
+        return start <= current < end if start < end else current >= start or current < end
 
     async def send_notification(
         self,
@@ -53,7 +65,8 @@ class NotificationService:
         db.flush()
 
         # Web Push (se configurado)
-        if user and user.push_subscription:
+        quiet_time = self._is_quiet_time(user)
+        if user and user.push_subscription and not quiet_time:
             try:
                 await self._send_web_push(
                     subscription=json.loads(user.push_subscription),
@@ -66,7 +79,7 @@ class NotificationService:
                 logger.warning(f"Falha no Web Push: {e}")
 
         # Telegram (se configurado)
-        if user and user.telegram_chat_id and settings.TELEGRAM_BOT_TOKEN:
+        if user and user.telegram_chat_id and settings.TELEGRAM_BOT_TOKEN and not quiet_time:
             try:
                 await self._send_telegram(
                     chat_id=user.telegram_chat_id,

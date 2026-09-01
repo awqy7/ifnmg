@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GraduationCap, Eye, EyeOff, Lock, User, ExternalLink } from "lucide-react";
-import { LoginButton } from "@/components/ui/ImmersiveLoader";
+import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -11,19 +11,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setError("");
     try {
       await login(username, password);
     } catch (err: any) {
-      throw new Error(
-        err.message || "Nao foi possivel autenticar. Verifique suas credenciais."
+      setError(
+        err.message || "Não foi possível autenticar. Verifique suas credenciais."
       );
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleError = (msg: string) => {
-    setError(msg);
   };
 
   return (
@@ -57,7 +60,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-3.5">
+          <form onSubmit={handleLogin} className="space-y-3.5">
             <div>
               <label htmlFor="moodle-username" className="block text-[11px] font-medium text-neutral-400 mb-1.5">
                 Usuario / CPF / Matricula
@@ -109,9 +112,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            <LoginButton onLogin={handleLogin} onError={handleError}>
-              Entrar
-            </LoginButton>
+            <button
+              type="submit"
+              disabled={loading}
+              className="relative w-full min-h-11 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center font-semibold text-white text-sm tracking-wide"
+            >
+              {loading ? <CogSpinner size={22} className="text-white" /> : "Entrar"}
+            </button>
           </form>
 
           <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-neutral-600">

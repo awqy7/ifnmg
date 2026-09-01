@@ -27,6 +27,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini ./alembic.ini
 COPY .python-version ./
 
 # Cloud Run expõe a porta via $PORT (default 8080)

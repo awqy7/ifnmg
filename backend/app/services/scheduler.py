@@ -18,6 +18,7 @@ from sqlalchemy import text
 
 from app.database import SessionLocal
 from app.config import settings
+from app.services.activity_status import effective_activity_status, normalise_moodle_status
 
 logger = logging.getLogger(__name__)
 
@@ -116,26 +117,21 @@ def _release_distributed_lock(db: Session, user_id: str) -> None:
 # Upserts compartilhados
 # ─────────────────────────────────────────────────────────────
 
-def _compute_status(item: dict, existing_status: Optional[str]) -> str:
-    """Define status da atividade: submitted > late > pending."""
-    if existing_status in ("submitted", "graded"):
-        # mantém enviado manualmente pelo usuário
-        return "submitted"
-    if item.get("is_completed"):
-        return "submitted"
-    due = item.get("due_date")
-    if isinstance(due, datetime):
-        pass
-    elif due:
+def _parse_datetime(value) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=None) if value.tzinfo else value
+    if isinstance(value, (int, float)) and value > 0:
         try:
-            due = datetime.fromisoformat(str(due))
-        except Exception:
-            due = None
-    else:
-        due = None
-    if due and due < datetime.utcnow():
-        return "late"
-    return "pending"
+            return datetime.fromtimestamp(value)
+        except (OverflowError, OSError, ValueError):
+            return None
+    if value:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 async def _upsert_activity(
@@ -155,16 +151,12 @@ async def _upsert_activity(
     if not mid or not act_data.get("title"):
         return None
 
-    due_date = None
-    raw_due = act_data.get("due_date")
-    if raw_due:
-        if isinstance(raw_due, datetime):
-            due_date = raw_due
-        else:
-            try:
-                due_date = datetime.fromisoformat(str(raw_due))
-            except Exception:
-                due_date = None
+    due_date = _parse_datetime(act_data.get("due_date"))
+    moodle_status = normalise_moodle_status(
+        act_data.get("submission_status") or act_data.get("status"),
+        bool(act_data.get("is_completed")),
+    )
+    moodle_submission_at = _parse_datetime(act_data.get("submission_time"))
 
     activity = existing_activities.get(mid) if existing_activities is not None else None
     if activity is None and existing_activities is None:
@@ -172,6 +164,17 @@ async def _upsert_activity(
             Activity.course_id == course.id,
             Activity.moodle_id == mid,
         ).first()
+
+    # O HTML só informa a conclusão visual e não é confiável para reabrir uma
+    # entrega já confirmada. Só reduzimos o status oficial quando o endpoint de
+    # submissão realmente trouxe um valor explícito.
+    if (
+        activity
+        and act_data.get("submission_status") is None
+        and not act_data.get("is_completed")
+        and activity.moodle_status in {"submitted", "graded"}
+    ):
+        moodle_status = activity.moodle_status
 
     created = False
     if not activity:
@@ -183,6 +186,10 @@ async def _upsert_activity(
             activity_type=act_data.get("type", "unknown"),
             description=act_data.get("description", ""),
             due_date=due_date,
+            moodle_status=moodle_status,
+            moodle_submission_at=moodle_submission_at,
+            is_group_activity=bool(act_data.get("is_group_activity")),
+            last_seen_at=datetime.utcnow(),
             url=act_data.get("url", ""),
             is_new=True,
             notified=False,
@@ -201,16 +208,28 @@ async def _upsert_activity(
         # UPDATE: mantém dados sempre atualizados com o Moodle
         activity.title = act_data["title"] or activity.title
         activity.activity_type = act_data.get("type") or activity.activity_type
-        if act_data.get("description"):
-            activity.description = act_data["description"]
-        if due_date:
+        if "description" in act_data:
+            activity.description = act_data.get("description") or ""
+        if "due_date" in act_data:
             activity.due_date = due_date
-        if act_data.get("url"):
-            activity.url = act_data["url"]
-        if act_data.get("files"):
-            raw_data = dict(activity.raw_data or {})
-            raw_data["files"] = act_data["files"]
-            activity.raw_data = raw_data
+        if "url" in act_data:
+            activity.url = act_data.get("url") or ""
+        raw_data = dict(activity.raw_data or {})
+        preserved_content = {
+            key: raw_data.get(key)
+            for key in ("content_text", "content_fingerprint", "content_extraction_at")
+            if raw_data.get(key) is not None
+        }
+        raw_data.update(act_data)
+        raw_data.update(preserved_content)
+        activity.raw_data = raw_data
+        activity.moodle_status = moodle_status
+        activity.moodle_submission_at = (
+            moodle_submission_at if moodle_status in {"submitted", "graded"} else None
+        )
+        activity.is_group_activity = bool(act_data.get("is_group_activity") or activity.is_group_activity)
+        activity.last_seen_at = datetime.utcnow()
+        activity.removed_at = None
         # Atividade existente: não é nova
         activity.is_new = False
 
@@ -253,10 +272,12 @@ async def _upsert_activity(
         except Exception as e:
             logger.debug(f"Erro ao extrair anexo da atividade {mid}: {e}")
 
-    # Status recalculado; registros legados "graded" viram "submitted".
-    new_status = _compute_status(
-        {**act_data, "due_date": activity.due_date},
-        activity.status,
+    # A confirmação manual permanece separada da confirmação oficial.
+    new_status = effective_activity_status(
+        activity.moodle_status,
+        activity.manual_completed_at,
+        activity.due_date,
+        removed_at=activity.removed_at,
     )
     activity.status = new_status
 
@@ -276,6 +297,7 @@ async def _sync_materials(
     client=None,
     extract_text: bool = True,
     extraction_budget: Optional[list] = None,
+    reconcile: bool = True,
 ):
     """Cria/atualiza materiais do curso e extrai texto dos arquivos para a IA."""
     from app.models import Material, MaterialSyncMeta
@@ -293,6 +315,7 @@ async def _sync_materials(
         if material_ids else []
     )
     meta_by_material_id = {meta.material_id: meta for meta in stored_meta}
+    received_keys = set()
 
     for mat_data in materials_data:
         mid = str(mat_data.get("moodle_id") or "")
@@ -321,6 +344,7 @@ async def _sync_materials(
 
         # chave de dedupe por módulo
         mat_key = f"mod_{mid}" if mid else f"url_{mat_data.get('url', '')[:200]}"
+        received_keys.add(mat_key)
         material = materials_by_key.get(mat_key)
 
         if not material:
@@ -335,11 +359,14 @@ async def _sync_materials(
                 topic_number=mat_data.get("topic_number"),
                 is_new=True,
                 content_text="",
+                is_active=True,
             )
             db.add(material)
             db.flush()
             materials_by_key[mat_key] = material
         else:
+            material.is_active = True
+            material.updated_at = datetime.utcnow()
             material.title = title[:500]
             if mat_data.get("topic_name"):
                 material.topic_name = mat_data["topic_name"]
@@ -400,6 +427,11 @@ async def _sync_materials(
                 meta_by_material_id[material.id] = extraction_meta
 
         synced += 1
+
+    if reconcile:
+        for stored in stored_materials:
+            if stored.moodle_id not in received_keys:
+                stored.is_active = False
 
     return synced
 
@@ -478,15 +510,7 @@ async def sync_moodle_for_user(user_id: str):
 
         # Guarda token p/ uso futuro
         if moodle_token:
-            keys = {}
-            if user.ai_api_keys_enc:
-                try:
-                    keys = crypto_service.decrypt_json(user.ai_api_keys_enc)
-                except Exception:
-                    keys = {}
-            if keys.get("moodle_token") != moodle_token:
-                keys["moodle_token"] = moodle_token
-                user.ai_api_keys_enc = crypto_service.encrypt_json(keys)
+            user.moodle_token_enc = crypto_service.encrypt(moodle_token)
 
         client = moodle_auth_service.build_httpx_client(session_data)
         ws = MoodleWebService(
@@ -524,16 +548,19 @@ async def sync_moodle_for_user(user_id: str):
 
             existing_courses = db.query(Course).filter(Course.user_id == user_id).all()
             courses_by_moodle_id = {course.moodle_id: course for course in existing_courses}
+            seen_course_ids = set()
 
             new_activities_all = []
             new_activity_ids = set()
-            # No máximo três extrações/OCR pesados por ciclo. Os demais materiais
-            # ficam para o ciclo seguinte sem bloquear os dados essenciais.
-            extraction_budget = [3]
-            activity_extraction_budget = [2]
+            enrichment_jobs = []
+            # A primeira fase é somente metadados. Download/OCR acontece depois
+            # que o dashboard já foi liberado para o aluno.
+            extraction_budget = [0]
+            activity_extraction_budget = [0]
 
             for idx, course_data in enumerate(courses_data):
                 moodle_id = course_data["moodle_id"]
+                seen_course_ids.add(moodle_id)
                 course = courses_by_moodle_id.get(moodle_id)
                 is_new_course = False
 
@@ -556,8 +583,9 @@ async def sync_moodle_for_user(user_id: str):
                     course.name = course_data["name"] or course.name
                     if course_data.get("teacher"):
                         course.teacher = course_data["teacher"]
-                    if course_data.get("progress"):
+                    if course_data.get("progress") is not None:
                         course.progress = course_data["progress"]
+                    course.is_active = True
                     course.updated_at = datetime.utcnow()
 
                 # ── Conteúdo do curso ──
@@ -572,6 +600,7 @@ async def sync_moodle_for_user(user_id: str):
 
                 if not content:
                     content = await scraper.get_course_content(moodle_id)
+                enrichment_jobs.append((course, content, is_new_course, source))
 
                 teacher_from_page = content.get("teacher")
                 if teacher_from_page and not course.teacher:
@@ -582,7 +611,13 @@ async def sync_moodle_for_user(user_id: str):
                 activities_by_moodle_id = {
                     str(activity.moodle_id): activity for activity in stored_activities
                 }
-                for act_data in content.get("activities", []):
+                received_activities = content.get("activities", [])
+                received_activity_ids = {
+                    str(item.get("moodle_id"))
+                    for item in received_activities
+                    if item.get("moodle_id")
+                }
+                for act_data in received_activities:
                     activity = await _upsert_activity(
                         db, user_id, course, act_data, is_new_course, ws=ws, client=client,
                         extraction_budget=activity_extraction_budget,
@@ -593,6 +628,13 @@ async def sync_moodle_for_user(user_id: str):
                             new_activities_all.append(activity)
                             new_activity_ids.add(activity.id)
 
+                if content.get("collection_complete", True):
+                    for stored in stored_activities:
+                        if str(stored.moodle_id) not in received_activity_ids and not stored.removed_at:
+                            stored.removed_at = datetime.utcnow()
+                            stored.status = "closed"
+                            stored.is_new = False
+
                 # Materiais (com extração de texto p/ IA)
                 try:
                     n_mat = await _sync_materials(
@@ -601,6 +643,7 @@ async def sync_moodle_for_user(user_id: str):
                         ws=ws if (use_ws and source == "ws") else None,
                         client=client,
                         extraction_budget=extraction_budget,
+                        reconcile=content.get("collection_complete", True),
                     )
                     _sync_status[user_id]["materials"] += n_mat
                 except Exception as e:
@@ -609,6 +652,10 @@ async def sync_moodle_for_user(user_id: str):
                 _sync_status[user_id]["courses_done"] = idx + 1
                 _sync_status[user_id]["activities"] += len(content.get("activities", []))
                 _persist_sync_status(db, user_id)
+
+            for stored_course in existing_courses:
+                if stored_course.moodle_id not in seen_course_ids:
+                    stored_course.is_active = False
 
             # Notifica novas atividades
             courses_by_id = {course.id: course for course in courses_by_moodle_id.values()}
@@ -637,7 +684,46 @@ async def sync_moodle_for_user(user_id: str):
 
             _sync_status[user_id].update({
                 "running": False,
+                "phase": "usable",
+                "enrichment_running": bool(enrichment_jobs),
                 "finished_at": datetime.utcnow().isoformat(),
+            })
+            _persist_sync_status(db, user_id)
+
+            # Fase não bloqueante para texto, PDFs e OCR. Uma falha aqui não
+            # invalida os prazos e atividades já entregues à interface.
+            material_budget = [3]
+            activity_budget = [2]
+            for course, content, is_new_course, source in enrichment_jobs:
+                try:
+                    stored = db.query(Activity).filter(Activity.course_id == course.id).all()
+                    activity_map = {str(item.moodle_id): item for item in stored}
+                    for act_data in content.get("activities", []):
+                        await _upsert_activity(
+                            db, user_id, course, act_data, is_new_course,
+                            ws=ws if (use_ws and source == "ws") else None,
+                            client=client,
+                            extraction_budget=activity_budget,
+                            existing_activities=activity_map,
+                        )
+                    await _sync_materials(
+                        db, user_id, course, content.get("materials", []),
+                        ws=ws if (use_ws and source == "ws") else None,
+                        client=client,
+                        extraction_budget=material_budget,
+                        reconcile=False,
+                    )
+                    db.commit()
+                except Exception as exc:
+                    db.rollback()
+                    logger.warning("Enriquecimento de %s falhou: %s", course.name, exc)
+                if material_budget[0] <= 0 and activity_budget[0] <= 0:
+                    break
+
+            _sync_status[user_id].update({
+                "phase": "complete",
+                "enrichment_running": False,
+                "enrichment_finished_at": datetime.utcnow().isoformat(),
             })
             _persist_sync_status(db, user_id)
             logger.info(f"Sync concluído para {user_id}: {_sync_status[user_id]}")
@@ -716,16 +802,27 @@ async def check_deadlines(db: Session, user_id: str, user):
 
 
 async def mark_late_activities():
-    """Job leve: marca atividades vencidas como late."""
+    """Recalcula estados temporais sem alterar a origem da conclusão."""
     from app.models import Activity
 
     db: Session = SessionLocal()
     try:
-        updated = db.query(Activity).filter(
-            Activity.status == "pending",
+        activities = db.query(Activity).filter(
+            Activity.status.in_(["pending", "late"]),
             Activity.due_date != None,
-            Activity.due_date < datetime.utcnow(),
-        ).update({"status": "late"}, synchronize_session=False)
+            Activity.removed_at == None,
+        ).all()
+        updated = 0
+        for activity in activities:
+            status = effective_activity_status(
+                activity.moodle_status,
+                activity.manual_completed_at,
+                activity.due_date,
+                removed_at=activity.removed_at,
+            )
+            if status != activity.status:
+                activity.status = status
+                updated += 1
         if updated:
             db.commit()
             logger.info(f"{updated} atividades marcadas como atrasadas")
@@ -776,7 +873,20 @@ async def generate_daily_briefings():
                 ).first()
                 if existing:
                     continue
-                await _generate_user_briefing(db, user)
+                briefing = await _generate_user_briefing(db, user)
+                settings_map = user.notification_settings or {}
+                if settings_map.get("daily_briefing", True):
+                    from app.services.notification_service import notification_service
+                    await notification_service.send_notification(
+                        db=db,
+                        user_id=user.id,
+                        title="Seu briefing diário está pronto",
+                        message=(briefing.content or "Veja suas prioridades de hoje.")[:180],
+                        notif_type="daily_briefing",
+                        related_id=briefing.id,
+                        related_url="/",
+                        user=user,
+                    )
                 logger.info(f"Briefing gerado para {user.name}")
             except Exception as e:
                 logger.error(f"Erro briefing {user.id}: {e}")

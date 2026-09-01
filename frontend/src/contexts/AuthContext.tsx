@@ -11,6 +11,7 @@ interface User {
   moodle_last_sync: string | null;
   ai_provider: string;
   theme: string;
+  notification_settings?: Record<string, boolean | string>;
 }
 
 interface AuthContextType {

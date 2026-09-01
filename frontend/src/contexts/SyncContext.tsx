@@ -50,7 +50,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             setSyncProgress("Erro na sincronização");
           } else {
             setSyncProgress(
-              `Sincronizado! ${st.courses_done || 0} disciplinas · ${st.materials || 0} materiais`
+              st.enrichment_running
+                ? `Dados prontos! Processando documentos em segundo plano`
+                : `Sincronizado! ${st.courses_done || 0} disciplinas · ${st.materials || 0} materiais`
             );
             // Dispara atualização global de dados (DashboardHome ouve este evento)
             window.dispatchEvent(new CustomEvent("data-refresh"));

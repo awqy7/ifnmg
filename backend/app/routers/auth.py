@@ -74,10 +74,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, session_version: int = 0) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(
-        {"sub": user_id, "exp": expire, "iat": datetime.utcnow(), "jti": secrets.token_hex(16)},
+        {
+            "sub": user_id,
+            "sv": session_version,
+            "exp": expire,
+            "iat": datetime.utcnow(),
+            "jti": secrets.token_hex(16),
+        },
         settings.SECRET_KEY,
         algorithm=ALGORITHM,
     )
@@ -135,13 +141,14 @@ async def get_current_user(
     try:
         payload = jwt.decode(token_str, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
+        session_version = int(payload.get("sv", 0))
         if not user_id:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-    if not user:
+    if not user or int(user.session_version or 0) != session_version:
         raise credentials_exception
     return user
 
@@ -211,21 +218,14 @@ async def moodle_login(
 
     moodle_token = session_data.get("moodle_token") or await moodle_auth_service.get_moodle_token(username, password)
     if moodle_token:
-        existing_keys = {}
-        if user.ai_api_keys_enc:
-            try:
-                existing_keys = crypto_service.decrypt_json(user.ai_api_keys_enc)
-            except Exception:
-                pass
-        existing_keys["moodle_token"] = moodle_token
-        user.ai_api_keys_enc = crypto_service.encrypt_json(existing_keys)
+        user.moodle_token_enc = crypto_service.encrypt(moodle_token)
         db.commit()
 
     if not get_sync_status(user.id, db).get("running", False):
         mark_sync_queued(db, user.id)
         background_tasks.add_task(sync_moodle_for_user, user.id)
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, int(user.session_version or 0))
     set_auth_cookie(response, token)
 
     return {
@@ -251,6 +251,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "moodle_last_sync": current_user.moodle_last_sync,
         "ai_provider": current_user.ai_provider or "groq",
         "theme": current_user.theme or "dark",
+        "notification_settings": current_user.notification_settings or {},
         "created_at": current_user.created_at,
     }
 
@@ -299,6 +300,7 @@ async def update_me(
         "moodle_last_sync": current_user.moodle_last_sync,
         "ai_provider": current_user.ai_provider or "groq",
         "theme": current_user.theme or "dark",
+        "notification_settings": current_user.notification_settings or {},
         "created_at": current_user.created_at,
     }
 
@@ -310,5 +312,7 @@ async def logout(
     db: Session = Depends(get_db),
 ):
     """Encerra apenas a sessão do aplicativo, preservando a conexão ao Virtual2."""
+    current_user.session_version = int(current_user.session_version or 0) + 1
+    db.commit()
     clear_auth_cookie(response)
     return {"message": "Sessão encerrada com sucesso"}

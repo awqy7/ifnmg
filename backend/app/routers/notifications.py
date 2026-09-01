@@ -3,7 +3,7 @@ Rota de notificações e grade de horários.
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -97,15 +97,49 @@ async def subscribe_push(
     return {"message": "Push subscription salva!"}
 
 
+@notifications_router.get("/push-public-key")
+async def get_push_public_key(current_user: User = Depends(get_current_user)):
+    from app.config import settings
+    return {"public_key": settings.VAPID_PUBLIC_KEY}
+
+
+class NotificationSettingsBody(BaseModel):
+    new_activity: Optional[bool] = None
+    deadline_7d: Optional[bool] = None
+    deadline_3d: Optional[bool] = None
+    deadline_1d: Optional[bool] = None
+    deadline_6h: Optional[bool] = None
+    daily_briefing: Optional[bool] = None
+    quiet_start: Optional[str] = None
+    quiet_end: Optional[str] = None
+
+    @field_validator("quiet_start", "quiet_end")
+    @classmethod
+    def validate_time(cls, value: Optional[str]):
+        if value is None:
+            return value
+        from datetime import datetime
+        try:
+            datetime.strptime(value, "%H:%M")
+        except ValueError as exc:
+            raise ValueError("Horário deve usar HH:MM") from exc
+        return value
+
+
+@notifications_router.get("/settings")
+async def get_notification_settings(current_user: User = Depends(get_current_user)):
+    return current_user.notification_settings or {}
+
+
 @notifications_router.put("/settings")
 async def update_notification_settings(
-    data: dict,
+    data: NotificationSettingsBody,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Atualiza preferências de notificação."""
     current_settings = current_user.notification_settings or {}
-    current_settings.update(data)
+    current_settings.update(data.model_dump(exclude_none=True))
     current_user.notification_settings = current_settings
     db.commit()
     return {"message": "Configurações atualizadas", "settings": current_settings}
@@ -121,6 +155,16 @@ class ScheduleSlot(BaseModel):
     course_name: Optional[str] = None
     room: Optional[str] = None
     color: Optional[str] = "#6366f1"
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def validate_schedule_time(cls, value: str):
+        from datetime import datetime
+        try:
+            datetime.strptime(value, "%H:%M")
+        except ValueError as exc:
+            raise ValueError("Horário deve usar HH:MM") from exc
+        return value
 
 
 @schedule_router.get("")
@@ -164,6 +208,17 @@ async def add_schedule_slot(
     """Adiciona um slot à grade de horários."""
     if data.day_of_week < 0 or data.day_of_week > 5:
         raise HTTPException(status_code=400, detail="Dia inválido (0=Seg, 5=Sab)")
+    if data.start_time >= data.end_time:
+        raise HTTPException(status_code=400, detail="O horário final deve ser posterior ao inicial")
+
+    overlap = db.query(Schedule).filter(
+        Schedule.user_id == current_user.id,
+        Schedule.day_of_week == data.day_of_week,
+        Schedule.start_time < data.end_time,
+        Schedule.end_time > data.start_time,
+    ).first()
+    if overlap:
+        raise HTTPException(status_code=409, detail="Este horário se sobrepõe a uma aula já cadastrada")
 
     # Se course_id fornecido, busca nome
     course_name = data.course_name
@@ -174,9 +229,10 @@ async def add_schedule_slot(
             Course.id == data.course_id,
             Course.user_id == current_user.id,
         ).first()
-        if course:
-            course_name = course.name
-            color = course.color
+        if not course:
+            raise HTTPException(status_code=404, detail="Disciplina não encontrada")
+        course_name = course.name
+        color = course.color
 
     slot = Schedule(
         user_id=current_user.id,

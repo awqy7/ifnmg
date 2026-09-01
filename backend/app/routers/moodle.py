@@ -52,15 +52,7 @@ async def save_credentials(
     current_user.moodle_connected = True
 
     if moodle_token:
-        # Salva token REST se disponível
-        existing_keys = {}
-        if current_user.ai_api_keys_enc:
-            try:
-                existing_keys = crypto_service.decrypt_json(current_user.ai_api_keys_enc)
-            except Exception:
-                pass
-        existing_keys["moodle_token"] = moodle_token
-        current_user.ai_api_keys_enc = crypto_service.encrypt_json(existing_keys)
+        current_user.moodle_token_enc = crypto_service.encrypt(moodle_token)
 
     db.commit()
 
@@ -125,6 +117,8 @@ async def sync_status(
         "error": status.get("error"),
         "started_at": status.get("started_at"),
         "finished_at": status.get("finished_at"),
+        "enrichment_running": status.get("enrichment_running", False),
+        "enrichment_finished_at": status.get("enrichment_finished_at"),
         "last_sync": current_user.moodle_last_sync.isoformat() if current_user.moodle_last_sync else None,
     }
 
@@ -164,6 +158,7 @@ async def remove_credentials(
     """Remove as credenciais do Moodle."""
     current_user.moodle_username_enc = None
     current_user.moodle_password_enc = None
+    current_user.moodle_token_enc = None
     current_user.moodle_session_cookies = None
     current_user.moodle_connected = False
     db.commit()

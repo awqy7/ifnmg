@@ -4,6 +4,7 @@ FastAPI — Aplicação principal do IFNMG Assistente Backend.
 import logging
 import re
 import time
+import uuid
 from contextlib import asynccontextmanager
 from typing import Callable
 
@@ -88,6 +89,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable):
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        request.state.request_id = request_id
+        started = time.perf_counter()
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["Server-Timing"] = f'app;dur={(time.perf_counter() - started) * 1000:.1f}'
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle do app: startup e shutdown."""
@@ -129,6 +141,7 @@ app = FastAPI(
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, limit=200, window=60)
+app.add_middleware(RequestContextMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -174,6 +187,20 @@ async def health():
         "version": "1.0.0",
         "app": "IFNMG Assistente",
     }
+
+
+@app.get("/api/health/ready")
+async def readiness():
+    """Readiness real: confirma que o banco está acessível."""
+    from sqlalchemy import text
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "ok"}
+    finally:
+        db.close()
 
 
 @app.get("/")

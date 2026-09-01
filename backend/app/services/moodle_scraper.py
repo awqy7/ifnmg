@@ -339,13 +339,19 @@ class MoodleScraper:
         capturar conteúdo colapsado/lazy-load."""
         activities = []
         materials = []
+        teacher_name = None
+        course_title = None
+        collection_complete = False
 
         try:
             # 1. Página principal (professor + título)
             course_url = f"{MOODLE_BASE}/course/view.php?id={moodle_course_id}"
             resp = await self.client.get(course_url)
             if resp.status_code != 200:
-                return {"activities": [], "materials": [], "teacher": None}
+                return {
+                    "activities": [], "materials": [], "teacher": None,
+                    "course_title": None, "collection_complete": False,
+                }
 
             soup = self._soup(resp.text)
 
@@ -518,6 +524,8 @@ class MoodleScraper:
                         else:
                             materials.append(item)
 
+            collection_complete = True
+
         except Exception as e:
             logger.error(f"Erro no scraping de conteúdo do curso {moodle_course_id}: {e}", exc_info=True)
 
@@ -526,6 +534,7 @@ class MoodleScraper:
             "materials": materials,
             "teacher": teacher_name,
             "course_title": course_title,
+            "collection_complete": collection_complete,
         }
 
     # ─────────────────────────────────────────────────────────────

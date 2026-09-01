@@ -252,6 +252,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   <Markdown content={briefing.content} />
                 </div>
 
+                {briefing.awaiting_confirmation?.length > 0 && (
+                  <div className="rounded-xl border border-sky-500/15 bg-sky-500/[0.05] p-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold text-sky-300">Aguardando confirmação do Virtual2</p>
+                        <p className="mt-0.5 text-[10px] text-sky-300/55">
+                          {briefing.awaiting_confirmation.length} {briefing.awaiting_confirmation.length === 1 ? "entrega informada por você" : "entregas informadas por você"}
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => onNavigate("atividades")} className="text-[10px] font-semibold text-sky-300 hover:text-white">Ver atividades</button>
+                    </div>
+                  </div>
+                )}
+
                 {briefing.study_plan?.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2.5">

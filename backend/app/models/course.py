@@ -1,6 +1,9 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import (
+    Column, String, Integer, Float, Boolean, DateTime, Text, JSON, ForeignKey,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -12,6 +15,7 @@ def gen_uuid():
 class Course(Base):
     """Disciplina/Curso do Moodle."""
     __tablename__ = "courses"
+    __table_args__ = (UniqueConstraint("user_id", "moodle_id", name="uq_courses_user_moodle"),)
 
     id = Column(String, primary_key=True, default=gen_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -33,6 +37,7 @@ class Course(Base):
 class Activity(Base):
     """Tarefa, quiz, fórum ou outra atividade do Moodle."""
     __tablename__ = "activities"
+    __table_args__ = (UniqueConstraint("course_id", "moodle_id", name="uq_activities_course_moodle"),)
 
     id = Column(String, primary_key=True, default=gen_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -42,7 +47,18 @@ class Activity(Base):
     activity_type = Column(String(50))  # assignment, quiz, forum, resource, url, page
     description = Column(Text)
     due_date = Column(DateTime, nullable=True)
-    status = Column(String(20), default="pending")  # pending, submitted, late, graded, closed
+    # `status` é o estado efetivo usado pela interface. As origens oficial e
+    # manual ficam separadas para não apresentar uma confirmação do aluno como
+    # se fosse uma entrega reconhecida pelo Virtual2.
+    status = Column(String(20), default="pending")  # pending, late, manual_completed, submitted, closed
+    moodle_status = Column(String(30), default="unknown")
+    moodle_submission_at = Column(DateTime, nullable=True)
+    manual_completed_at = Column(DateTime, nullable=True)
+    manual_completion_reason = Column(String(50), nullable=True)
+    manual_completion_note = Column(String(500), nullable=True)
+    is_group_activity = Column(Boolean, default=False)
+    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    removed_at = Column(DateTime, nullable=True)
     url = Column(String(1000))
     is_new = Column(Boolean, default=True)  # Para notificações
     notified = Column(Boolean, default=False)
@@ -57,6 +73,7 @@ class Activity(Base):
 class Material(Base):
     """Material/recurso de um curso."""
     __tablename__ = "materials"
+    __table_args__ = (UniqueConstraint("course_id", "moodle_id", name="uq_materials_course_moodle"),)
 
     id = Column(String, primary_key=True, default=gen_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -70,7 +87,9 @@ class Material(Base):
     topic_number = Column(Integer)
     file_size = Column(Integer, nullable=True)
     is_new = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     course = relationship("Course", back_populates="materials")
 

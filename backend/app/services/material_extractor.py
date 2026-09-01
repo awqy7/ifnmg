@@ -451,6 +451,17 @@ async def extract_material_content(
     if not data:
         return ""
 
+    # Texto simples e HTML são baratos; evitar criar uma thread reduz latência
+    # e elimina travamentos de encerramento do executor em ambientes restritos.
+    simple_name = (filename or "").lower()
+    simple_mime = (mimetype or "").lower()
+    if (
+        simple_name.endswith((".txt", ".md", ".csv", ".log", ".html", ".htm"))
+        or simple_mime.startswith("text/")
+        or "html" in simple_mime
+    ):
+        return extract_text_from_bytes(filename, mimetype, data)
+
     # PDF/OCR e leitura de documentos são CPU-bound. Executar fora do event
     # loop mantém login, dashboard e polling responsivos durante a sincronização.
     return await asyncio.to_thread(extract_text_from_bytes, filename, mimetype, data)

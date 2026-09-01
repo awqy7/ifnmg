@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Settings,
@@ -26,6 +26,8 @@ export default function SettingsView() {
   const [apiKey, setApiKey] = useState("");
   const [savingAI, setSavingAI] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [enablingPush, setEnablingPush] = useState(false);
 
   const [notifSettings, setNotifSettings] = useState({
     new_activity: true,
@@ -34,7 +36,16 @@ export default function SettingsView() {
     deadline_1d: true,
     deadline_6h: true,
     daily_briefing: true,
+    quiet_start: "22:00",
+    quiet_end: "07:00",
   });
+
+  useEffect(() => {
+    if (user?.ai_provider) setSelectedProvider(user.ai_provider);
+    notificationsApi.getSettings().then((saved) => {
+      setNotifSettings((current) => ({ ...current, ...saved } as typeof current));
+    }).catch(() => {});
+  }, [user?.ai_provider]);
 
   const handleSaveMoodle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +81,39 @@ export default function SettingsView() {
     const next = { ...notifSettings, [key]: !notifSettings[key as keyof typeof notifSettings] };
     setNotifSettings(next);
     try {
-      await notificationsApi.updateSettings(next);
-    } catch {}
+      await notificationsApi.updateSettings({ [key]: next[key as keyof typeof next] });
+    } catch {
+      setNotifSettings(notifSettings);
+    }
+  };
+
+  const enablePush = async () => {
+    setEnablingPush(true);
+    setPushMessage(null);
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        throw new Error("Este navegador não oferece notificações push.");
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("Permissão de notificações não concedida.");
+      const { public_key: publicKey } = await notificationsApi.getPushPublicKey();
+      if (!publicKey) throw new Error("Notificações push ainda não estão configuradas no servidor.");
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const padding = "=".repeat((4 - (publicKey.length % 4)) % 4);
+      const base64 = (publicKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+      const raw = window.atob(base64);
+      const applicationServerKey = Uint8Array.from(raw.split("").map((char) => char.charCodeAt(0)));
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+      await notificationsApi.subscribePush(subscription.toJSON());
+      setPushMessage("Notificações ativadas neste dispositivo.");
+    } catch (err) {
+      setPushMessage(err instanceof Error ? err.message : "Não foi possível ativar notificações.");
+    } finally {
+      setEnablingPush(false);
+    }
   };
 
   return (
@@ -257,6 +299,24 @@ export default function SettingsView() {
             );
           })}
         </div>
+        <div className="grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-2">
+          <label className="text-[11px] font-medium text-neutral-400">
+            Silenciar a partir de
+            <input type="time" value={notifSettings.quiet_start} onChange={(event) => setNotifSettings((current) => ({ ...current, quiet_start: event.target.value }))} onBlur={() => notificationsApi.updateSettings({ quiet_start: notifSettings.quiet_start }).catch(() => {})} className="mt-1.5 w-full rounded-lg border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2 text-xs text-white" />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-400">
+            Retomar às
+            <input type="time" value={notifSettings.quiet_end} onChange={(event) => setNotifSettings((current) => ({ ...current, quiet_end: event.target.value }))} onBlur={() => notificationsApi.updateSettings({ quiet_end: notifSettings.quiet_end }).catch(() => {})} className="mt-1.5 w-full rounded-lg border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2 text-xs text-white" />
+          </label>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[10px] text-neutral-500">Receba alertas mesmo com o sistema fechado.</p>
+          <button type="button" onClick={enablePush} disabled={enablingPush} className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-[11px] font-semibold text-emerald-300 disabled:opacity-50">
+            {enablingPush && <CogSpinner size={13} className="text-emerald-300" />}
+            Ativar neste dispositivo
+          </button>
+        </div>
+        {pushMessage && <p className="rounded-lg bg-white/[0.03] p-2.5 text-[10px] text-neutral-300">{pushMessage}</p>}
       </div>
     </div>
   );
