@@ -15,7 +15,7 @@ lxml
 playwright==1.47.0
 apscheduler==3.10.4
 pywebpush==2.0.0
-python-multipart==0.0.12
+python-multipart==0.0.32
 aiofiles==24.1.0
 litellm==1.49.1
 pypdf2==3.0.1
