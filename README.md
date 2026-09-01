@@ -28,14 +28,10 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
    - **Gerador de Flashcards**: Criação de baralhos de memorização a partir dos materiais da aula.
    - **Simulado de Provas**: Cria questões de múltipla escolha com correção imediata e justificativas.
 
-6. 📅 **Grade Semanal de Horários & Calendário Integrado**:
+6. 🕒 **Grade Semanal de Horários**:
    - Configuração visual da grade de aulas.
-   - Integração com o calendário acadêmico do IFNMG.
 
-7. 📊 **Boletim & Histórico de Notas**:
-   - Acompanhamento das notas e médias ponderadas por disciplina com feedbacks dos professores.
-
-8. 🔔 **Notificações Inteligentes**:
+7. 🔔 **Notificações Inteligentes**:
    - Alertas de novas atividades postadas e lembretes de prazos (7 dias, 3 dias, 1 dia e 6 horas antes).
 
 ---

@@ -35,7 +35,7 @@ class Notification(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     title = Column(String(500), nullable=False)
     message = Column(Text, nullable=False)
-    notification_type = Column(String(50))  # new_activity, deadline, grade, forum, daily
+    notification_type = Column(String(50))  # new_activity, deadline, forum, daily
     related_id = Column(String, nullable=True)  # ID da atividade/curso relacionado
     related_url = Column(String(1000), nullable=True)
     is_read = Column(Boolean, default=False)

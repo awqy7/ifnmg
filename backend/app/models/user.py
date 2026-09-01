@@ -38,7 +38,6 @@ class User(Base):
         "deadline_3d": True,
         "deadline_1d": True,
         "deadline_6h": True,
-        "grade_released": True,
         "forum_post": True,
         "daily_briefing": True,
         "quiet_start": "22:00",

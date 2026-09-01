@@ -278,7 +278,9 @@ async def extract_url_content(client: httpx.AsyncClient, url: str) -> str:
             return _sanitize_for_llm(_clean_html(response.text))
         
         filename = unquote(urlparse(final_url).path.rsplit("/", 1)[-1])
-        extracted = extract_text_from_bytes(filename, content_type, response.content)
+        extracted = await asyncio.to_thread(
+            extract_text_from_bytes, filename, content_type, response.content
+        )
         if extracted:
             return extracted
     except Exception as exc:
@@ -449,4 +451,6 @@ async def extract_material_content(
     if not data:
         return ""
 
-    return extract_text_from_bytes(filename, mimetype, data)
+    # PDF/OCR e leitura de documentos são CPU-bound. Executar fora do event
+    # loop mantém login, dashboard e polling responsivos durante a sincronização.
+    return await asyncio.to_thread(extract_text_from_bytes, filename, mimetype, data)

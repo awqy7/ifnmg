@@ -6,8 +6,6 @@ import TopBar from "@/components/layout/TopBar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import ActivitiesView from "@/components/activities/ActivitiesView";
 import CoursesView from "@/components/courses/CoursesView";
-import GradesView from "@/components/grades/GradesView";
-import CalendarView from "@/components/calendar/CalendarView";
 import ChatView from "@/components/chat/ChatView";
 import ScheduleView from "@/components/schedule/ScheduleView";
 import StudyToolsView from "@/components/study/StudyToolsView";
@@ -20,8 +18,6 @@ export type ViewType =
   | "home"
   | "atividades"
   | "cursos"
-  | "notas"
-  | "calendario"
   | "chat"
   | "horarios"
   | "estudo"
@@ -63,8 +59,6 @@ export default function Dashboard() {
     ),
     atividades: <ActivitiesView openActivity={openActivityModal} />,
     cursos: <CoursesView openChat={openChat} />,
-    notas: <GradesView />,
-    calendario: <CalendarView openActivity={openActivityModal} />,
     chat: <ChatView initialPrompt={chatInitialPrompt} initialCourseId={chatInitialCourseId} />,
     horarios: <ScheduleView />,
     estudo: <StudyToolsView />,

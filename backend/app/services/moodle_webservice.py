@@ -3,11 +3,13 @@ Cliente oficial da API REST do Moodle (webservice moodle_mobile_app).
 Retorna JSON estruturado — muito mais confiável que scraping HTML.
 Usado como fonte primária; o scraper HTML é apenas fallback.
 """
+import asyncio
 import html
 import logging
 import re
 from typing import Optional, Dict, List, Any
-from datetime import datetime, timedelta
+from datetime import datetime
+from urllib.parse import urlparse
 
 import httpx
 
@@ -59,11 +61,17 @@ def clean_moodle_text(value: Any, limit: int = 15_000) -> str:
 class MoodleWebService:
     """Wrapper dos web services oficiais do Moodle via token."""
 
-    def __init__(self, base_url: str, token: str, client: Optional[httpx.AsyncClient] = None):
+    def __init__(
+        self,
+        base_url: str,
+        token: str,
+        client: Optional[httpx.AsyncClient] = None,
+        userid: Optional[int] = None,
+    ):
         self.base_url = base_url.rstrip("/")
         self.token = token
         self.client = client
-        self._userid: Optional[int] = None
+        self._userid: Optional[int] = userid
 
     async def _call(self, wsfunction: str, params: Optional[Dict] = None) -> Any:
         payload = {
@@ -176,38 +184,6 @@ class MoodleWebService:
                 return value
         return []
 
-    # ─── Notas ───────────────────────────────────────────────────
-
-    async def get_grade_items(self, courseid: int) -> List[Dict]:
-        """Notas completas do usuário no curso, estruturadas."""
-        userid = await self.get_userid()
-        data = await self._call("gradereport_user_get_grade_items", {
-            "courseid": courseid,
-            "userid": userid,
-        })
-        usergrades = data.get("usergrades", [])
-        items = []
-        for ug in usergrades:
-            items.extend(ug.get("gradeitems", []))
-        return items
-
-    # ─── Calendário ──────────────────────────────────────────────
-
-    async def get_calendar_events(
-        self,
-        days_back: int = 7,
-        days_ahead: int = 120,
-    ) -> List[Dict]:
-        """Eventos do calendário num intervalo de datas."""
-        now = datetime.utcnow()
-        timestart = int((now - timedelta(days=days_back)).timestamp())
-        timeend = int((now + timedelta(days=days_ahead)).timestamp())
-        data = await self._call("core_calendar_get_calendar_events", {
-            "options[timestart]": timestart,
-            "options[timeend]": timeend,
-        })
-        return data.get("events", [])
-
     # ─── Download de arquivos ────────────────────────────────────
 
     def build_file_download_url(self, fileurl: str) -> str:
@@ -219,22 +195,46 @@ class MoodleWebService:
 
     async def download_file(self, fileurl: str, max_bytes: int = 15 * 1024 * 1024) -> Optional[bytes]:
         """Baixa um arquivo do Moodle usando o token. Retorna None se falhar/exceder limite."""
+        base = urlparse(self.base_url)
+        target = urlparse(fileurl)
+        try:
+            same_origin = (
+                target.scheme == base.scheme
+                and target.hostname == base.hostname
+                and target.port == base.port
+            )
+        except ValueError:
+            same_origin = False
+        if not same_origin:
+            logger.warning("Download autenticado fora do domínio do Moodle bloqueado")
+            return None
+
         url = self.build_file_download_url(fileurl)
+
+        async def stream_download(client: httpx.AsyncClient) -> Optional[bytes]:
+            async with client.stream("GET", url, follow_redirects=False) as resp:
+                if resp.is_redirect:
+                    logger.warning("Download do Moodle redirecionado e bloqueado: %s", fileurl[:100])
+                    return None
+                if resp.status_code != 200:
+                    return None
+                declared_size = resp.headers.get("content-length")
+                if declared_size and int(declared_size) > max_bytes:
+                    logger.warning("Arquivo excede %s bytes: %s", max_bytes, fileurl[:100])
+                    return None
+                chunks = bytearray()
+                async for chunk in resp.aiter_bytes():
+                    chunks.extend(chunk)
+                    if len(chunks) > max_bytes:
+                        logger.warning("Download interrompido por tamanho: %s", fileurl[:100])
+                        return None
+                return bytes(chunks)
+
         try:
             if self.client:
-                resp = await self.client.get(url, follow_redirects=False)
-            else:
-                async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
-                    resp = await client.get(url, follow_redirects=False)
-            if resp.is_redirect:
-                logger.warning("Download do Moodle redirecionado e bloqueado: %s", fileurl[:100])
-                return None
-            if resp.status_code != 200:
-                return None
-            if len(resp.content) > max_bytes:
-                logger.warning(f"Arquivo excede {max_bytes} bytes: {fileurl[:100]}")
-                return None
-            return resp.content
+                return await stream_download(self.client)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                return await stream_download(client)
         except Exception as e:
             logger.warning(f"Falha ao baixar {fileurl[:100]}: {e}")
             return None
@@ -261,81 +261,105 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
     materials: List[Dict] = []
     userid = await ws.get_userid()
 
+    # As fontes abaixo são independentes. Consultá-las juntas evita uma longa
+    # fila de round-trips por disciplina sem aumentar o volume de dados.
+    module_names = list(INSTANCE_FUNCTIONS)
+    module_limit = asyncio.Semaphore(3)
+
+    async def fetch_module_instances(name: str) -> List[Dict]:
+        async with module_limit:
+            return await ws.get_module_instances(name, moodle_course_id)
+
+    results = await asyncio.gather(
+        ws.get_assignments(moodle_course_id),
+        ws.get_quizzes(moodle_course_id),
+        ws.get_course_contents(moodle_course_id),
+        *(fetch_module_instances(name) for name in module_names),
+        return_exceptions=True,
+    )
+    assignments_result, quizzes_result, sections_result, *detail_results = results
+    assignments = assignments_result if isinstance(assignments_result, list) else []
+    quizzes = quizzes_result if isinstance(quizzes_result, list) else []
+    if isinstance(assignments_result, Exception):
+        logger.warning("[collect] assignments curso %s: %s", moodle_course_id, assignments_result)
+    if isinstance(quizzes_result, Exception):
+        logger.warning("[collect] quizzes curso %s: %s", moodle_course_id, quizzes_result)
+    if isinstance(sections_result, Exception):
+        raise sections_result
+    sections = sections_result if isinstance(sections_result, list) else []
+
     # Datas oficiais por cmid + instância de assign
     due_dates: Dict[int, datetime] = {}
     descriptions: Dict[int, str] = {}
     assignment_files: Dict[int, List[Dict]] = {}
     instance_details: Dict[int, Dict] = {}
 
-    try:
-        assignments = await ws.get_assignments(moodle_course_id)
-        for a in assignments:
-            cmid = a.get("cmid")
-            d = ts_to_datetime(a.get("duedate"))
-            if cmid and d and d.year > 2000:
-                due_dates[cmid] = d
-            intro = a.get("intro") or ""
-            if intro:
-                text = clean_moodle_text(intro, 15_000)
-                if text:
-                    descriptions[cmid] = text
-            if cmid:
-                assignment_files[cmid] = [
-                    {
-                        "filename": file.get("filename", ""),
-                        "fileurl": file.get("fileurl", ""),
-                        "mimetype": file.get("mimetype", ""),
-                        "filesize": file.get("filesize", 0),
-                    }
-                    for file in (a.get("introattachments") or [])
-                    if file.get("fileurl")
-                ]
-    except Exception as e:
-        logger.warning(f"[collect] assignments curso {moodle_course_id}: {e}")
+    for assignment in assignments:
+        cmid = assignment.get("cmid")
+        due = ts_to_datetime(assignment.get("duedate"))
+        if cmid and due and due.year > 2000:
+            due_dates[cmid] = due
+        intro = assignment.get("intro") or ""
+        if intro:
+            cleaned_intro = clean_moodle_text(intro, 15_000)
+            if cleaned_intro:
+                descriptions[cmid] = cleaned_intro
+        if cmid:
+            assignment_files[cmid] = [
+                {
+                    "filename": file.get("filename", ""),
+                    "fileurl": file.get("fileurl", ""),
+                    "mimetype": file.get("mimetype", ""),
+                    "filesize": file.get("filesize", 0),
+                }
+                for file in (assignment.get("introattachments") or [])
+                if file.get("fileurl")
+            ]
 
     # ── Status REAL de envio das tarefas (o que o aluno já entregou) ──
     submission_map: Dict[int, str] = {}
-    try:
-        assignments = await ws.get_assignments(moodle_course_id)
-        for a in assignments:
-            inst = a.get("id")
-            cmid = a.get("cmid")
-            if not inst or not cmid:
-                continue
-            try:
-                st = await ws._call("mod_assign_get_submission_status", {
-                    "assignid": inst, "userid": userid,
-                })
-                last = st.get("lastattempt") or {}
-                sub = last.get("submission") or {}
-                team = last.get("teamsubmission") or {}
-                status = sub.get("status") or team.get("status") or "new"
-                submission_map[cmid] = status
-            except Exception:
-                continue
-    except Exception as e:
-        logger.warning(f"[collect] submissions curso {moodle_course_id}: {e}")
+    submission_limit = asyncio.Semaphore(6)
 
-    try:
-        quizzes = await ws.get_quizzes(moodle_course_id)
-        for q in quizzes:
-            cmid = q.get("coursemodule") or q.get("cmid")
-            d = ts_to_datetime(q.get("timeclose"))
-            if cmid and d and d.year > 2000 and cmid not in due_dates:
-                due_dates[cmid] = d
-    except Exception as e:
-        logger.warning(f"[collect] quizzes curso {moodle_course_id}: {e}")
+    async def fetch_submission_status(assignment: Dict) -> tuple[Optional[int], Optional[str]]:
+        instance_id = assignment.get("id")
+        cmid = assignment.get("cmid")
+        if not instance_id or not cmid:
+            return None, None
+        try:
+            async with submission_limit:
+                status_data = await ws._call("mod_assign_get_submission_status", {
+                    "assignid": instance_id,
+                    "userid": userid,
+                })
+            last_attempt = status_data.get("lastattempt") or {}
+            submission = last_attempt.get("submission") or {}
+            team_submission = last_attempt.get("teamsubmission") or {}
+            status = submission.get("status") or team_submission.get("status") or "new"
+            return cmid, status
+        except Exception:
+            return cmid, None
+
+    if assignments:
+        submission_results = await asyncio.gather(
+            *(fetch_submission_status(assignment) for assignment in assignments)
+        )
+        submission_map.update({cmid: status for cmid, status in submission_results if cmid and status})
+
+    for quiz in quizzes:
+        cmid = quiz.get("coursemodule") or quiz.get("cmid")
+        due = ts_to_datetime(quiz.get("timeclose"))
+        if cmid and due and due.year > 2000 and cmid not in due_dates:
+            due_dates[cmid] = due
 
     # Enriquece páginas, livros, pastas, labels e plugins que trazem o conteúdo
     # em endpoints separados de core_course_get_contents.
-    for modname in INSTANCE_FUNCTIONS:
-        for detail in await ws.get_module_instances(modname, moodle_course_id):
+    for details in detail_results:
+        if not isinstance(details, list):
+            continue
+        for detail in details:
             cmid = detail.get("coursemodule") or detail.get("cmid")
             if cmid:
                 instance_details[int(cmid)] = detail
-
-    # Estrutura completa do curso
-    sections = await ws.get_course_contents(moodle_course_id)
 
     for sec_idx, section in enumerate(sections):
         topic_name = section.get("name") or f"Tópico {sec_idx + 1}"

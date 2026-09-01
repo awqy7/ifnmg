@@ -2,8 +2,7 @@
 Scheduler de background jobs.
 Sync completo do Moodle: API oficial (webservice) como fonte primária,
 HTML scraper como fallback. Sincroniza cursos, atividades (com UPDATE),
-materiais (com extração de texto p/ IA), notas, calendário e notificações
-escalonadas de prazo.
+materiais (com extração de texto p/ IA) e notificações escalonadas de prazo.
 """
 import hashlib
 import json
@@ -117,11 +116,9 @@ def _release_distributed_lock(db: Session, user_id: str) -> None:
 # Upserts compartilhados
 # ─────────────────────────────────────────────────────────────
 
-def _compute_status(item: dict, existing_status: Optional[str], grade=None) -> str:
-    """Define status da atividade: graded > submitted > late > pending."""
-    if grade is not None:
-        return "graded"
-    if existing_status == "submitted":
+def _compute_status(item: dict, existing_status: Optional[str]) -> str:
+    """Define status da atividade: submitted > late > pending."""
+    if existing_status in ("submitted", "graded"):
         # mantém enviado manualmente pelo usuário
         return "submitted"
     if item.get("is_completed"):
@@ -150,6 +147,7 @@ async def _upsert_activity(
     ws=None,
     client=None,
     extraction_budget: Optional[list] = None,
+    existing_activities: Optional[dict] = None,
 ):
     from app.models import Activity
 
@@ -168,10 +166,12 @@ async def _upsert_activity(
             except Exception:
                 due_date = None
 
-    activity = db.query(Activity).filter(
-        Activity.course_id == course.id,
-        Activity.moodle_id == mid,
-    ).first()
+    activity = existing_activities.get(mid) if existing_activities is not None else None
+    if activity is None and existing_activities is None:
+        activity = db.query(Activity).filter(
+            Activity.course_id == course.id,
+            Activity.moodle_id == mid,
+        ).first()
 
     created = False
     if not activity:
@@ -194,6 +194,8 @@ async def _upsert_activity(
         )
         db.add(activity)
         db.flush()
+        if existing_activities is not None:
+            existing_activities[mid] = activity
         created = True
     else:
         # UPDATE: mantém dados sempre atualizados com o Moodle
@@ -251,11 +253,10 @@ async def _upsert_activity(
         except Exception as e:
             logger.debug(f"Erro ao extrair anexo da atividade {mid}: {e}")
 
-    # status recalculado (preserva 'graded' e 'submitted' manuais)
+    # Status recalculado; registros legados "graded" viram "submitted".
     new_status = _compute_status(
         {**act_data, "due_date": activity.due_date},
         activity.status,
-        grade=activity.grade,
     )
     activity.status = new_status
 
@@ -263,7 +264,6 @@ async def _upsert_activity(
         activity.is_new = True
         activity.notified = False
 
-    db.flush()
     return activity
 
 
@@ -282,6 +282,18 @@ async def _sync_materials(
     from app.services.material_extractor import extract_material_content, extract_url_content
 
     synced = 0
+    stored_materials = db.query(Material).filter(
+        Material.user_id == user_id,
+        Material.course_id == course.id,
+    ).all()
+    materials_by_key = {material.moodle_id: material for material in stored_materials}
+    material_ids = [material.id for material in stored_materials]
+    stored_meta = (
+        db.query(MaterialSyncMeta).filter(MaterialSyncMeta.material_id.in_(material_ids)).all()
+        if material_ids else []
+    )
+    meta_by_material_id = {meta.material_id: meta for meta in stored_meta}
+
     for mat_data in materials_data:
         mid = str(mat_data.get("moodle_id") or "")
         title = mat_data.get("title")
@@ -309,14 +321,7 @@ async def _sync_materials(
 
         # chave de dedupe por módulo
         mat_key = f"mod_{mid}" if mid else f"url_{mat_data.get('url', '')[:200]}"
-        material = None
-        try:
-            material = db.query(Material).filter(
-                Material.user_id == user_id,
-                Material.moodle_id == mat_key,
-            ).first()
-        except Exception:
-            material = None
+        material = materials_by_key.get(mat_key)
 
         if not material:
             material = Material(
@@ -333,6 +338,7 @@ async def _sync_materials(
             )
             db.add(material)
             db.flush()
+            materials_by_key[mat_key] = material
         else:
             material.title = title[:500]
             if mat_data.get("topic_name"):
@@ -340,9 +346,7 @@ async def _sync_materials(
             material.topic_number = mat_data.get("topic_number")
             material.url = mat_data.get("url", "") or material.url
 
-        extraction_meta = db.query(MaterialSyncMeta).filter(
-            MaterialSyncMeta.material_id == material.id
-        ).first()
+        extraction_meta = meta_by_material_id.get(material.id)
         source_changed = not extraction_meta or extraction_meta.fingerprint != fingerprint
         has_budget = extraction_budget is None or extraction_budget[0] > 0
 
@@ -386,85 +390,18 @@ async def _sync_materials(
                 extraction_meta.extraction_attempted = True
                 extraction_meta.extracted_at = datetime.utcnow() if text_parts else extraction_meta.extracted_at
             else:
-                db.add(MaterialSyncMeta(
+                extraction_meta = MaterialSyncMeta(
                     material_id=material.id,
                     fingerprint=fingerprint,
                     extraction_attempted=True,
                     extracted_at=datetime.utcnow() if text_parts else None,
-                ))
+                )
+                db.add(extraction_meta)
+                meta_by_material_id[material.id] = extraction_meta
 
         synced += 1
 
     return synced
-
-
-async def _upsert_grades(db: Session, user_id: str, course, grades_data: list):
-    from app.models import Grade
-
-    for gdata in grades_data:
-        item_name = (gdata.get("item_name") or "").strip()
-        if not item_name or item_name.lower() in ("total do curso", "course total"):
-            continue
-        existing = db.query(Grade).filter(
-            Grade.course_id == course.id,
-            Grade.item_name == item_name,
-        ).first()
-
-        changed = (
-            existing is None
-            or (gdata.get("grade") is not None and existing.grade != gdata.get("grade"))
-        )
-
-        if not existing:
-            db.add(Grade(
-                user_id=user_id,
-                course_id=course.id,
-                item_name=item_name,
-                grade=gdata.get("grade"),
-                max_grade=gdata.get("max_grade"),
-                percentage=gdata.get("percentage"),
-                feedback=gdata.get("feedback"),
-                graded_at=datetime.utcnow(),
-                notified=True,  # notas antigas não notificam
-            ))
-        elif changed and gdata.get("grade") is not None:
-            existing.grade = gdata["grade"]
-            existing.percentage = gdata.get("percentage")
-            if gdata.get("feedback"):
-                existing.feedback = gdata["feedback"]
-            existing.notified = False  # dispara notificação de mudança
-            existing.graded_at = datetime.utcnow()
-
-
-def _normalize_ws_grade_items(items: list) -> list:
-    out = []
-    for gi in items:
-        grademax = gi.get("grademax")
-        graderaw = gi.get("graderaw")
-        percentage = None
-        if graderaw is not None and grademax:
-            percentage = round((graderaw / grademax) * 100, 1)
-        out.append({
-            "item_name": gi.get("itemname") or "",
-            "grade": float(graderaw) if graderaw is not None else None,
-            "max_grade": float(grademax) if grademax else None,
-            "percentage": percentage,
-            "feedback": gi.get("feedback") or None,
-        })
-    return out
-
-
-def _normalize_html_grades(grades_data: list) -> list:
-    return [
-        {
-            "item_name": g.get("item_name"),
-            "grade": g.get("grade"),
-            "max_grade": g.get("max_grade"),
-            "percentage": g.get("percentage"),
-            "feedback": g.get("feedback"),
-        }
-        for g in grades_data
-    ]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -473,7 +410,7 @@ def _normalize_html_grades(grades_data: list) -> list:
 
 async def sync_moodle_for_user(user_id: str):
     """Sincroniza TUDO do Moodle para um usuário. WS primeiro, HTML fallback."""
-    from app.models import User, Course, Activity, CalendarEvent
+    from app.models import User, Course, Activity
     from app.services.moodle_auth import moodle_auth_service
     from app.services.crypto_service import crypto_service
     from app.services.notification_service import notification_service
@@ -515,8 +452,13 @@ async def sync_moodle_for_user(user_id: str):
         if user.moodle_session_cookies:
             try:
                 session_data = crypto_service.decrypt_json(user.moodle_session_cookies)
+                had_cached_user_id = bool(session_data.get("moodle_user_id"))
                 if not await moodle_auth_service.validate_session(session_data):
                     session_data = None
+                elif not had_cached_user_id and session_data.get("moodle_user_id"):
+                    # Evita uma segunda consulta a core_webservice_get_site_info
+                    # nas próximas sincronizações.
+                    user.moodle_session_cookies = crypto_service.encrypt_json(session_data)
             except Exception:
                 session_data = None
 
@@ -547,8 +489,17 @@ async def sync_moodle_for_user(user_id: str):
                 user.ai_api_keys_enc = crypto_service.encrypt_json(keys)
 
         client = moodle_auth_service.build_httpx_client(session_data)
-        ws = MoodleWebService(settings.MOODLE_BASE_URL, moodle_token, client=client) if moodle_token else None
-        scraper = MoodleScraper(client, moodle_token)
+        ws = MoodleWebService(
+            settings.MOODLE_BASE_URL,
+            moodle_token,
+            client=client,
+            userid=session_data.get("moodle_user_id"),
+        ) if moodle_token else None
+        scraper = MoodleScraper(
+            client,
+            moodle_token,
+            moodle_user_id=session_data.get("moodle_user_id"),
+        )
 
         use_ws = False
         courses_data = []
@@ -571,22 +522,19 @@ async def sync_moodle_for_user(user_id: str):
 
             logger.info(f"Sync {user_id}: {len(courses_data)} cursos via {ws and use_ws and 'WS' or 'HTML'}")
 
-            existing_course_ids = {
-                c.moodle_id for c in db.query(Course).filter(Course.user_id == user_id).all()
-            }
+            existing_courses = db.query(Course).filter(Course.user_id == user_id).all()
+            courses_by_moodle_id = {course.moodle_id: course for course in existing_courses}
 
             new_activities_all = []
-            # No máximo oito extrações/OCR pesados por ciclo. Os demais materiais
+            new_activity_ids = set()
+            # No máximo três extrações/OCR pesados por ciclo. Os demais materiais
             # ficam para o ciclo seguinte sem bloquear os dados essenciais.
-            extraction_budget = [8]
-            activity_extraction_budget = [4]
+            extraction_budget = [3]
+            activity_extraction_budget = [2]
 
             for idx, course_data in enumerate(courses_data):
                 moodle_id = course_data["moodle_id"]
-                course = db.query(Course).filter(
-                    Course.user_id == user_id,
-                    Course.moodle_id == moodle_id,
-                ).first()
+                course = courses_by_moodle_id.get(moodle_id)
                 is_new_course = False
 
                 if not course:
@@ -602,6 +550,7 @@ async def sync_moodle_for_user(user_id: str):
                     )
                     db.add(course)
                     db.flush()
+                    courses_by_moodle_id[moodle_id] = course
                     is_new_course = True
                 else:
                     course.name = course_data["name"] or course.name
@@ -629,15 +578,20 @@ async def sync_moodle_for_user(user_id: str):
                     course.teacher = teacher_from_page
 
                 # Atividades (cria OU atualiza + extrai anexos)
+                stored_activities = db.query(Activity).filter(Activity.course_id == course.id).all()
+                activities_by_moodle_id = {
+                    str(activity.moodle_id): activity for activity in stored_activities
+                }
                 for act_data in content.get("activities", []):
                     activity = await _upsert_activity(
                         db, user_id, course, act_data, is_new_course, ws=ws, client=client,
                         extraction_budget=activity_extraction_budget,
+                        existing_activities=activities_by_moodle_id,
                     )
                     if activity and activity.is_new and activity.status in ("pending", "late"):
-                        existing_ids = {a.id for a in new_activities_all}
-                        if activity.id not in existing_ids:
+                        if activity.id not in new_activity_ids:
                             new_activities_all.append(activity)
+                            new_activity_ids.add(activity.id)
 
                 # Materiais (com extração de texto p/ IA)
                 try:
@@ -652,25 +606,14 @@ async def sync_moodle_for_user(user_id: str):
                 except Exception as e:
                     logger.warning(f"[{course_data['name']}] materiais: {e}")
 
-                # Notas
-                try:
-                    if ws and use_ws:
-                        items = await ws.get_grade_items(moodle_id)
-                        grades_data = _normalize_ws_grade_items(items)
-                    else:
-                        grades_data = _normalize_html_grades(await scraper.get_grades(moodle_id))
-                    await _upsert_grades(db, user_id, course, grades_data)
-                except Exception as e:
-                    logger.warning(f"[{course_data['name']}] notas: {e}")
-
-                db.commit()
                 _sync_status[user_id]["courses_done"] = idx + 1
                 _sync_status[user_id]["activities"] += len(content.get("activities", []))
                 _persist_sync_status(db, user_id)
 
             # Notifica novas atividades
+            courses_by_id = {course.id: course for course in courses_by_moodle_id.values()}
             for act in new_activities_all:
-                course = db.query(Course).get(act.course_id)
+                course = courses_by_id.get(act.course_id)
                 try:
                     await notification_service.send_notification(
                         db=db,
@@ -685,57 +628,6 @@ async def sync_moodle_for_user(user_id: str):
                     act.is_new = False  # Marca como já notificado
                 except Exception as e:
                     logger.warning(f"Notificação atividade: {e}")
-
-            # Calendário
-            try:
-                events_data = []
-                if ws and use_ws:
-                    raw_events = await ws.get_calendar_events()
-                    from app.services.moodle_webservice import ts_to_datetime
-                    for ev in raw_events:
-                        start = ts_to_datetime(ev.get("timestart"))
-                        events_data.append({
-                            "moodle_id": str(ev.get("id", "")),
-                            "title": ev.get("name", ""),
-                            "description": ev.get("description", "") or "",
-                            "event_type": ev.get("eventtype", "event"),
-                            "course_name": "",
-                            "start_date": start.isoformat() if start else None,
-                            "url": ev.get("url", "") or "",
-                        })
-                else:
-                    events_data = await scraper.get_calendar_events()
-
-                for ev_data in events_data:
-                    mid = ev_data.get("moodle_id")
-                    if not mid or not ev_data.get("title"):
-                        continue
-                    exists = db.query(CalendarEvent).filter(
-                        CalendarEvent.user_id == user_id,
-                        CalendarEvent.moodle_id == str(mid),
-                    ).first()
-                    if exists:
-                        continue
-                    start = None
-                    if ev_data.get("start_date"):
-                        try:
-                            start = datetime.fromisoformat(ev_data["start_date"])
-                        except Exception:
-                            pass
-                    if not start:
-                        continue
-                    db.add(CalendarEvent(
-                        user_id=user_id,
-                        moodle_id=str(mid),
-                        title=ev_data["title"],
-                        description=ev_data.get("description", ""),
-                        event_type=ev_data.get("event_type", ""),
-                        course_name=ev_data.get("course_name", ""),
-                        start_date=start,
-                        url=ev_data.get("url", ""),
-                    ))
-            except Exception as e:
-                logger.warning(f"Calendário: {e}")
 
             user.moodle_last_sync = datetime.utcnow()
             db.commit()

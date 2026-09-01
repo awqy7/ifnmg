@@ -195,15 +195,6 @@ export const coursesApi = {
   getMaterials: (courseId: string) => api.get<any[]>(`/api/courses/${courseId}/materials`),
 };
 
-export const gradesApi = {
-  list: (courseId?: string) =>
-    api.get<any[]>(`/api/grades${courseId ? `?course_id=${courseId}` : ""}`),
-};
-
-export const calendarApi = {
-  list: () => api.get<any[]>("/api/calendar"),
-};
-
 export const briefingApi = {
   getToday: () => api.get<any>("/api/briefing/today"),
   generate: () => api.post("/api/briefing/generate"),

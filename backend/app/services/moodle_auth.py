@@ -118,6 +118,7 @@ class MoodleAuthService:
 
         # Nome completo do aluno via web service (best-effort, não bloqueia login)
         student_name = None
+        moodle_user_id = None
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 info = await client.post(
@@ -131,6 +132,7 @@ class MoodleAuthService:
                 info_data = info.json()
                 if not (isinstance(info_data, dict) and info_data.get("exception")):
                     student_name = info_data.get("fullname")
+                    moodle_user_id = info_data.get("userid")
         except Exception:
             pass
 
@@ -138,6 +140,7 @@ class MoodleAuthService:
             "moodle_token": token,
             "privatetoken": data.get("privatetoken"),
             "user_name": student_name or f"Aluno {username}",
+            "moodle_user_id": moodle_user_id,
             "logged_at": datetime.utcnow().isoformat(),
             "base_url": MOODLE_BASE,
         }
@@ -323,7 +326,10 @@ class MoodleAuthService:
                         },
                     )
                     data = response.json()
-                    return response.status_code == 200 and not data.get("exception") and bool(data.get("userid"))
+                    valid = response.status_code == 200 and not data.get("exception") and bool(data.get("userid"))
+                    if valid:
+                        session_data["moodle_user_id"] = data.get("userid")
+                    return valid
             async with self.build_httpx_client(session_data) as client:
                 resp = await client.get(f"{MOODLE_BASE}/my/")
                 if "login" in str(resp.url):

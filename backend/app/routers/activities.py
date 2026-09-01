@@ -204,9 +204,7 @@ async def list_activities(
             "type": a.activity_type or "assign",
             "description": a.description or "",
             "due_date": a.due_date.isoformat() if a.due_date else None,
-            "status": a.status,
-            "grade": a.grade,
-            "max_grade": a.max_grade,
+            "status": "submitted" if a.status == "graded" else a.status,
             "url": a.url or "",
             "course_id": a.course_id,
             "course_name": course_name or "Disciplina",
@@ -259,7 +257,7 @@ async def get_activity_details(
         "pending": "Pendente",
         "submitted": "Enviado para avaliação",
         "late": "Atrasado",
-        "graded": "Avaliado",
+        "graded": "Enviado para avaliação",
         "closed": "Finalizado",
     }
 
@@ -270,10 +268,8 @@ async def get_activity_details(
         "type": act.activity_type or "assign",
         "description": act.description or "Sem orientações adicionais informadas pelo professor.",
         "due_date": act.due_date.isoformat() if act.due_date else None,
-        "status": act.status,
+        "status": "submitted" if act.status == "graded" else act.status,
         "status_text": status_text_map.get(act.status, "Pendente"),
-        "grade": act.grade,
-        "max_grade": act.max_grade,
         "time_remaining": "Prazo encerrado" if act.status == "late" else None,
         "url": act.url or "",
         "course_id": act.course_id,
@@ -296,7 +292,7 @@ async def update_activity_status(
     if not target_status:
         raise HTTPException(status_code=400, detail="Status não informado")
 
-    VALID_STATUSES = {"pending", "submitted", "late", "graded", "closed"}
+    VALID_STATUSES = {"pending", "submitted", "late", "closed"}
     if target_status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Status inválido. Use: {', '.join(VALID_STATUSES)}")
 
@@ -358,7 +354,7 @@ ou desviar da explicação acadêmica.
 Estruture a explicação nos seguintes tópicos:
 1. 🎯 **Objetivo Principal:** O que esta atividade avalia em 1 frase.
 2. 📋 **Passo a Passo de Resolução:** Etapas práticas e sequenciais para fazer a tarefa.
-3. 💡 **Dicas & Conceitos-Chave:** O que não pode faltar para tirar nota máxima.
+3. 💡 **Dicas & Conceitos-Chave:** O que não pode faltar para uma resposta completa.
 4. ⚠️ **Atenção:** Erros comuns a evitar.
 
 Seja direto, didático e encorajador."""

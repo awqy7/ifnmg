@@ -10,7 +10,7 @@ import {
   Database,
   FileText,
   BookOpen,
-  GraduationCap,
+  Clock,
 } from "lucide-react";
 import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -20,8 +20,8 @@ const LOADING_MESSAGES = [
   "Buscando nos seus materiais do Virtual2...",
   "Lendo suas atividades e prazos...",
   "Analisando o conteudo das materias...",
-  "Consultando suas notas e boletim...",
-  "Verificando seu calendario academico...",
+  "Organizando suas disciplinas...",
+  "Verificando sua grade de horarios...",
   "Formulando resposta com base nos seus dados...",
 ];
 
@@ -160,7 +160,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
   const quickPrompts = [
     "Quais sao minhas atividades pendentes e os prazos?",
     "Me explique o conteudo dos materiais da minha materia",
-    "Como estao minhas notas no boletim?",
+    "Monte um plano de estudo para esta semana",
     "Gere questoes de treino baseadas nos meus PDFs",
     "Faca um resumo dos materiais que meu professor postou",
     "Qual atividade eu devo priorizar agora?",
@@ -194,7 +194,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
               {[
                 { icon: BookOpen, label: "Materiais" },
                 { icon: FileText, label: "Atividades" },
-                { icon: GraduationCap, label: "Notas" },
+                { icon: Clock, label: "Prazos" },
                 { icon: Sparkles, label: "PDFs" },
               ].map(({ icon: Icon, label }) => (
                 <span key={label} className="flex items-center gap-1 text-[9px] text-emerald-400/60 bg-emerald-500/[0.04] rounded px-1.5 py-0.5">
@@ -251,14 +251,14 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
               </div>
               <h3 className="text-sm font-semibold text-white">Tutor IA</h3>
               <p className="text-[11px] text-neutral-500 mt-1 mb-4 leading-relaxed">
-                Pergunte qualquer coisa sobre seus materiais, atividades e notas do Virtual2.
+                Pergunte qualquer coisa sobre seus materiais, atividades e prazos do Virtual2.
               </p>
 
               <div className="flex flex-wrap gap-1 justify-center mb-5">
                 {[
                   { icon: FileText, label: "PDFs" },
                   { icon: BookOpen, label: "Materiais" },
-                  { icon: GraduationCap, label: "Notas" },
+                  { icon: Clock, label: "Prazos" },
                   { icon: Sparkles, label: "Atividades" },
                 ].map(({ icon: Icon, label }) => (
                   <span key={label} className="flex items-center gap-1 text-[9px] text-emerald-400/60 bg-emerald-500/[0.04] border border-emerald-500/[0.08] rounded-full px-2 py-0.5">

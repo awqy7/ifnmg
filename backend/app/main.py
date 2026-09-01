@@ -148,8 +148,6 @@ from app.routers.auth import router as auth_router
 from app.routers.moodle import router as moodle_router
 from app.routers.courses import router as courses_router
 from app.routers.activities import router as activities_router
-from app.routers.grades import router as grades_router
-from app.routers.calendar import router as calendar_router
 from app.routers.briefing import router as briefing_router
 from app.routers.chat import router as chat_router
 from app.routers.notifications import notifications_router, schedule_router
@@ -160,8 +158,6 @@ app.include_router(auth_router)
 app.include_router(moodle_router)
 app.include_router(courses_router)
 app.include_router(activities_router)
-app.include_router(grades_router)
-app.include_router(calendar_router)
 app.include_router(briefing_router)
 app.include_router(chat_router)
 app.include_router(notifications_router)

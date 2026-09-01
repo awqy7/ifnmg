@@ -8,14 +8,18 @@ from app.services.material_extractor import (
     extract_text_from_bytes,
     extract_youtube_video_id,
 )
-from app.services.moodle_webservice import collect_course_data
+from app.services.moodle_webservice import MoodleWebService, collect_course_data
 
 
 class _FakeWebService:
+    def __init__(self):
+        self.assignment_calls = 0
+
     async def get_userid(self):
         return 7
 
     async def get_assignments(self, _course_id):
+        self.assignment_calls += 1
         return []
 
     async def get_quizzes(self, _course_id):
@@ -58,7 +62,8 @@ class _FakeWebService:
 
 class MoodleCoverageTests(unittest.TestCase):
     def test_collects_inline_text_unknown_plugins_and_activity_files(self):
-        data = asyncio.run(collect_course_data(_FakeWebService(), 99))
+        ws = _FakeWebService()
+        data = asyncio.run(collect_course_data(ws, 99))
 
         material_types = {item["type"] for item in data["materials"]}
         self.assertIn("section_summary", material_types)
@@ -69,6 +74,7 @@ class MoodleCoverageTests(unittest.TestCase):
         self.assertEqual(assignment["files"][0]["filename"], "roteiro.pdf")
         video = next(item for item in data["materials"] if item["moodle_id"] == "14")
         self.assertEqual(video["url"], "https://youtu.be/dQw4w9WgXcQ")
+        self.assertEqual(ws.assignment_calls, 1)
 
     def test_extracts_presentation_and_spreadsheet_text(self):
         pptx = io.BytesIO()
@@ -113,6 +119,19 @@ class MoodleCoverageTests(unittest.TestCase):
         ))
         self.assertTrue(ws.called)
         self.assertEqual(text, "conteudo autenticado")
+
+    def test_authenticated_download_never_sends_token_to_external_domain(self):
+        class ClientThatMustNotRun:
+            def stream(self, *_args, **_kwargs):
+                raise AssertionError("external request should have been blocked")
+
+        ws = MoodleWebService(
+            "https://virtual2.ifnmg.edu.br",
+            "secret-token",
+            client=ClientThatMustNotRun(),
+        )
+        result = asyncio.run(ws.download_file("https://example.com/material.pdf"))
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

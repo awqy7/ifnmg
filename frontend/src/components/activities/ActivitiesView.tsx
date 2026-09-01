@@ -160,12 +160,6 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                       ) : (
                         <span className="text-neutral-600">Sem prazo</span>
                       )}
-
-                      {act.grade !== null && act.grade !== undefined && (
-                        <span className="text-emerald-400/80 font-medium bg-emerald-500/[0.06] px-1.5 py-0.5 rounded border border-emerald-500/[0.1]">
-                          {act.grade} {act.max_grade ? `/ ${act.max_grade}` : ""}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>

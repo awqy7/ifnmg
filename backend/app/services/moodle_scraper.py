@@ -1,8 +1,9 @@
 """
-Scraper avançado e completo do Moodle IFNMG.
-Extrai 100% dos cursos (via Overview, AJAX Timeline, Dashboard e Perfil),
-além de todos os tópicos, materiais, atividades detalhadas, notas e eventos de calendário.
+Scraper do Moodle IFNMG usado como fallback da API oficial.
+Descobre cursos via Timeline, Dashboard e Perfil, além de extrair tópicos,
+materiais e atividades detalhadas.
 """
+import asyncio
 import re
 import json
 import logging
@@ -25,9 +26,15 @@ COURSE_COLORS = [
 
 
 class MoodleScraper:
-    def __init__(self, client: httpx.AsyncClient, moodle_token: Optional[str] = None):
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        moodle_token: Optional[str] = None,
+        moodle_user_id: Optional[int] = None,
+    ):
         self.client = client
         self.token = moodle_token
+        self.moodle_user_id = moodle_user_id
 
     def _soup(self, html: str) -> BeautifulSoup:
         return BeautifulSoup(html, "html.parser")
@@ -95,67 +102,42 @@ class MoodleScraper:
     async def get_courses(self) -> List[Dict]:
         """
         Coleta TODOS os cursos em que o estudante está matriculado.
-        Cruza dados do Boletim Geral (/grade/report/overview), AJAX Timeline, Dashboard e Perfil.
+        Cruza dados do AJAX Timeline, Dashboard, Perfil e API REST.
         """
         courses_by_id: Dict[int, Dict] = {}
-
-        # 1. Fonte Principal: Boletim Geral de Notas (/grade/report/overview/index.php)
+        dashboard_html = ""
         try:
-            overview_courses = await self._get_courses_from_grade_overview()
-            for c in overview_courses:
-                courses_by_id[c["moodle_id"]] = c
-            logger.info(f"Fonte Boletim Geral: {len(overview_courses)} cursos encontrados")
-        except Exception as e:
-            logger.warning(f"Falha ao ler Boletim Geral: {e}")
+            response = await self.client.get(f"{MOODLE_BASE}/my/")
+            if response.status_code == 200:
+                dashboard_html = response.text
+        except Exception as exc:
+            logger.warning("Falha ao abrir Dashboard /my/: %s", exc)
 
-        # 2. Fonte AJAX: Moodle Timeline API (/lib/ajax/service.php)
-        try:
-            ajax_courses = await self._get_courses_from_ajax_timeline()
-            for c in ajax_courses:
-                mid = c["moodle_id"]
-                if mid in courses_by_id:
-                    courses_by_id[mid].update({k: v for k, v in c.items() if v})
-                else:
-                    courses_by_id[mid] = c
-            logger.info(f"Fonte AJAX Timeline: {len(ajax_courses)} cursos encontrados")
-        except Exception as e:
-            logger.warning(f"Falha no AJAX Timeline: {e}")
-
-        # 3. Fonte Dashboard: /my/
-        try:
-            dashboard_courses = await self._get_courses_from_dashboard()
-            for c in dashboard_courses:
-                mid = c["moodle_id"]
-                if mid in courses_by_id:
-                    courses_by_id[mid].update({k: v for k, v in c.items() if v})
-                else:
-                    courses_by_id[mid] = c
-            logger.info(f"Fonte Dashboard /my/: {len(dashboard_courses)} cursos encontrados")
-        except Exception as e:
-            logger.warning(f"Falha no Dashboard /my/: {e}")
-
-        # 4. Fonte Perfil: /user/profile.php
-        try:
-            profile_courses = await self._get_courses_from_user_profile()
-            for c in profile_courses:
-                mid = c["moodle_id"]
-                if mid not in courses_by_id:
-                    courses_by_id[mid] = c
-        except Exception as e:
-            logger.warning(f"Falha no Perfil: {e}")
-
-        # 5. Fonte API REST (se token estiver disponível)
+        source_names = ["AJAX Timeline", "Dashboard /my/", "Perfil"]
+        source_calls = [
+            self._get_courses_from_ajax_timeline(dashboard_html),
+            self._get_courses_from_dashboard(dashboard_html),
+            self._get_courses_from_user_profile(),
+        ]
         if self.token:
-            try:
-                api_courses = await self._get_courses_api()
-                for c in api_courses:
-                    mid = c["moodle_id"]
-                    if mid in courses_by_id:
-                        courses_by_id[mid].update({k: v for k, v in c.items() if v})
-                    else:
-                        courses_by_id[mid] = c
-            except Exception as e:
-                logger.warning(f"Falha na API REST: {e}")
+            source_names.append("API REST")
+            source_calls.append(self._get_courses_api())
+
+        source_results = await asyncio.gather(*source_calls, return_exceptions=True)
+        for source_index, (source_name, source_courses) in enumerate(zip(source_names, source_results)):
+            if isinstance(source_courses, Exception):
+                logger.warning("Falha na fonte %s: %s", source_name, source_courses)
+                continue
+            logger.info("Fonte %s: %s cursos encontrados", source_name, len(source_courses))
+            for course in source_courses:
+                moodle_id = course["moodle_id"]
+                # O perfil é a fonte menos rica: apenas preenche lacunas.
+                if source_index == 2 and moodle_id in courses_by_id:
+                    continue
+                if moodle_id in courses_by_id:
+                    courses_by_id[moodle_id].update({key: value for key, value in course.items() if value})
+                else:
+                    courses_by_id[moodle_id] = course
 
         # Atribui cores únicas
         result = list(courses_by_id.values())
@@ -165,54 +147,21 @@ class MoodleScraper:
         logger.info(f"Total consolidado de disciplinas: {len(result)}")
         return result
 
-    async def _get_courses_from_grade_overview(self) -> List[Dict]:
-        """Lê o relatório geral de notas onde todos os cursos são listados pelo servidor."""
-        courses = []
-        resp = await self.client.get(f"{MOODLE_BASE}/grade/report/overview/index.php")
-        if resp.status_code != 200:
-            return []
-
-        soup = self._soup(resp.text)
-        # Seleciona links para cursos na tabela de notas
-        links = soup.select(
-            "table#overview-grade a[href*='course/view.php'], "
-            ".generictable a[href*='course/view.php'], "
-            "a[href*='/course/view.php?id=']"
-        )
-        seen = set()
-        for link in links:
-            href = link.get("href", "")
-            match = re.search(r"id=(\d+)", href)
-            if match:
-                course_id = int(match.group(1))
-                if course_id in seen or course_id <= 1:
-                    continue
-                seen.add(course_id)
-                name = link.get_text(strip=True)
-                if name and len(name) > 2:
-                    courses.append({
-                        "moodle_id": course_id,
-                        "name": name,
-                        "short_name": "",
-                        "teacher": None,
-                        "progress": 0,
-                        "raw_data": {"source": "grade_overview"},
-                    })
-        return courses
-
-    async def _get_courses_from_ajax_timeline(self) -> List[Dict]:
+    async def _get_courses_from_ajax_timeline(self, dashboard_html: str = "") -> List[Dict]:
         """Usa o endpoint AJAX nativo do Moodle para buscar cursos da timeline."""
         courses = []
         # Primeiro pega a sesskey da página /my/
-        my_resp = await self.client.get(f"{MOODLE_BASE}/my/")
-        soup = self._soup(my_resp.text)
+        if not dashboard_html:
+            my_resp = await self.client.get(f"{MOODLE_BASE}/my/")
+            dashboard_html = my_resp.text
+        soup = self._soup(dashboard_html)
         
         sesskey = None
         sesskey_input = soup.find("input", {"name": "sesskey"})
         if sesskey_input:
             sesskey = sesskey_input.get("value")
         else:
-            match = re.search(r'"sesskey":"([^"]+)"', my_resp.text)
+            match = re.search(r'"sesskey":"([^"]+)"', dashboard_html)
             if match:
                 sesskey = match.group(1)
 
@@ -249,14 +198,16 @@ class MoodleScraper:
                     })
         return courses
 
-    async def _get_courses_from_dashboard(self) -> List[Dict]:
+    async def _get_courses_from_dashboard(self, dashboard_html: str = "") -> List[Dict]:
         """Extrai cursos do HTML da página /my/."""
         courses = []
-        resp = await self.client.get(f"{MOODLE_BASE}/my/")
-        if resp.status_code != 200:
-            return []
+        if not dashboard_html:
+            resp = await self.client.get(f"{MOODLE_BASE}/my/")
+            if resp.status_code != 200:
+                return []
+            dashboard_html = resp.text
 
-        soup = self._soup(resp.text)
+        soup = self._soup(dashboard_html)
         seen = set()
 
         # 1. Cards de cursos com data-course-id
@@ -361,6 +312,8 @@ class MoodleScraper:
         return []
 
     async def _get_user_id_api(self) -> Optional[int]:
+        if self.moodle_user_id:
+            return self.moodle_user_id
         try:
             resp = await self.client.post(
                 f"{MOODLE_BASE}/webservice/rest/server.php",
@@ -371,7 +324,8 @@ class MoodleScraper:
                 },
             )
             data = resp.json()
-            return data.get("userid")
+            self.moodle_user_id = data.get("userid")
+            return self.moodle_user_id
         except Exception:
             return None
 
@@ -592,9 +546,6 @@ class MoodleScraper:
             "time_remaining": "",
             "submission_status": "pending",
             "submission_status_text": "Não enviado",
-            "grading_status_text": "Não avaliado",
-            "grade": None,
-            "max_grade": None,
             "files": [],
             "feedback": "",
         }
@@ -653,8 +604,6 @@ class MoodleScraper:
                         details["submission_status"] = "submitted"
                     elif "rascunho" in val.lower():
                         details["submission_status"] = "draft"
-                elif "status da avaliação" in label or "grading status" in label:
-                    details["grading_status_text"] = val
                 elif "data de entrega" in label or "due date" in label:
                     parsed_dt = self._parse_moodle_date(val)
                     if parsed_dt:
@@ -663,15 +612,6 @@ class MoodleScraper:
                     details["time_remaining"] = val
                     if "atrasado" in val.lower() or "overdue" in val.lower():
                         details["submission_status"] = "late"
-                elif "nota" in label or "grade" in label:
-                    match = re.search(r"(\d+[.,]?\d*)\s*/\s*(\d+[.,]?\d*)?", val)
-                    if match:
-                        try:
-                            details["grade"] = float(match.group(1).replace(",", "."))
-                            if match.group(2):
-                                details["max_grade"] = float(match.group(2).replace(",", "."))
-                        except Exception:
-                            pass
                 elif "comentários de feedback" in label or "feedback comments" in label:
                     details["feedback"] = val
 
@@ -679,101 +619,3 @@ class MoodleScraper:
             logger.error(f"Erro ao extrair detalhes completos da atividade {activity_url}: {e}")
 
         return details
-
-    # ─────────────────────────────────────────────────────────────
-    # MÓDULO: Notas por Disciplina
-    # ─────────────────────────────────────────────────────────────
-
-    async def get_grades(self, moodle_course_id: int) -> List[Dict]:
-        """Extrai todas as avaliações e notas do curso."""
-        grades = []
-        try:
-            resp = await self.client.get(f"{MOODLE_BASE}/grade/report/user/index.php?id={moodle_course_id}")
-            if resp.status_code != 200:
-                return []
-
-            soup = self._soup(resp.text)
-            rows = soup.select("table.user-grade tr, .gradereport-user-wrapper table tr")
-            for row in rows:
-                cells = row.select("td, th")
-                if len(cells) < 2:
-                    continue
-
-                item_name = cells[0].get_text(strip=True)
-                if not item_name or item_name.lower() in ("item de avaliação", "nota", "avaliação", "total do curso"):
-                    continue
-
-                grade_text = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                max_text = cells[2].get_text(strip=True) if len(cells) > 2 else ""
-
-                grade_num = None
-                max_num = None
-                try:
-                    clean_g = re.search(r"(\d+[.,]?\d*)", grade_text)
-                    if clean_g:
-                        grade_num = float(clean_g.group(1).replace(",", "."))
-                    clean_m = re.search(r"(\d+[.,]?\d*)", max_text)
-                    if clean_m:
-                        max_num = float(clean_m.group(1).replace(",", "."))
-                except Exception:
-                    pass
-
-                feedback = cells[3].get_text(strip=True) if len(cells) > 3 else None
-
-                grades.append({
-                    "item_name": item_name,
-                    "grade": grade_num,
-                    "max_grade": max_num,
-                    "percentage": round((grade_num / max_num * 100), 1) if (grade_num is not None and max_num) else None,
-                    "feedback": feedback if feedback and feedback != "-" else None,
-                })
-
-        except Exception as e:
-            logger.error(f"Erro ao extrair notas do curso {moodle_course_id}: {e}")
-
-        return grades
-
-    # ─────────────────────────────────────────────────────────────
-    # MÓDULO: Calendário Acadêmico
-    # ─────────────────────────────────────────────────────────────
-
-    async def get_calendar_events(self) -> List[Dict]:
-        """Extrai todos os eventos e datas limites do calendário."""
-        events = []
-        try:
-            resp = await self.client.get(f"{MOODLE_BASE}/calendar/view.php?view=upcoming")
-            if resp.status_code != 200:
-                resp = await self.client.get(f"{MOODLE_BASE}/calendar/view.php?view=month")
-
-            soup = self._soup(resp.text)
-            event_blocks = soup.select(".event, .calendar-event-column, [data-event-id]")
-
-            for ev in event_blocks:
-                title_el = ev.select_one(".event-name, .name, a, h5, h4")
-                if not title_el:
-                    continue
-
-                date_el = ev.select_one("time, .date, .calendar-event-date")
-                parsed_date = None
-                if date_el:
-                    parsed_date = self._parse_moodle_date(date_el.get_text())
-
-                desc_el = ev.select_one(".description, .content")
-                desc = desc_el.get_text(strip=True) if desc_el else ""
-
-                link = title_el.get("href", "") if title_el.name == "a" else ""
-
-                events.append({
-                    "moodle_id": ev.get("data-event-id") or str(len(events) + 1),
-                    "title": title_el.get_text(strip=True),
-                    "description": desc,
-                    "event_type": "event",
-                    "course_name": "",
-                    "start_date": parsed_date.isoformat() if parsed_date else None,
-                    "url": link if link.startswith("http") else f"{MOODLE_BASE}/{link.lstrip('/')}" if link else "",
-                })
-
-        except Exception as e:
-            logger.error(f"Erro ao ler calendário: {e}")
-
-        return events

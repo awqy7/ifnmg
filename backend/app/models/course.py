@@ -28,7 +28,6 @@ class Course(Base):
 
     activities = relationship("Activity", back_populates="course", cascade="all, delete-orphan")
     materials = relationship("Material", back_populates="course", cascade="all, delete-orphan")
-    grades = relationship("Grade", back_populates="course", cascade="all, delete-orphan")
 
 
 class Activity(Base):
@@ -44,8 +43,6 @@ class Activity(Base):
     description = Column(Text)
     due_date = Column(DateTime, nullable=True)
     status = Column(String(20), default="pending")  # pending, submitted, late, graded, closed
-    grade = Column(Float, nullable=True)
-    max_grade = Column(Float, nullable=True)
     url = Column(String(1000))
     is_new = Column(Boolean, default=True)  # Para notificações
     notified = Column(Boolean, default=False)
@@ -76,42 +73,6 @@ class Material(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     course = relationship("Course", back_populates="materials")
-
-
-class Grade(Base):
-    """Nota de uma atividade."""
-    __tablename__ = "grades"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
-    item_name = Column(String(500))
-    grade = Column(Float, nullable=True)
-    max_grade = Column(Float, nullable=True)
-    percentage = Column(Float, nullable=True)
-    feedback = Column(Text, nullable=True)
-    graded_at = Column(DateTime, nullable=True)
-    notified = Column(Boolean, default=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    course = relationship("Course", back_populates="grades")
-
-
-class CalendarEvent(Base):
-    """Evento do calendário do Moodle."""
-    __tablename__ = "calendar_events"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    moodle_id = Column(String)
-    title = Column(String(500), nullable=False)
-    description = Column(Text)
-    event_type = Column(String(50))  # assignment, course, site, user
-    course_name = Column(String(500))
-    start_date = Column(DateTime)
-    end_date = Column(DateTime, nullable=True)
-    url = Column(String(1000))
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class MaterialSyncMeta(Base):

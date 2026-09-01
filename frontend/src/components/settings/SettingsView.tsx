@@ -33,7 +33,6 @@ export default function SettingsView() {
     deadline_3d: true,
     deadline_1d: true,
     deadline_6h: true,
-    grade_released: true,
     daily_briefing: true,
   });
 
@@ -241,7 +240,6 @@ export default function SettingsView() {
             { key: "deadline_3d", label: "Prazo em 3 dias" },
             { key: "deadline_1d", label: "Prazo em 1 dia" },
             { key: "deadline_6h", label: "Prazo em 6 horas" },
-            { key: "grade_released", label: "Notas lancadas" },
             { key: "daily_briefing", label: "Briefing diario" },
           ].map((item) => {
             const active = notifSettings[item.key as keyof typeof notifSettings];

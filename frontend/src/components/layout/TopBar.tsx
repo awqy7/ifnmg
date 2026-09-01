@@ -91,7 +91,9 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           return;
         }
         const lastSync = user.moodle_last_sync ? new Date(user.moodle_last_sync).getTime() : 0;
-        const isStale = !lastSync || Date.now() - lastSync > 10 * 60 * 1000;
+        // O scheduler já atualiza a cada 30 minutos. Evita iniciar uma nova
+        // coleta em toda entrada recente; o botão manual continua sempre visível.
+        const isStale = !lastSync || Date.now() - lastSync > 30 * 60 * 1000;
         if (isStale) await triggerSync();
       } catch {
         // A home continua disponível com o último snapshot local.

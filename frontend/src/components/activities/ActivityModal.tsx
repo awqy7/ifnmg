@@ -10,7 +10,6 @@ import {
   Download,
   Bot,
   Calendar,
-  Award,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
@@ -170,15 +169,11 @@ export default function ActivityModal({
 
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-[var(--border)] flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-[var(--border)] flex items-center justify-center text-neutral-400">
-                    <Award className="w-4 h-4" />
+                    <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-[9px] text-neutral-500 uppercase tracking-wider">Nota</p>
-                    <p className="text-[11px] font-medium text-white">
-                      {details?.grade !== null && details?.grade !== undefined
-                        ? `${details.grade} / ${details.max_grade || 100}`
-                        : details?.time_remaining || "Aguardando"}
-                    </p>
+                    <p className="text-[9px] text-neutral-500 uppercase tracking-wider">Tempo</p>
+                    <p className="text-[11px] font-medium text-white">{details?.time_remaining || "No prazo"}</p>
                   </div>
                 </div>
               </div>

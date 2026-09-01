@@ -34,8 +34,6 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS ix_activities_course_moodle ON activities (course_id, moodle_id)",
         "CREATE INDEX IF NOT EXISTS ix_materials_user_course ON materials (user_id, course_id)",
         "CREATE INDEX IF NOT EXISTS ix_materials_user_moodle ON materials (user_id, moodle_id)",
-        "CREATE INDEX IF NOT EXISTS ix_grades_user_course ON grades (user_id, course_id)",
-        "CREATE INDEX IF NOT EXISTS ix_calendar_user_start ON calendar_events (user_id, start_date)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_read_created ON notifications (user_id, is_read, created_at)",
         "CREATE INDEX IF NOT EXISTS ix_briefings_user_date ON daily_briefings (user_id, date)",
         "CREATE INDEX IF NOT EXISTS ix_schedules_user_day ON schedules (user_id, day_of_week)",

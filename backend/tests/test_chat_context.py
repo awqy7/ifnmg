@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
-from app.models import Activity, Course, Grade, Material, User
+from app.models import Activity, Course, Material, Schedule, User
 from app.routers.chat import _build_system_context
 
 
@@ -30,7 +30,7 @@ class ChatContextTests(unittest.TestCase):
                 content_text="não pode aparecer",
             ),
             Activity(user_id="u1", course_id="c1", moodle_id="a1", title="Lista de árvores", status="pending"),
-            Grade(user_id="u1", course_id="c1", item_name="Prova 1", grade=8, max_grade=10),
+            Schedule(user_id="u1", course_id="c1", course_name="Algoritmos", day_of_week=0, start_time="08:00", end_time="09:40"),
         ])
         self.db.commit()
 
@@ -41,7 +41,9 @@ class ChatContextTests(unittest.TestCase):
         context = asyncio.run(_build_system_context(self.db, "u1", None, "árvores"))
         self.assertIn("Árvores binárias", context)
         self.assertIn("Lista de árvores", context)
-        self.assertIn("Prova 1", context)
+        self.assertIn("GRADE DE HORÁRIOS", context)
+        self.assertNotIn("\nNOTAS:", context)
+        self.assertNotIn("\nCALENDÁRIO:", context)
         self.assertNotIn("SEGREDO DE OUTRO ALUNO", context)
         self.assertIn("dado não confiável", context)
 
