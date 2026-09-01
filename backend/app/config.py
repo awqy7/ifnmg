@@ -1,13 +1,14 @@
-import secrets
 from pathlib import Path
 from typing import Optional, List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from cryptography.fernet import Fernet
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=str(BASE_DIR / ".env"), extra="ignore")
+
     # App
     APP_ENV: str = "development"
     DEBUG: bool = False
@@ -53,10 +54,6 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 5
     RATE_LIMIT_SYNC_PER_HOUR: int = 10
     AI_REQUESTS_PER_DAY: int = 200
-
-    class Config:
-        env_file = str(BASE_DIR / ".env")
-        extra = "ignore"
 
     def model_post_init(self, __context):
         if not self.SECRET_KEY:

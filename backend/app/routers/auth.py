@@ -3,12 +3,13 @@ Rotas de autenticação direta via Virtual2 IFNMG (Moodle).
 Sem necessidade de criar conta separada: o login do Virtual2 é a única credencial.
 """
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response
 from fastapi.security import OAuth2PasswordBearer, HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -75,13 +76,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: str, session_version: int = 0) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(
         {
             "sub": user_id,
             "sv": session_version,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": now,
             "jti": secrets.token_hex(16),
         },
         settings.SECRET_KEY,
@@ -144,7 +146,7 @@ async def get_current_user(
         session_version = int(payload.get("sv", 0))
         if not user_id:
             raise credentials_exception
-    except JWTError:
+    except InvalidTokenError:
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
@@ -259,7 +261,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
 @router.post("/websocket-ticket", response_model=dict)
 async def create_websocket_ticket(current_user: User = Depends(get_current_user)):
     """Emite credencial curta e de uso exclusivo para abrir o WebSocket."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     ticket = jwt.encode(
         {
             "sub": current_user.id,

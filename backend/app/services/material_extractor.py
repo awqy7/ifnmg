@@ -1,7 +1,7 @@
 """
 Extração de conteúdo textual dos materiais do Moodle.
 Baixa arquivos via webservice/pluginfile.php e extrai texto
-(PDF via pdfplumber/PyPDF2, HTML limpo, texto puro) para alimentar a IA.
+(PDF via pdfplumber/pypdf, HTML limpo, texto puro) para alimentar a IA.
 """
 import asyncio
 import io
@@ -161,7 +161,7 @@ def _pdf_text(data: bytes) -> str:
         logger.warning("pdfplumber falhou: %s", e)
 
     try:
-        from PyPDF2 import PdfReader
+        from pypdf import PdfReader
         reader = PdfReader(io.BytesIO(data))
         chunks = []
         for i, page in enumerate(reader.pages[:MAX_PDF_PAGES]):
@@ -175,7 +175,7 @@ def _pdf_text(data: bytes) -> str:
         if len(extracted) >= 100:
             return _sanitize_for_llm(extracted)
     except Exception as e:
-        logger.warning("PyPDF2 falhou: %s", e)
+        logger.warning("pypdf falhou: %s", e)
 
     try:
         import pypdfium2 as pdfium

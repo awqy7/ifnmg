@@ -6,7 +6,8 @@ import logging
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, Cookie
-from jose import jwt, JWTError
+import jwt
+from jwt import InvalidTokenError
 
 from app.config import settings
 from app.database import SessionLocal
@@ -86,7 +87,7 @@ async def get_ws_user_id(
             return user_id if active else None
         finally:
             db.close()
-    except JWTError:
+    except InvalidTokenError:
         return None
 
 

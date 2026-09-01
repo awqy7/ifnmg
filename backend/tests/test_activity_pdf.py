@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 import httpx
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 from app.models import Activity, User
 from app.routers.activities import explain_activity_with_ai, generate_activity_response_pdf_endpoint
