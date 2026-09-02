@@ -6,5 +6,7 @@
 builder = "railpack"
 
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 healthCheckPath = "/api/health"
+healthCheckTimeoutSeconds = 60
+startPeriodSeconds = 30
