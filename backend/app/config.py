@@ -20,7 +20,9 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
-    ALLOWED_ORIGIN_REGEX: str = r"^https://ifnmg(-[a-z0-9-]+)?\.vercel\.app$"
+    # Previews devem ser incluídos explicitamente em ALLOWED_ORIGINS. Uma regex
+    # baseada apenas no nome do projeto aceitaria deployments de terceiros.
+    ALLOWED_ORIGIN_REGEX: Optional[str] = None
 
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
@@ -33,6 +35,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
+    GROQ_FALLBACK_MODEL: str = "openai/gpt-oss-120b"
 
     # Web Push
     VAPID_PUBLIC_KEY: Optional[str] = None
@@ -48,6 +52,8 @@ class Settings(BaseSettings):
     # Moodle
     MOODLE_BASE_URL: str = "https://virtual2.ifnmg.edu.br"
     SCRAPER_INTERVAL_MINUTES: int = 30
+    # Fallback pesado e opcional, usado somente quando instalado/configurado.
+    ENABLE_PLAYWRIGHT_FALLBACK: bool = False
 
     # Security
     BCRYPT_ROUNDS: int = 12

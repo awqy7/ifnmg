@@ -1,6 +1,7 @@
 import asyncio
 import unittest
 from datetime import datetime, timedelta
+from app.services.datetime_utils import utc_now_naive
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,12 +14,12 @@ from app.services.scheduler import _upsert_activity
 
 class ActivityStatusTests(unittest.TestCase):
     def test_manual_completion_is_not_official_submission(self):
-        now = datetime.utcnow()
+        now = utc_now_naive()
         self.assertEqual(effective_activity_status("new", now, now + timedelta(days=1)), "manual_completed")
         self.assertEqual(effective_activity_status("submitted", now, now + timedelta(days=1)), "submitted")
 
     def test_late_only_when_no_completion_exists(self):
-        due = datetime.utcnow() - timedelta(minutes=1)
+        due = utc_now_naive() - timedelta(minutes=1)
         self.assertEqual(effective_activity_status("pending", None, due), "late")
         self.assertEqual(effective_activity_status("submitted", None, due), "submitted")
 
@@ -39,10 +40,10 @@ class ActivityStatusTests(unittest.TestCase):
                 course_id="c1",
                 moodle_id="10",
                 title="Trabalho em grupo",
-                due_date=datetime.utcnow() + timedelta(days=1),
+                due_date=utc_now_naive() + timedelta(days=1),
                 status="manual_completed",
                 moodle_status="new",
-                manual_completed_at=datetime.utcnow(),
+                manual_completed_at=utc_now_naive(),
             )
             db.add(activity)
             db.commit()

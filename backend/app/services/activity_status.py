@@ -1,5 +1,6 @@
 """Regras centrais para a situação efetiva de uma atividade."""
 from datetime import datetime
+from app.services.datetime_utils import utc_now_naive
 from typing import Optional
 
 
@@ -40,7 +41,7 @@ def effective_activity_status(
         return "submitted"
     if manual_completed_at:
         return "manual_completed"
-    current = now or datetime.utcnow()
+    current = now or utc_now_naive()
     if due_date and due_date < current:
         return "late"
     return "pending"

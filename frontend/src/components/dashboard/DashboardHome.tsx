@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSync } from "@/contexts/SyncContext";
 import {
   Sparkles,
-  Clock,
   AlertTriangle,
   BookOpen,
   ArrowRight,
@@ -15,7 +14,6 @@ import {
   Target,
   Timer,
   CheckCircle2,
-  CalendarClock,
 } from "lucide-react";
 import { briefingApi, dashboardApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -33,18 +31,20 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
   const [briefing, setBriefing] = useState<any | null>(null);
   const [loadingBriefing, setLoadingBriefing] = useState(true);
   const [generatingBriefing, setGeneratingBriefing] = useState(false);
-  const [todaySchedule, setTodaySchedule] = useState<any>({ day: "", slots: [] });
   const [pendingActivities, setPendingActivities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [dataError, setDataError] = useState<string | null>(null);
   const initialSyncDone = useRef(false);
 
   const loadData = useCallback(async () => {
+    setDataError(null);
     try {
       const snapshot = await dashboardApi.getSnapshot();
       setBriefing(snapshot.briefing);
-      setTodaySchedule(snapshot.today_schedule || { day: "", slots: [] });
       setPendingActivities(snapshot.pending_activities || []);
       setCourses(snapshot.courses || []);
+    } catch (error) {
+      setDataError(error instanceof Error ? error.message : "Não foi possível carregar o painel.");
     } finally {
       setLoadingBriefing(false);
     }
@@ -74,8 +74,8 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
         const today = await briefingApi.getToday();
         setBriefing(today);
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      setDataError(error instanceof Error ? error.message : "Não foi possível gerar o briefing.");
     } finally {
       setGeneratingBriefing(false);
     }
@@ -94,7 +94,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
     month: "long",
   });
 
-  const classCount = briefing?.metrics?.classes ?? todaySchedule.slots?.length ?? 0;
+  const courseCount = courses.length;
   const taskCount = briefing?.metrics?.pending ?? pendingActivities.length;
   const lateCount = briefing?.metrics?.late ?? pendingActivities.filter((item) => item.status === "late").length;
   const due24hCount = briefing?.metrics?.due_24h ?? 0;
@@ -121,26 +121,29 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
             {getGreeting()}, {user?.name ? user.name.split(" ")[0] : "estudante"}
           </h1>
           <p className="text-sm text-neutral-400 mt-1.5 max-w-lg leading-relaxed">
-            {classCount > 0 && (
-              <>
-                <span className="text-neutral-200 font-medium">{classCount} {classCount === 1 ? "aula" : "aulas"} hoje</span>
-                {taskCount > 0 && " · "}
-              </>
-            )}
             {taskCount > 0 && (
               <span className="text-amber-300/90 font-medium">{taskCount} {taskCount === 1 ? "tarefa pendente" : "tarefas pendentes"}</span>
             )}
-            {classCount === 0 && taskCount === 0 && "Nenhuma aula ou tarefa pendente no momento."}
+            {taskCount === 0 && "Nenhuma tarefa pendente no momento."}
           </p>
         </div>
         {/* Subtle ambient glow */}
         <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-500/[0.04] rounded-full blur-3xl pointer-events-none" />
       </div>
 
+      {dataError && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.07] px-4 py-3 text-xs text-rose-200">
+          <span>{dataError}</span>
+          <button type="button" onClick={loadData} className="shrink-0 font-semibold text-white hover:text-rose-100">
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* Academic pulse */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Aulas hoje", value: classCount, icon: CalendarClock, tone: "emerald" },
+          { label: "Disciplinas", value: courseCount, icon: BookOpen, tone: "emerald" },
           { label: "Pendências", value: taskCount, icon: CheckCircle2, tone: "blue" },
           { label: "Próximas 24h", value: due24hCount, icon: Timer, tone: "amber" },
           { label: "Atrasadas", value: lateCount, icon: AlertTriangle, tone: "red" },
@@ -158,7 +161,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                 <Icon className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-bold tracking-tight text-white leading-none">{metric.value}</p>
+                <p className="text-xl font-bold tracking-tight text-white leading-none">{loadingBriefing ? "—" : metric.value}</p>
                 <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 truncate">{metric.label}</p>
               </div>
             </div>
@@ -166,10 +169,10 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
         })}
       </div>
 
-      {/* Briefing + Schedule */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* Briefing */}
+      <div>
         {/* AI Daily Briefing */}
-        <div className="card-enter lg:col-span-2 rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-5 flex flex-col" style={{ animationDelay: "50ms" }}>
+        <div className="card-enter rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-5 flex flex-col" style={{ animationDelay: "50ms" }}>
           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/[0.12]">
@@ -311,49 +314,6 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
           </div>
         </div>
 
-        {/* Today's Classes */}
-        <div className="card-enter rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-5 flex flex-col" style={{ animationDelay: "100ms" }}>
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-white/[0.04] border border-[var(--border)]">
-                <Clock className="w-4 h-4 text-neutral-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">Aulas de Hoje</h2>
-                <p className="text-[11px] text-neutral-500">{todaySchedule.day || "Hoje"}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigate("horarios")}
-              className="text-[11px] text-emerald-400/80 hover:text-emerald-400 flex items-center gap-0.5 font-medium transition"
-            >
-              Grade <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
-            {!todaySchedule.slots || todaySchedule.slots.length === 0 ? (
-              <div className="p-5 text-center text-neutral-500 text-xs leading-relaxed">
-                Sem aulas presenciais hoje.
-              </div>
-            ) : (
-              todaySchedule.slots.map((slot: any) => (
-                <div
-                  key={slot.id}
-                  className="p-3 rounded-xl bg-white/[0.02] border border-[var(--border)] flex items-center justify-between gap-2 hover:bg-white/[0.04] transition-colors"
-                >
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-medium text-neutral-200 truncate">{slot.course_name}</h4>
-                    <p className="text-[10px] text-neutral-500">{slot.room || "Sala padrao"}</p>
-                  </div>
-                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-500/[0.06] text-emerald-400/80 border border-emerald-500/[0.1] shrink-0">
-                    {slot.start_time} - {slot.end_time}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Activities + Courses */}
@@ -385,10 +345,11 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
               </div>
             ) : (
               pendingActivities.slice(0, 5).map((act) => (
-                <div
+                <button
+                  type="button"
                   key={act.id}
                   onClick={() => openActivity && openActivity(act.id)}
-                  className="p-3 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.15] hover:bg-white/[0.04] flex items-center justify-between gap-3 transition-colors cursor-pointer group"
+                  className="w-full p-3 text-left rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.15] hover:bg-white/[0.04] flex items-center justify-between gap-3 transition-colors group"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="mb-1">
@@ -413,7 +374,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                   <span className="text-[9px] uppercase font-semibold tracking-wide px-2 py-0.5 rounded-md bg-amber-500/[0.06] text-amber-400/70 border border-amber-500/[0.1] shrink-0">
                     {act.type}
                   </span>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -446,10 +407,11 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
               </div>
             ) : (
               courses.slice(0, 6).map((crs) => (
-                <div
+                <button
+                  type="button"
                   key={crs.id}
                   onClick={() => openChat(crs.id)}
-                  className="p-3.5 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.15] hover:bg-white/[0.04] transition-colors cursor-pointer flex flex-col justify-between group"
+                  className="p-3.5 text-left rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.15] hover:bg-white/[0.04] transition-colors flex flex-col justify-between group"
                 >
                   <div>
                     <h4 className="text-xs font-medium text-neutral-200 group-hover:text-emerald-300/90 transition-colors line-clamp-1">
@@ -465,7 +427,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                       Chat <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
                     </span>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>

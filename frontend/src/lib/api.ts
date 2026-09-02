@@ -1,15 +1,27 @@
 /**
  * API client centralizado para comunicação com o backend FastAPI.
- * Estratégia de autenticação dupla para compatibilidade total:
- * - Cookie httpOnly (desktops e browsers que aceitam cross-site cookies)
- * - Bearer Authorization header (iOS Safari / ITP / modo privado)
+ * A API usa sempre a mesma origem no navegador e passa pelo proxy do frontend.
+ * Isso mantém o cookie como first-party em todos os ambientes.
  */
 
 import { tokenStore } from "./token-store";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "";
+
+function notifyUnauthorized() {
+  tokenStore.clear();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("auth-expired"));
+  }
+}
 
 class ApiClient {
+  private responseCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
+
+  clearCache() {
+    this.responseCache.clear();
+  }
+
   /**
    * Monta os headers de autenticação.
    * Sempre inclui o Bearer token quando disponível (iOS Safari / cross-site).
@@ -38,13 +50,15 @@ class ApiClient {
 
     if (res.status === 401) {
       // Token inválido ou expirado: limpa o store
-      tokenStore.clear();
+      notifyUnauthorized();
     }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro na requisição");
     }
+
+    if (options.method && options.method !== "GET") this.clearCache();
 
     // Para 204 No Content
     if (res.status === 204) {
@@ -56,6 +70,17 @@ class ApiClient {
 
   async get<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: "GET" });
+  }
+
+  async getCached<T>(path: string, ttlMs = 30_000): Promise<T> {
+    const cached = this.responseCache.get(path);
+    if (cached && cached.expiresAt > Date.now()) return cached.value as Promise<T>;
+    const value = this.get<T>(path).catch((error) => {
+      this.responseCache.delete(path);
+      throw error;
+    });
+    this.responseCache.set(path, { expiresAt: Date.now() + ttlMs, value });
+    return value;
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
@@ -77,10 +102,7 @@ class ApiClient {
       credentials: "include",
     });
 
-    if (res.status === 401) {
-      tokenStore.clear();
-    }
-
+    if (res.status === 401) notifyUnauthorized();
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro na requisição");
@@ -119,6 +141,7 @@ class ApiClient {
       credentials: "include",
     });
 
+    if (res.status === 401) notifyUnauthorized();
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro na requisição de streaming");
@@ -128,6 +151,16 @@ class ApiClient {
     const decoder = new TextDecoder();
     if (!reader) return;
 
+    const parseLine = (line: string): { content?: string; done?: boolean } | null => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data: ")) return null;
+      try {
+        return JSON.parse(trimmed.slice(6));
+      } catch {
+        return null;
+      }
+    };
+
     let buffer = "";
     while (true) {
       const { done, value } = await reader.read();
@@ -136,15 +169,14 @@ class ApiClient {
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data: ")) continue;
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          if (data.content) yield data.content;
-          if (data.done) return;
-        } catch {}
+        const data = parseLine(line);
+        if (data?.content) yield data.content;
+        if (data?.done) return;
       }
     }
+    buffer += decoder.decode();
+    const finalData = parseLine(buffer);
+    if (finalData?.content) yield finalData.content;
   }
 }
 
@@ -173,9 +205,10 @@ export const moodleApi = {
 export const activitiesApi = {
   list: (params?: { status?: string; course_id?: string }) => {
     const q = new URLSearchParams(params as any).toString();
-    return api.get<any[]>(`/api/activities${q ? `?${q}` : ""}`);
+    const path = `/api/activities${q ? `?${q}` : ""}`;
+    return api.getCached<any[]>(path, 20_000);
   },
-  summary: () => api.get<any>("/api/activities/summary"),
+  summary: () => api.getCached<any>("/api/activities/summary", 20_000),
   getDetails: (id: string) =>
     api.get<any>(`/api/activities/${id}/details`),
   updateStatus: (id: string, status: string) =>
@@ -199,6 +232,7 @@ export const activitiesApi = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: "include",
     });
+    if (res.status === 401) notifyUnauthorized();
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Erro ao gerar PDF");
@@ -208,8 +242,8 @@ export const activitiesApi = {
 };
 
 export const coursesApi = {
-  list: () => api.get<any[]>("/api/courses"),
-  getMaterials: (courseId: string) => api.get<any[]>(`/api/courses/${courseId}/materials`),
+  list: () => api.getCached<any[]>("/api/courses", 60_000),
+  getMaterials: (courseId: string) => api.getCached<any[]>(`/api/courses/${courseId}/materials`, 60_000),
 };
 
 export const briefingApi = {
@@ -218,7 +252,7 @@ export const briefingApi = {
 };
 
 export const dashboardApi = {
-  getSnapshot: () => api.get<any>("/api/dashboard"),
+  getSnapshot: () => api.getCached<any>("/api/dashboard", 20_000),
 };
 
 export const chatApi = {
@@ -259,11 +293,4 @@ export const notificationsApi = {
   getPushPublicKey: () => api.get<{ public_key: string | null }>("/api/notifications/push-public-key"),
   subscribePush: (subscription: PushSubscriptionJSON) =>
     api.post<any>("/api/notifications/push-subscribe", { subscription }),
-};
-
-export const scheduleApi = {
-  get: () => api.get<any[]>("/api/schedule"),
-  getToday: () => api.get<any>("/api/schedule/today"),
-  add: (slot: any) => api.post<any>("/api/schedule", slot),
-  delete: (id: string) => api.delete<any>(`/api/schedule/${id}`),
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Users, X } from "lucide-react";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
@@ -28,6 +28,7 @@ export default function ManualCompletionDialog({
 }: ManualCompletionDialogProps) {
   const [reason, setReason] = useState<ManualCompletionReason>("group_member_submitted");
   const [note, setNote] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -36,11 +37,27 @@ export default function ManualCompletionDialog({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const firstControl = dialogRef.current?.querySelector<HTMLElement>("button, select, input");
+    firstControl?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !loading) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [loading, onClose, open]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4 backdrop-blur-sm">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="manual-completion-title"

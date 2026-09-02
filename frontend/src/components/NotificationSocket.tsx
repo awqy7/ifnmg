@@ -28,7 +28,7 @@ export default function NotificationSocket() {
       try {
         const { ticket } = await authApi.getWebSocketTicket();
         if (closed) return;
-        const apiHost = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiHost = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
         const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(ticket)}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
@@ -79,6 +79,8 @@ export default function NotificationSocket() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
+          role="status"
+          aria-live="polite"
           className="toast-enter flex items-start gap-3 p-3 rounded-xl bg-[#1c1c20] border border-[var(--border-strong)] shadow-xl shadow-black/50"
         >
           <div className="p-1.5 rounded-lg bg-emerald-500/[0.08] text-emerald-400/70 shrink-0">
@@ -89,8 +91,10 @@ export default function NotificationSocket() {
             <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-2">{toast.message}</p>
           </div>
           <button
+            type="button"
             onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
             className="text-neutral-600 hover:text-neutral-400 transition-colors shrink-0"
+            aria-label="Fechar notificação"
           >
             <X className="w-3 h-3" />
           </button>

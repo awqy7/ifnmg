@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,14 +14,15 @@ from app.models import User
 from app.routers.auth import get_current_user
 from app.services.moodle_auth import moodle_auth_service
 from app.services.crypto_service import crypto_service
-from app.services.scheduler import sync_moodle_for_user
+from app.services.scheduler import get_sync_status, mark_sync_queued, sync_moodle_for_user
+from app.services.datetime_utils import utc_iso
 
 router = APIRouter(prefix="/api/moodle", tags=["Moodle"])
 
 
 class MoodleCredentials(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=1024)
 
 
 @router.post("/credentials")
@@ -56,8 +57,10 @@ async def save_credentials(
 
     db.commit()
 
-    # Dispara sync em background imediatamente
-    background_tasks.add_task(sync_moodle_for_user, current_user.id)
+    sync_status = get_sync_status(current_user.id, db)
+    if not (sync_status.get("running") or sync_status.get("enrichment_running")):
+        mark_sync_queued(db, current_user.id)
+        background_tasks.add_task(sync_moodle_for_user, current_user.id)
 
     return {
         "message": "Conectado ao Virtual2 com sucesso! 🎉",
@@ -71,7 +74,7 @@ async def get_status(current_user: User = Depends(get_current_user)):
     """Retorna status da conexão com o Moodle."""
     return {
         "connected": current_user.moodle_connected,
-        "last_sync": current_user.moodle_last_sync,
+        "last_sync": utc_iso(current_user.moodle_last_sync),
         "has_credentials": bool(current_user.moodle_username_enc),
     }
 
@@ -83,12 +86,11 @@ async def force_sync(
     db: Session = Depends(get_db),
 ):
     """Força uma sincronização imediata com o Moodle."""
-    from app.services.scheduler import get_sync_status, mark_sync_queued
-
     if not current_user.moodle_username_enc:
         raise HTTPException(status_code=400, detail="Credenciais do Moodle não configuradas")
 
-    already = get_sync_status(current_user.id, db).get("running", False)
+    status_data = get_sync_status(current_user.id, db)
+    already = bool(status_data.get("running") or status_data.get("enrichment_running"))
     if not already:
         mark_sync_queued(db, current_user.id)
         background_tasks.add_task(sync_moodle_for_user, current_user.id)
@@ -119,7 +121,7 @@ async def sync_status(
         "finished_at": status.get("finished_at"),
         "enrichment_running": status.get("enrichment_running", False),
         "enrichment_finished_at": status.get("enrichment_finished_at"),
-        "last_sync": current_user.moodle_last_sync.isoformat() if current_user.moodle_last_sync else None,
+        "last_sync": utc_iso(current_user.moodle_last_sync),
     }
 
 
@@ -146,7 +148,10 @@ async def reconnect(
     current_user.moodle_connected = True
     db.commit()
 
-    background_tasks.add_task(sync_moodle_for_user, current_user.id)
+    sync_status = get_sync_status(current_user.id, db)
+    if not (sync_status.get("running") or sync_status.get("enrichment_running")):
+        mark_sync_queued(db, current_user.id)
+        background_tasks.add_task(sync_moodle_for_user, current_user.id)
     return {"message": "Reconectado com sucesso!"}
 
 

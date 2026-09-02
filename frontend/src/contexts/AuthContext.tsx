@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { tokenStore } from "@/lib/token-store";
+import { api } from "@/lib/api";
 
 interface User {
   id: string;
@@ -24,11 +25,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = "";
 
 /**
- * Realiza um fetch autenticado usando cookies httpOnly + Bearer token como fallback.
- * Isso garante compatibilidade com iOS Safari (ITP bloqueia cookies cross-site).
+ * Usa o cookie httpOnly pela mesma origem e um Bearer apenas na requisição
+ * imediatamente posterior ao login.
  */
 async function apiFetch(path: string, options: RequestInit = {}) {
   const token = tokenStore.get();
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Tenta recuperar o usuário autenticado.
-   * No iOS Safari o cookie pode não chegar; o Bearer token é o fallback.
+   * O proxy mantém o cookie em primeira parte, inclusive no Safari/iOS.
    */
   const fetchMe = async (): Promise<User | null> => {
     try {
@@ -72,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handleExpiredSession = () => setUser(null);
+    window.addEventListener("auth-expired", handleExpiredSession);
+    return () => window.removeEventListener("auth-expired", handleExpiredSession);
+  }, []);
+
   const login = async (username: string, password: string) => {
     const res = await apiFetch("/api/auth/moodle-login", {
       method: "POST",
@@ -87,11 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
-    // Salva o token JWT em memória + sessionStorage + localStorage
-    // O ApiClient vai incluí-lo em todos os requests subsequentes (iOS Safari fix)
+    // Mantém o token apenas em memória; a persistência é do cookie httpOnly.
     if (data.access_token) {
       tokenStore.set(data.access_token);
     }
+    api.clearCache();
 
     const me = await fetchMe();
     if (!me) throw new Error("Não foi possível obter dados do usuário após login.");
@@ -103,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
     tokenStore.clear();
+    api.clearCache();
     setUser(null);
   };
 

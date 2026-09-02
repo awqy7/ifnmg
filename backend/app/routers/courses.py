@@ -9,6 +9,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models import User, Course, Material, Activity
 from app.routers.auth import get_current_user
+from app.services.datetime_utils import utc_iso
 
 router = APIRouter(prefix="/api/courses", tags=["Disciplinas"])
 
@@ -48,8 +49,8 @@ async def list_courses(
             "color": c.color or "#6366f1",
             "progress": c.progress or 0,
             "pending_activities": pending_count,
-            "created_at": c.created_at.isoformat() if c.created_at else None,
-            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            "created_at": utc_iso(c.created_at),
+            "updated_at": utc_iso(c.updated_at),
         })
     return result
 
@@ -117,7 +118,7 @@ async def get_course_materials(
             "topic_number": m.topic_number,
             "file_size": m.file_size,
             "has_text": bool(m.content_text),
-            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "created_at": utc_iso(m.created_at),
         }
         for m in materials
     ]

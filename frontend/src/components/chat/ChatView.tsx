@@ -21,7 +21,7 @@ const LOADING_MESSAGES = [
   "Lendo suas atividades e prazos...",
   "Analisando o conteudo das materias...",
   "Organizando suas disciplinas...",
-  "Verificando sua grade de horarios...",
+  "Consultando seus materiais...",
   "Formulando resposta com base nos seus dados...",
 ];
 

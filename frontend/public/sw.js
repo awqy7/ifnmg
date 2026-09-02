@@ -15,7 +15,13 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = event.notification.data?.url || "/";
+  let target = "/";
+  try {
+    const candidate = new URL(event.notification.data?.url || "/", self.location.origin);
+    if (candidate.origin === self.location.origin) {
+      target = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+    }
+  } catch {}
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const existing = clients.find((client) => "focus" in client);
@@ -27,3 +33,5 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));

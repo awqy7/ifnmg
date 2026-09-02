@@ -16,6 +16,7 @@ frontend/.env.local
 frontend/.env
 *.tsbuildinfo
 frontend/tests/screenshot_*.png
+/tests/screenshot_*.png
 
 # Logs e temporários
 *.log

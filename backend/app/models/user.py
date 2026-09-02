@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.services.datetime_utils import utc_now_naive
 
 
 def gen_uuid():
@@ -18,8 +19,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     session_version = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     # Credenciais do Moodle (criptografadas)
     moodle_username_enc = Column(Text, nullable=True)
@@ -56,7 +57,6 @@ class User(Base):
     theme = Column(String(10), default="dark")
 
     # Relacionamentos
-    schedules = relationship("Schedule", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
     flashcard_decks = relationship("FlashcardDeck", back_populates="user", cascade="all, delete-orphan")

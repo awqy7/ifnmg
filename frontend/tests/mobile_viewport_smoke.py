@@ -25,7 +25,7 @@ def api_response(url: str):
         return {
             "briefing": {
                 "content": "Priorize a atividade de teste e reserve um bloco de estudo focado.",
-                "metrics": {"classes": 0, "pending": 1, "late": 0, "due_24h": 0},
+                "metrics": {"courses": 1, "pending": 1, "late": 0, "due_24h": 0},
                 "top_priority": {
                     "id": "atividade-mobile",
                     "title": "Atividade de teste responsivo",
@@ -42,7 +42,6 @@ def api_response(url: str):
                     }
                 ],
             },
-            "today_schedule": {"day": "Hoje", "slots": []},
             "pending_activities": [
                 {
                     "id": "atividade-mobile",
@@ -63,8 +62,6 @@ def api_response(url: str):
                 }
             ],
         }
-    if "/api/schedule/today" in url:
-        return {"day": "Hoje", "slots": []}
     if "/api/notifications/unread-count" in url:
         return {"count": 0}
     if "/api/activities/summary" in url:
@@ -144,10 +141,6 @@ def main():
             for width, height in viewports:
                 print(f"Testando {width}x{height}...", flush=True)
                 page = browser.new_page(viewport={"width": width, "height": height})
-                page.add_init_script(
-                    "localStorage.setItem('ifnmg_token', 'mobile-smoke-token')"
-                )
-
                 def route_api(route):
                     route.fulfill(
                         status=200,

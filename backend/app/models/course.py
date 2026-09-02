@@ -6,6 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.services.datetime_utils import utc_now_naive
 
 
 def gen_uuid():
@@ -27,8 +28,8 @@ class Course(Base):
     progress = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
     raw_data = Column(JSON)  # Dados extras do Moodle
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     activities = relationship("Activity", back_populates="course", cascade="all, delete-orphan")
     materials = relationship("Material", back_populates="course", cascade="all, delete-orphan")
@@ -57,15 +58,15 @@ class Activity(Base):
     manual_completion_reason = Column(String(50), nullable=True)
     manual_completion_note = Column(String(500), nullable=True)
     is_group_activity = Column(Boolean, default=False)
-    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, default=utc_now_naive)
     removed_at = Column(DateTime, nullable=True)
     url = Column(String(1000))
     is_new = Column(Boolean, default=True)  # Para notificações
     notified = Column(Boolean, default=False)
     notified_thresholds = Column(JSON, default=dict)  # {"7d": true, "3d": false...} lembretes já enviados
     raw_data = Column(JSON)
-    first_seen = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    first_seen = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     course = relationship("Course", back_populates="activities")
 
@@ -88,8 +89,8 @@ class Material(Base):
     file_size = Column(Integer, nullable=True)
     is_new = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     course = relationship("Course", back_populates="materials")
 
@@ -102,4 +103,4 @@ class MaterialSyncMeta(Base):
     fingerprint = Column(String(64), nullable=False)
     extraction_attempted = Column(Boolean, default=False, nullable=False)
     extracted_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)

@@ -10,11 +10,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Libs de runtime (lxml/pdf/imagens). Não é necessário build-essential:
+# Libs de runtime (PDF/imagens/OCR). Não é necessário build-essential:
 # todas as dependências do requirements têm wheels manylinux para 3.12.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libxml2 \
-        libxslt1.1 \
         libjpeg62-turbo \
         libpng16-16 \
         zlib1g \
@@ -30,6 +28,16 @@ COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 COPY .python-version ./
+
+# O serviço não precisa de privilégios de root em runtime.
+RUN groupadd --system app \
+    && useradd --system --gid app --home /app app \
+    && mkdir -p /app/data \
+    && chown -R app:app /app
+USER app
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1:${PORT:-8080}/api/health || exit 1
 
 # Cloud Run expõe a porta via $PORT (default 8080)
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

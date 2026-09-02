@@ -44,7 +44,7 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS ix_materials_user_moodle ON materials (user_id, moodle_id)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_read_created ON notifications (user_id, is_read, created_at)",
         "CREATE INDEX IF NOT EXISTS ix_briefings_user_date ON daily_briefings (user_id, date)",
-        "CREATE INDEX IF NOT EXISTS ix_schedules_user_day ON schedules (user_id, day_of_week)",
+        "CREATE INDEX IF NOT EXISTS ix_ai_request_logs_user_created ON ai_request_logs (user_id, created_at)",
     ]
     with engine.begin() as connection:
         for statement in indexes:

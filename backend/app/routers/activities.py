@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from urllib.parse import urljoin
 
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -32,6 +32,8 @@ from app.services.activity_status import (
     completion_source,
     effective_activity_status,
 )
+from app.services.datetime_utils import utc_iso, utc_now_naive
+from app.services.ai_quota import consume_ai_request
 
 router = APIRouter(prefix="/api/activities", tags=["Atividades"])
 logger = logging.getLogger(__name__)
@@ -60,10 +62,10 @@ def _status_payload(activity: Activity) -> dict:
         "status_source": completion_source(activity.status),
         "moodle_status": activity.moodle_status or "unknown",
         "moodle_submission_at": (
-            activity.moodle_submission_at.isoformat() if activity.moodle_submission_at else None
+            utc_iso(activity.moodle_submission_at)
         ),
         "manual_completed_at": (
-            activity.manual_completed_at.isoformat() if activity.manual_completed_at else None
+            utc_iso(activity.manual_completed_at)
         ),
         "manual_completion_reason": activity.manual_completion_reason,
         "manual_completion_note": activity.manual_completion_note,
@@ -216,7 +218,7 @@ def _pdf_filename(title: str) -> str:
 async def list_activities(
     status: Optional[str] = None,
     course_id: Optional[str] = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=200),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -243,7 +245,7 @@ async def list_activities(
             "title": a.title,
             "type": a.activity_type or "assign",
             "description": a.description or "",
-            "due_date": a.due_date.isoformat() if a.due_date else None,
+            "due_date": utc_iso(a.due_date),
             **_status_payload(a),
             "url": a.url or "",
             "course_id": a.course_id,
@@ -309,7 +311,7 @@ async def get_activity_details(
         "title": act.title,
         "type": act.activity_type or "assign",
         "description": act.description or "Sem orientações adicionais informadas pelo professor.",
-        "due_date": act.due_date.isoformat() if act.due_date else None,
+        "due_date": utc_iso(act.due_date),
         **_status_payload(act),
         "status_text": status_text_map.get(act.status, "Pendente"),
         "time_remaining": "Prazo encerrado" if act.status == "late" else None,
@@ -347,7 +349,7 @@ async def update_activity_status(
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
     if target_status == "submitted":
-        activity.manual_completed_at = datetime.utcnow()
+        activity.manual_completed_at = utc_now_naive()
         activity.manual_completion_reason = "other"
     elif target_status in {"pending", "late"}:
         activity.manual_completed_at = None
@@ -359,7 +361,7 @@ async def update_activity_status(
         activity.due_date,
         removed_at=activity.removed_at,
     )
-    activity.updated_at = datetime.utcnow()
+    activity.updated_at = utc_now_naive()
     db.commit()
     return {"id": activity.id, **_status_payload(activity)}
 
@@ -383,7 +385,7 @@ async def update_manual_completion(
         raise HTTPException(status_code=400, detail="Motivo de conclusão inválido")
 
     if data.completed:
-        activity.manual_completed_at = datetime.utcnow()
+        activity.manual_completed_at = utc_now_naive()
         activity.manual_completion_reason = data.reason
         activity.manual_completion_note = (data.note or "").strip() or None
         if data.reason == "group_member_submitted":
@@ -399,7 +401,7 @@ async def update_manual_completion(
         activity.due_date,
         removed_at=activity.removed_at,
     )
-    activity.updated_at = datetime.utcnow()
+    activity.updated_at = utc_now_naive()
     db.commit()
     db.refresh(activity)
     return {"id": activity.id, **_status_payload(activity)}
@@ -423,6 +425,8 @@ async def explain_activity_with_ai(
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
     act, course_name = res
+
+    consume_ai_request(db, current_user.id, "activity_explanation")
 
     source_text, source_summary = await _collect_activity_source(act, current_user, db)
 
@@ -513,6 +517,8 @@ async def generate_activity_response_pdf_endpoint(
                 "Verifique se a atividade possui instruções em texto ou um PDF selecionável."
             ),
         )
+
+    consume_ai_request(db, current_user.id, "activity_pdf")
 
     provider_str = current_user.ai_provider or "groq"
     try:

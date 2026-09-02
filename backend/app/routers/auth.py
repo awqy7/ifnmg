@@ -11,7 +11,7 @@ from fastapi.security import OAuth2PasswordBearer, HTTPAuthorizationCredentials,
 import jwt
 from jwt import InvalidTokenError
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -20,12 +20,19 @@ from app.models import User
 from app.services.moodle_auth import moodle_auth_service
 from app.services.crypto_service import crypto_service
 from app.services.scheduler import sync_moodle_for_user, get_sync_status, mark_sync_queued
+from app.services.datetime_utils import utc_iso, utc_now_naive
 
 # ─── Schemas (definidos ANTES das rotas que os usam) ──────────────────────────
 
 class MoodleDirectLogin(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    theme: Optional[str] = Field(default=None, max_length=10)
+    ai_provider: Optional[str] = Field(default=None, max_length=50)
 
 
 class Token(BaseModel):
@@ -54,10 +61,20 @@ ALGORITHM = settings.JWT_ALGORITHM
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=settings.BCRYPT_ROUNDS)
 
 login_attempts: dict[str, list[datetime]] = {}
+_last_login_cleanup = utc_now_naive()
 
 
 def check_rate_limit(ip: str, limit: int, window_seconds: int = 60) -> bool:
-    now = datetime.utcnow()
+    global _last_login_cleanup
+    now = utc_now_naive()
+    if (now - _last_login_cleanup).total_seconds() >= window_seconds:
+        for key, attempts in list(login_attempts.items()):
+            fresh = [t for t in attempts if (now - t).total_seconds() < window_seconds]
+            if fresh:
+                login_attempts[key] = fresh
+            else:
+                login_attempts.pop(key, None)
+        _last_login_cleanup = now
     if ip not in login_attempts:
         login_attempts[ip] = []
     login_attempts[ip] = [t for t in login_attempts[ip] if (now - t).total_seconds() < window_seconds]
@@ -94,13 +111,13 @@ def create_access_token(user_id: str, session_version: int = 0) -> str:
 def set_auth_cookie(response: Response, token: str):
     """Define o cookie httpOnly com o token JWT."""
     is_production = settings.APP_ENV == "production"
-    # SameSite=none necessário para cookies cross-site funcionarem via proxy Vercel
+    # Em desenvolvimento HTTP, Secure impediria o navegador de salvar o cookie.
     response.set_cookie(
         key="ifnmg_token",
         value=token,
         httponly=True,
-        secure=True,  # Obrigatório para SameSite=none
-        samesite="none",
+        secure=is_production,
+        samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -112,8 +129,8 @@ def clear_auth_cookie(response: Response):
         key="ifnmg_token",
         value="",
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=settings.APP_ENV == "production",
+        samesite="lax",
         max_age=0,
         path="/",
     )
@@ -223,7 +240,8 @@ async def moodle_login(
         user.moodle_token_enc = crypto_service.encrypt(moodle_token)
         db.commit()
 
-    if not get_sync_status(user.id, db).get("running", False):
+    sync_status = get_sync_status(user.id, db)
+    if not (sync_status.get("running") or sync_status.get("enrichment_running")):
         mark_sync_queued(db, user.id)
         background_tasks.add_task(sync_moodle_for_user, user.id)
 
@@ -250,11 +268,11 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "name": current_user.name,
         "email": current_user.email,
         "moodle_connected": current_user.moodle_connected,
-        "moodle_last_sync": current_user.moodle_last_sync,
+        "moodle_last_sync": utc_iso(current_user.moodle_last_sync),
         "ai_provider": current_user.ai_provider or "groq",
         "theme": current_user.theme or "dark",
         "notification_settings": current_user.notification_settings or {},
-        "created_at": current_user.created_at,
+        "created_at": utc_iso(current_user.created_at),
     }
 
 
@@ -269,6 +287,7 @@ async def create_websocket_ticket(current_user: User = Depends(get_current_user)
             "exp": now + timedelta(seconds=60),
             "aud": "websocket",
             "scope": "notifications:read",
+            "sv": int(current_user.session_version or 0),
             "jti": secrets.token_hex(16),
         },
         settings.SECRET_KEY,
@@ -279,17 +298,17 @@ async def create_websocket_ticket(current_user: User = Depends(get_current_user)
 
 @router.put("/me", response_model=dict)
 async def update_me(
-    data: dict,
+    data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Atualiza preferências do usuário (tema, ai_provider, etc)."""
-    if "theme" in data and data["theme"] in ("dark", "light"):
-        current_user.theme = data["theme"]
-    if "ai_provider" in data and data["ai_provider"] in ("groq", "gemini", "openai", "anthropic", "ollama"):
-        current_user.ai_provider = data["ai_provider"]
-    if "name" in data and data["name"]:
-        current_user.name = data["name"]
+    if data.theme in ("dark", "light"):
+        current_user.theme = data.theme
+    if data.ai_provider in ("groq", "gemini", "openai", "anthropic", "ollama"):
+        current_user.ai_provider = data.ai_provider
+    if data.name:
+        current_user.name = data.name.strip()
 
     db.commit()
     db.refresh(current_user)
@@ -299,11 +318,11 @@ async def update_me(
         "name": current_user.name,
         "email": current_user.email,
         "moodle_connected": current_user.moodle_connected,
-        "moodle_last_sync": current_user.moodle_last_sync,
+        "moodle_last_sync": utc_iso(current_user.moodle_last_sync),
         "ai_provider": current_user.ai_provider or "groq",
         "theme": current_user.theme or "dark",
         "notification_settings": current_user.notification_settings or {},
-        "created_at": current_user.created_at,
+        "created_at": utc_iso(current_user.created_at),
     }
 
 

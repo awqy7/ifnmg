@@ -14,7 +14,6 @@ const LazyLoading = () => <div className="flex min-h-52 items-center justify-cen
 const ActivitiesView = dynamic(() => import("@/components/activities/ActivitiesView"), { loading: LazyLoading });
 const CoursesView = dynamic(() => import("@/components/courses/CoursesView"), { loading: LazyLoading });
 const ChatView = dynamic(() => import("@/components/chat/ChatView"), { loading: LazyLoading });
-const ScheduleView = dynamic(() => import("@/components/schedule/ScheduleView"), { loading: LazyLoading });
 const StudyToolsView = dynamic(() => import("@/components/study/StudyToolsView"), { loading: LazyLoading });
 const SettingsView = dynamic(() => import("@/components/settings/SettingsView"), { loading: LazyLoading });
 
@@ -23,7 +22,6 @@ export type ViewType =
   | "atividades"
   | "cursos"
   | "chat"
-  | "horarios"
   | "estudo"
   | "configuracoes";
 
@@ -38,7 +36,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fromHash = window.location.hash.replace("#", "") as ViewType;
-    const valid: ViewType[] = ["home", "atividades", "cursos", "chat", "horarios", "estudo", "configuracoes"];
+    const valid: ViewType[] = ["home", "atividades", "cursos", "chat", "estudo", "configuracoes"];
     if (valid.includes(fromHash)) setCurrentView(fromHash);
     const handleHistory = () => {
       const value = window.location.hash.replace("#", "") as ViewType;
@@ -78,7 +76,6 @@ export default function Dashboard() {
     atividades: <ActivitiesView openActivity={openActivityModal} />,
     cursos: <CoursesView openChat={openChat} />,
     chat: <ChatView initialPrompt={chatInitialPrompt} initialCourseId={chatInitialCourseId} />,
-    horarios: <ScheduleView />,
     estudo: <StudyToolsView />,
     configuracoes: <SettingsView />,
   };

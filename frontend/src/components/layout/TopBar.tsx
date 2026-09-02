@@ -198,12 +198,13 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
           {/* AI Tutor Quick Access */}
           <button
-            disabled
+            type="button"
+            onClick={() => onNavigate("chat")}
             className={`${
               !user?.moodle_connected ? "hidden sm:flex" : "flex"
-            } min-w-10 h-10 sm:h-9 items-center justify-center gap-1.5 px-2 sm:px-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] text-[11px] font-medium text-neutral-600 cursor-not-allowed transition-colors`}
-            aria-label="Chat IA em breve"
-            title="Chat com IA (Em breve)"
+            } min-w-10 h-10 sm:h-9 items-center justify-center gap-1.5 px-2 sm:px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-[var(--border)] text-[11px] font-medium text-neutral-300 transition-colors`}
+            aria-label="Abrir Chat IA"
+            title="Abrir Chat IA"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">IA</span>
@@ -275,6 +276,12 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           </div>
         </div>
       </div>
+      <div aria-live="polite" className="sr-only">{syncProgress || ""}</div>
+      {syncProgress && (
+        <div className="sm:hidden truncate border-t border-[var(--border)] px-3 py-1.5 text-center text-[10px] text-neutral-400">
+          {syncProgress}
+        </div>
+      )}
     </header>
   );
 }

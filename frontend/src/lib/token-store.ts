@@ -1,18 +1,14 @@
 /**
- * tokenStore — Armazenamento centralizado do JWT para compatibilidade com
- * Safari iOS e browsers que bloqueiam cookies cross-site (ITP).
+ * tokenStore — fallback em memória para a requisição que acabou de autenticar.
  *
- * Estratégia: prioridade em camadas
- * 1. Memória (mais seguro, perdido ao recarregar) → estado React-like
- * 2. sessionStorage (tab/janela atual)
- * 3. localStorage (persistência entre sessões, necessário no iOS Safari)
- *
- * O token é limpo em logout() ou quando /api/auth/me retorna 401.
+ * A sessão persistente fica somente no cookie httpOnly. JWT em localStorage ou
+ * sessionStorage poderia ser lido por qualquer script injetado na página.
  */
 
 const KEY = "ifnmg_jwt";
 
 let _inMemory: string | null = null;
+let legacyStorageCleared = false;
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -20,40 +16,34 @@ function isBrowser() {
 
 export const tokenStore = {
   /**
-   * Salva o token em memória + sessionStorage + localStorage (fallback iOS).
+   * Salva o token apenas em memória. O cookie httpOnly mantém a sessão.
    */
   set(token: string | null) {
     _inMemory = token;
     if (!isBrowser()) return;
     try {
-      if (token) {
-        sessionStorage.setItem(KEY, token);
-        localStorage.setItem(KEY, token);
-      } else {
-        sessionStorage.removeItem(KEY);
-        localStorage.removeItem(KEY);
-      }
+      sessionStorage.removeItem(KEY);
+      localStorage.removeItem(KEY);
+      legacyStorageCleared = true;
     } catch {
       // Storage pode ser bloqueado em modo privado do Safari
     }
   },
 
   /**
-   * Lê o token: memória → sessionStorage → localStorage.
+   * Lê somente da memória e remove tokens persistidos por versões antigas.
    */
   get(): string | null {
     if (_inMemory) return _inMemory;
     if (!isBrowser()) return null;
-    try {
-      const s = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
-      if (s) {
-        _inMemory = s; // restaura em memória
-        return s;
-      }
-    } catch {
-      // sem acesso ao storage
+    if (!legacyStorageCleared) {
+      try {
+        sessionStorage.removeItem(KEY);
+        localStorage.removeItem(KEY);
+      } catch {}
+      legacyStorageCleared = true;
     }
-    return null;
+    return _inMemory;
   },
 
   /**

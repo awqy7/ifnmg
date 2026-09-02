@@ -22,12 +22,16 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [courseMaterials, setCourseMaterials] = useState<Record<string, any[]>>({});
   const [loadingMaterials, setLoadingMaterials] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const loadCourses = async () => {
     setLoading(true);
+    setError(null);
     try {
       const crs = await coursesApi.list();
       setCourses(crs);
+      // Libera a tela assim que as disciplinas chegam. Materiais são lazy-load.
+      setLoading(false);
       if (crs.length > 0) {
         const firstId = crs[0].id;
         setExpandedCourse(firstId);
@@ -39,8 +43,10 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
           setLoadingMaterials((prev) => ({ ...prev, [firstId]: false }));
         }
       }
-    } catch {}
-    setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar as disciplinas.");
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -74,6 +80,13 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
           Materiais, PDFs e conteudo organizados por disciplina
         </p>
       </div>
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-xs text-red-300/90">
+          <span>{error}</span>
+          <button type="button" onClick={loadCourses} className="font-semibold text-red-200 hover:text-white">Tentar novamente</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="p-12 flex items-center justify-center">

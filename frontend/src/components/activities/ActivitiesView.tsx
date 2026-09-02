@@ -170,8 +170,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
             return (
               <div
                 key={act.id}
-                onClick={() => openActivity && openActivity(act.id)}
-                className="bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500/[0.12] p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors cursor-pointer group"
+                className="bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500/[0.12] p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors group"
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <button
@@ -200,12 +199,16 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
 
                     <div className="flex items-center gap-2">
                       <span className="p-0.5 rounded bg-white/[0.02]">{getTypeIcon(act.type)}</span>
-                      <h3
-                        className={`text-xs font-medium text-neutral-200 group-hover:text-emerald-300/90 transition-colors ${
-                          isSubmitted || isManualCompleted ? "line-through text-neutral-600" : ""
-                        }`}
-                      >
-                        {act.title}
+                      <h3 className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => openActivity?.(act.id)}
+                          className={`text-left text-xs font-medium text-neutral-200 hover:text-emerald-300/90 transition-colors ${
+                            isSubmitted || isManualCompleted ? "line-through text-neutral-600" : ""
+                          }`}
+                        >
+                          {act.title}
+                        </button>
                       </h3>
                     </div>
 
@@ -242,11 +245,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
-                  <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] group-hover:bg-white/[0.06] border border-[var(--border)] text-[10px] font-medium text-neutral-400 transition-colors">
+                  <button type="button" onClick={() => openActivity?.(act.id)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] group-hover:bg-white/[0.06] border border-[var(--border)] text-[10px] font-medium text-neutral-400 transition-colors">
                     <Sparkles className="w-3 h-3 text-emerald-400/60" />
                     <span>Detalhes</span>
                     <ChevronRight className="w-3 h-3 text-neutral-600 group-hover:translate-x-0.5 transition-transform" />
-                  </span>
+                  </button>
                 </div>
               </div>
             );

@@ -7,7 +7,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
 ## ✨ Funcionalidades Principais
 
 1. 🔐 **Login Automático & Seguro no Virtual2**:
-   - Integração com `https://virtual2.ifnmg.edu.br/` via Playwright headless e Moodle REST API.
+   - Integração com `https://virtual2.ifnmg.edu.br/` via Moodle REST API e sessão HTTP; Playwright é um fallback opcional de desenvolvimento.
    - Suas credenciais são criptografadas em repouso com **Fernet (AES-128)**.
 
 2. 📋 **Central Unificada de Atividades & Prazos**:
@@ -16,7 +16,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
    - Links diretos para as páginas do Moodle.
 
 3. 🌅 **Briefing Matinal Diário com IA**:
-   - Analisa sua grade de horários do dia, tarefas pendentes e materiais recentes.
+   - Analisa tarefas pendentes, disciplinas e materiais recentes.
    - Exibe foco principal, métricas, urgências e um plano de estudo acionável.
    - Abre instantaneamente com o último snapshot local enquanto atualiza em segundo plano.
 
@@ -28,10 +28,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
    - **Gerador de Flashcards**: Criação de baralhos de memorização a partir dos materiais da aula.
    - **Simulado de Provas**: Cria questões de múltipla escolha com correção imediata e justificativas.
 
-6. 🕒 **Grade Semanal de Horários**:
-   - Configuração visual da grade de aulas.
-
-7. 🔔 **Notificações Inteligentes**:
+6. 🔔 **Notificações Inteligentes**:
    - Alertas de novas atividades postadas e lembretes de prazos (7 dias, 3 dias, 1 dia e 6 horas antes).
 
 ---
@@ -39,7 +36,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
 ## 🛠️ Tecnologias Utilizadas
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS, Lucide Icons, Date-fns
-- **Backend**: Python 3.11+, FastAPI, SQLAlchemy, APScheduler, LiteLLM, Playwright, PyWebPush, Passlib/Bcrypt
+- **Backend**: Python 3.11+, FastAPI, SQLAlchemy, APScheduler, LiteLLM, PyWebPush e Passlib/Bcrypt
 - **Banco de Dados**: SQLite (desenvolvimento) / PostgreSQL (produção)
 - **IA**: Google Gemini 1.5 Flash (Gratuito por padrão), Groq, OpenAI GPT-4o Mini, Claude 3, Ollama
 
@@ -66,7 +63,7 @@ O sistema usa **3 serviços**:
 | Serviço | O que roda | Host |
 |---|---|---|
 | Frontend (Next.js) | Interface web (porta 3000) | **Vercel** |
-| Backend (FastAPI/Python) | API, IA, Playwright, WebSocket | **Upuai Cloud (Brasil)** |
+| Backend (FastAPI/Python) | API, IA, sincronização e WebSocket | **Upuai Cloud (Brasil)** |
 | Banco de dados | PostgreSQL | **Supabase** |
 
 > ⚠️ **O backend precisa rodar com IP brasileiro.** O Moodle do Virtual2 (`virtual2.ifnmg.edu.br`) bloqueia autenticação vinda de IPs estrangeiros/datacenters fora do Brasil — por isso o **Render (EUA) não funciona** para o login. Soluções com IP no Brasil: **Upuai Cloud** (PaaS BR, recomendado), Brasa Cloud (beta) ou Google Cloud Run em `southamerica-east1`.
@@ -114,7 +111,7 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
 5. Adicione as env vars:
    - `APP_ENV=production`
    - `DATABASE_URL` (string do pooler acima — troque SENHA pela senha real do banco)
-   - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (ou deixe padrão; domínios `*.vercel.app` já são aceitos)
+   - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (inclua cada domínio de produção/preview explicitamente)
    - `GROQ_API_KEY`, `SECRET_KEY`, `ENCRYPTION_KEY` etc. conforme necessário
 
 #### e) Vercel (frontend)

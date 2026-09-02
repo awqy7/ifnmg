@@ -131,6 +131,7 @@ class ActivityResponsePdfTests(unittest.TestCase):
                     "app.routers.activities.ai_service.generate_activity_draft",
                     new=AsyncMock(return_value="Resposta baseada no enunciado."),
                 ),
+                patch("app.routers.activities.consume_ai_request"),
             ):
                 return await generate_activity_response_pdf_endpoint("activity-1", user, db)
 
@@ -169,6 +170,7 @@ class ActivityResponsePdfTests(unittest.TestCase):
                     new=AsyncMock(return_value=("ANEXO: roteiro.pdf\nConteúdo completo", "roteiro.pdf")),
                 ),
                 patch("app.routers.activities.ai_service.chat", new=chat),
+                patch("app.routers.activities.consume_ai_request"),
             ):
                 return await explain_activity_with_ai("activity-2", user, db)
 

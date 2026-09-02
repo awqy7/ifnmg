@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SyncProvider } from "@/contexts/SyncContext";
 import { Analytics } from "@vercel/analytics/next";
+import PwaRegistrar from "@/components/PwaRegistrar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,6 +41,7 @@ export default function RootLayout({
             {children}
           </SyncProvider>
         </AuthProvider>
+        <PwaRegistrar />
         <Analytics />
       </body>
     </html>

@@ -3,28 +3,11 @@ from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.services.datetime_utils import utc_now_naive
 
 
 def gen_uuid():
     return str(uuid.uuid4())
-
-
-class Schedule(Base):
-    """Slot da grade de horários do aluno."""
-    __tablename__ = "schedules"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    day_of_week = Column(Integer, nullable=False)  # 0=Seg, 1=Ter, ..., 5=Sab
-    start_time = Column(String(5), nullable=False)   # "07:00"
-    end_time = Column(String(5), nullable=False)     # "08:40"
-    course_id = Column(String, ForeignKey("courses.id"), nullable=True)
-    course_name = Column(String(500))  # Nome manual, caso não vinculado
-    room = Column(String(100), nullable=True)
-    color = Column(String(7), default="#6366f1")
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User", back_populates="schedules")
 
 
 class Notification(Base):
@@ -41,7 +24,7 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     sent_push = Column(Boolean, default=False)
     sent_telegram = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
 
     user = relationship("User", back_populates="notifications")
 
@@ -55,8 +38,8 @@ class ChatSession(Base):
     course_id = Column(String, ForeignKey("courses.id"), nullable=True)
     title = Column(String(500), default="Nova conversa")
     ai_provider = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     user = relationship("User", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
@@ -71,7 +54,7 @@ class ChatMessage(Base):
     role = Column(String(10), nullable=False)  # "user" ou "assistant"
     content = Column(Text, nullable=False)
     tokens_used = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
 
     session = relationship("ChatSession", back_populates="messages")
 
@@ -85,7 +68,7 @@ class FlashcardDeck(Base):
     course_id = Column(String, ForeignKey("courses.id"), nullable=True)
     name = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
 
     user = relationship("User", back_populates="flashcard_decks")
     cards = relationship("Flashcard", back_populates="deck", cascade="all, delete-orphan")
@@ -100,7 +83,7 @@ class Flashcard(Base):
     front = Column(Text, nullable=False)
     back = Column(Text, nullable=False)
     difficulty = Column(Integer, default=0)  # 0=novo, 1=fácil, 2=médio, 3=difícil
-    next_review = Column(DateTime, default=datetime.utcnow)
+    next_review = Column(DateTime, default=utc_now_naive)
     review_count = Column(Integer, default=0)
 
     deck = relationship("FlashcardDeck", back_populates="cards")
@@ -115,7 +98,7 @@ class DailyBriefing(Base):
     date = Column(String(10), nullable=False)  # "2024-08-24"
     content = Column(Text, nullable=False)  # Markdown gerado pela IA
     courses_today = Column(JSON)  # Lista de cursos do dia
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
 
 
 class SyncState(Base):
@@ -124,4 +107,14 @@ class SyncState(Base):
 
     user_id = Column(String, ForeignKey("users.id"), primary_key=True)
     status = Column(JSON, default=dict, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+
+class AIRequestLog(Base):
+    """Contador durável das operações de IA sujeitas à cota diária."""
+    __tablename__ = "ai_request_logs"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    operation = Column(String(40), nullable=False)
+    created_at = Column(DateTime, default=utc_now_naive, nullable=False, index=True)

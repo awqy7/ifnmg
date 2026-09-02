@@ -178,3 +178,8 @@ body {
   background: rgba(52, 211, 153, 0.2);
   color: #ecfdf5;
 }
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgb(52 211 153 / 0.9);
+  outline-offset: 3px;
+}

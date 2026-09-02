@@ -2,12 +2,14 @@
 Serviço de notificações: in-app, Web Push e Telegram.
 """
 import json
+import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
+from app.services.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +40,10 @@ class NotificationService:
         """Cria notificação no banco e envia via push/telegram."""
         from app.models import Notification
         from app.config import settings
-        from datetime import timedelta
 
         # ── Deduplicação: evita notificações repetidas a cada sync ──
         if related_id:
-            from datetime import datetime
-            cutoff = datetime.utcnow() - timedelta(hours=24)
+            cutoff = utc_now_naive() - timedelta(hours=24)
             exists = db.query(Notification).filter(
                 Notification.user_id == user_id,
                 Notification.notification_type == notif_type,
@@ -107,7 +107,7 @@ class NotificationService:
         if not settings.VAPID_PRIVATE_KEY:
             return
 
-        from pywebpush import webpush, WebPushException
+        from pywebpush import webpush
 
         payload = json.dumps({
             "title": title,
@@ -116,7 +116,8 @@ class NotificationService:
             "icon": "/icon-192x192.png",
         })
 
-        webpush(
+        await asyncio.to_thread(
+            webpush,
             subscription_info=subscription,
             data=payload,
             vapid_private_key=settings.VAPID_PRIVATE_KEY,
@@ -129,7 +130,7 @@ class NotificationService:
         from app.config import settings
 
         async with httpx.AsyncClient() as client:
-            await client.post(
+            response = await client.post(
                 f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
                 json={
                     "chat_id": chat_id,
@@ -138,6 +139,7 @@ class NotificationService:
                 },
                 timeout=10.0,
             )
+            response.raise_for_status()
 
     async def _broadcast_ws(self, user_id: str, data: dict):
         """Envia notificação via WebSocket para o usuário."""

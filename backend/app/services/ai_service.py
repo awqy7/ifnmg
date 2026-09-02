@@ -123,7 +123,16 @@ class AIService:
         from app.config import settings
 
         model = PROVIDER_MODELS[provider]
+        if provider == AIProvider.GROQ:
+            groq_model = settings.GROQ_MODEL.removeprefix("groq/")
+            model = f"groq/{groq_model}"
         kwargs = {"model": model}
+
+        if provider == AIProvider.GROQ and "gpt-oss" in model:
+            kwargs.update({
+                "reasoning_effort": "low",
+                "include_reasoning": False,
+            })
 
         if custom_api_keys and provider.value in custom_api_keys:
             key = custom_api_keys[provider.value]
@@ -176,12 +185,19 @@ class AIService:
             return _strip_thinking(content)
 
         except Exception as e:
-            if provider == AIProvider.GROQ and ("rate_limit" in str(e).lower() or "413" in str(e) or "429" in str(e)):
+            error_message = str(e).lower()
+            if provider == AIProvider.GROQ and any(marker in error_message for marker in (
+                "model_not_found", "does not exist", "do not have access",
+                "rate_limit", "413", "429",
+            )):
                 try:
-                    logger.warning("Groq rate limit atingido, tentando fallback para gpt-oss-120b...")
+                    from app.config import settings
+
+                    fallback_model = settings.GROQ_FALLBACK_MODEL.removeprefix("groq/")
+                    logger.warning("Modelo Groq principal indisponível; tentando fallback configurado")
                     fallback_kwargs = self._build_litellm_kwargs(provider, api_key, custom_api_keys)
                     fallback_kwargs.update({
-                        "model": "groq/openai/gpt-oss-120b",
+                        "model": f"groq/{fallback_model}",
                         "messages": messages,
                         "max_tokens": max_tokens,
                         "temperature": temperature,
@@ -238,12 +254,14 @@ class AIService:
                 messages=[{"role": "user", "content": "Responda apenas: OK"}],
                 provider=provider,
                 api_key=api_key,
-                max_tokens=10,
+                max_tokens=64,
                 temperature=0,
             )
+            if not response.strip():
+                raise RuntimeError("O provedor respondeu sem conteúdo")
             return {"success": True, "provider": provider, "response": response}
         except Exception as e:
-            return {"success": False, "provider": provider, "error": str(e)}
+            return {"success": False, "provider": provider, "error": _safe_error(e)}
 
     # ─────────────────────────────────────────────────────────────
     # PROMPTS ESPECIALIZADOS

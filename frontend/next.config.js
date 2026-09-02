@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const isProduction = process.env.NODE_ENV === "production";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const apiOrigin = new URL(apiUrl).origin;
+const websocketOrigin = apiOrigin.replace(/^http/, "ws");
 
 const nextConfig = {
   reactStrictMode: true,
@@ -10,7 +13,7 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*`,
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },
@@ -49,7 +52,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "img-src 'self' data: https:",
-              "connect-src 'self' https://*.vercel.app https://*.supabase.co wss://*.supabase.co https://ifnmg-production.apps.upuai.cloud http://localhost:8000",
+              `connect-src 'self' https://*.vercel.app https://*.supabase.co wss://*.supabase.co ${apiOrigin} ${websocketOrigin}`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   X,
   Clock,
@@ -34,11 +34,24 @@ export default function ActivityModal({
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const pdfUrlRef = useRef<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const loadDetails = useCallback(async (id: string) => {
+    setLoading(true);
+    setDetailsError(null);
+    try {
+      setDetails(await activitiesApi.getDetails(id));
+    } catch (error) {
+      setDetailsError(error instanceof Error ? error.message : "Não foi possível carregar a atividade.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!activityId) return;
-    setLoading(true);
     setDetails(null);
     if (pdfUrlRef.current) {
       URL.revokeObjectURL(pdfUrlRef.current);
@@ -46,12 +59,25 @@ export default function ActivityModal({
     }
     setPdfUrl(null);
 
-    activitiesApi
-      .getDetails(activityId)
-      .then((data) => setDetails(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [activityId]);
+    loadDetails(activityId);
+  }, [activityId, loadDetails]);
+
+  useEffect(() => {
+    if (!activityId) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !showCompletionDialog) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [activityId, onClose, showCompletionDialog]);
 
   useEffect(() => {
     return () => {
@@ -124,7 +150,7 @@ export default function ActivityModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-y-auto">
+    <div onMouseDown={(event) => event.target === event.currentTarget && onClose()} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center overflow-y-auto">
       <div
         role="dialog"
         aria-modal="true"
@@ -148,6 +174,7 @@ export default function ActivityModal({
           </div>
 
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
             aria-label="Fechar modal"
@@ -162,6 +189,13 @@ export default function ActivityModal({
             <div className="py-14 flex flex-col items-center justify-center gap-2 text-neutral-500">
               <CogSpinner size={24} className="text-neutral-600" />
               <p className="text-[11px]">Carregando detalhes...</p>
+            </div>
+          ) : detailsError ? (
+            <div role="alert" className="py-12 text-center">
+              <p className="text-sm text-rose-300">{detailsError}</p>
+              <button type="button" onClick={() => loadDetails(activityId)} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-white hover:bg-white/5">
+                Tentar novamente
+              </button>
             </div>
           ) : (
             <>

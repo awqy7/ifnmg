@@ -1,11 +1,11 @@
 """
 WebSocket para notificações em tempo real.
 """
-import json
 import logging
+import re
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Header, Cookie
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import jwt
 from jwt import InvalidTokenError
 
@@ -56,55 +56,60 @@ manager = ConnectionManager()
 
 
 async def get_ws_user_id(
-    websocket: WebSocket,
-    authorization: Optional[str] = Header(None),
-    token_query: Optional[str] = Query(None, alias="token"),
-    token_cookie: Optional[str] = Cookie(None, alias="ifnmg_token"),
+    token: Optional[str],
 ) -> Optional[str]:
-    """Extrai e valida o token JWT de header, query ou cookie (preferência: header > cookie > query)."""
-    token = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
-    elif token_cookie:
-        token = token_cookie
-    elif token_query:
-        token = token_query
-    
+    """Valida o ticket curto e exclusivo emitido para notificações."""
     if not token:
         return None
-    
+
     try:
-        decode_options = {"audience": "websocket"} if token_query and token == token_query else {}
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM], **decode_options)
-        if token_query and token == token_query and payload.get("scope") != "notifications:read":
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience="websocket",
+        )
+        if payload.get("scope") != "notifications:read":
             return None
         user_id = payload.get("sub")
-        if not user_id:
+        session_version = payload.get("sv")
+        if not user_id or session_version is None:
             return None
         db = SessionLocal()
         try:
-            active = db.query(User.id).filter(User.id == user_id, User.is_active == True).first()
-            return user_id if active else None
+            active = db.query(User.id, User.session_version).filter(
+                User.id == user_id,
+                User.is_active == True,
+            ).first()
+            return user_id if active and int(active.session_version or 0) == int(session_version) else None
         finally:
             db.close()
-    except InvalidTokenError:
+    except (InvalidTokenError, TypeError, ValueError):
         return None
+
+
+def _websocket_origin_allowed(origin: Optional[str]) -> bool:
+    if not origin:
+        return settings.APP_ENV != "production"
+    if origin in settings.allowed_origins_list:
+        return True
+    return bool(
+        settings.ALLOWED_ORIGIN_REGEX
+        and re.fullmatch(settings.ALLOWED_ORIGIN_REGEX, origin)
+    )
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None),
 ):
-    """WebSocket autenticado para notificações em tempo real.
-    
-    Token pode ser enviado via:
-    - Header Authorization: Bearer <token> (recomendado)
-    - Cookie ifnmg_token (para navegadores)
-    - Query param ?token= (fallback, menos seguro)
-    """
-    user_id = await get_ws_user_id(websocket, authorization, token)
+    """WebSocket autenticado exclusivamente por ticket curto e restrito."""
+    if not _websocket_origin_allowed(websocket.headers.get("origin")):
+        await websocket.close(code=4003, reason="Origin not allowed")
+        return
+
+    user_id = await get_ws_user_id(token)
     
     if not user_id:
         await websocket.close(code=4001, reason="Unauthorized")
