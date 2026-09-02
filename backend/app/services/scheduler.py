@@ -4,6 +4,7 @@ Sync completo do Moodle: API oficial (webservice) como fonte primária,
 HTML scraper como fallback. Sincroniza cursos, atividades (com UPDATE),
 materiais (com extração de texto p/ IA) e notificações escalonadas de prazo.
 """
+import asyncio
 import hashlib
 import json
 import logging
@@ -19,6 +20,7 @@ from sqlalchemy import text
 from app.database import SessionLocal
 from app.config import settings
 from app.services.activity_status import effective_activity_status, normalise_moodle_status
+from app.services.datetime_utils import UTC, to_utc_naive, utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ scheduler = AsyncIOScheduler(timezone="America/Sao_Paulo")
 
 # Status de sync em memória (por usuário) para feedback no frontend
 _sync_status: Dict[str, dict] = {}
+_active_syncs: set[str] = set()
 
 
 def _persist_sync_status(db: Session, user_id: str) -> None:
@@ -36,7 +39,7 @@ def _persist_sync_status(db: Session, user_id: str) -> None:
     payload = dict(_sync_status.get(user_id, {"running": False}))
     if state:
         state.status = payload
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now_naive()
     else:
         db.add(SyncState(user_id=user_id, status=payload))
     db.commit()
@@ -49,7 +52,7 @@ def mark_sync_queued(db: Session, user_id: str) -> None:
     payload = {
         "running": True,
         "phase": "queued",
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": utc_now_naive().isoformat(),
         "courses_done": 0,
         "activities": 0,
         "materials": 0,
@@ -59,7 +62,7 @@ def mark_sync_queued(db: Session, user_id: str) -> None:
     state = db.query(SyncState).filter(SyncState.user_id == user_id).first()
     if state:
         state.status = payload
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now_naive()
     else:
         db.add(SyncState(user_id=user_id, status=payload))
     db.commit()
@@ -67,7 +70,7 @@ def mark_sync_queued(db: Session, user_id: str) -> None:
 
 def get_sync_status(user_id: str, db: Optional[Session] = None) -> dict:
     memory_status = _sync_status.get(user_id)
-    if memory_status and memory_status.get("running"):
+    if memory_status and (memory_status.get("running") or memory_status.get("enrichment_running")):
         return memory_status
 
     from app.models import SyncState
@@ -81,7 +84,7 @@ def get_sync_status(user_id: str, db: Optional[Session] = None) -> dict:
         started_at = status.get("started_at")
         if status.get("running") and started_at:
             try:
-                if datetime.utcnow() - datetime.fromisoformat(started_at) > timedelta(minutes=45):
+                if utc_now_naive() - datetime.fromisoformat(started_at) > timedelta(minutes=45):
                     status["running"] = False
                     status["error"] = "Sincronização anterior interrompida"
             except (TypeError, ValueError):
@@ -92,25 +95,43 @@ def get_sync_status(user_id: str, db: Optional[Session] = None) -> dict:
             session.close()
 
 
-def _acquire_distributed_lock(db: Session, user_id: str) -> bool:
-    """Usa advisory lock no PostgreSQL; SQLite continua protegido pelo estado local."""
-    if db.bind and db.bind.dialect.name == "postgresql":
-        return bool(db.execute(
-            text("SELECT pg_try_advisory_lock(hashtext(:lock_key))"),
-            {"lock_key": f"moodle-sync:{user_id}"},
-        ).scalar())
-    return not _sync_status.get(user_id, {}).get("running", False)
+def _acquire_distributed_lock(db: Session, user_id: str):
+    """Mantém o advisory lock numa conexão dedicada até o fim do job."""
+    if user_id in _active_syncs:
+        return None
+    _active_syncs.add(user_id)
 
-
-def _release_distributed_lock(db: Session, user_id: str) -> None:
     if db.bind and db.bind.dialect.name == "postgresql":
+        connection = db.get_bind().connect()
         try:
-            db.execute(
+            acquired = bool(connection.execute(
+                text("SELECT pg_try_advisory_lock(hashtext(:lock_key))"),
+                {"lock_key": f"moodle-sync:{user_id}"},
+            ).scalar())
+        except Exception:
+            connection.close()
+            _active_syncs.discard(user_id)
+            raise
+        if not acquired:
+            connection.close()
+            _active_syncs.discard(user_id)
+            return None
+        return connection
+    return True
+
+
+def _release_distributed_lock(lock_handle, user_id: str) -> None:
+    if lock_handle is not True:
+        try:
+            lock_handle.execute(
                 text("SELECT pg_advisory_unlock(hashtext(:lock_key))"),
                 {"lock_key": f"moodle-sync:{user_id}"},
             )
         except Exception:
             logger.warning("Não foi possível liberar o lock de sync do usuário %s", user_id)
+        finally:
+            lock_handle.close()
+    _active_syncs.discard(user_id)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -119,16 +140,16 @@ def _release_distributed_lock(db: Session, user_id: str) -> None:
 
 def _parse_datetime(value) -> Optional[datetime]:
     if isinstance(value, datetime):
-        return value.replace(tzinfo=None) if value.tzinfo else value
+        return to_utc_naive(value)
     if isinstance(value, (int, float)) and value > 0:
         try:
-            return datetime.fromtimestamp(value)
+            return datetime.fromtimestamp(value, UTC).replace(tzinfo=None)
         except (OverflowError, OSError, ValueError):
             return None
     if value:
         try:
             parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-            return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+            return to_utc_naive(parsed)
         except (TypeError, ValueError):
             return None
     return None
@@ -189,7 +210,7 @@ async def _upsert_activity(
             moodle_status=moodle_status,
             moodle_submission_at=moodle_submission_at,
             is_group_activity=bool(act_data.get("is_group_activity")),
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=utc_now_naive(),
             url=act_data.get("url", ""),
             is_new=True,
             notified=False,
@@ -228,7 +249,7 @@ async def _upsert_activity(
             moodle_submission_at if moodle_status in {"submitted", "graded"} else None
         )
         activity.is_group_activity = bool(act_data.get("is_group_activity") or activity.is_group_activity)
-        activity.last_seen_at = datetime.utcnow()
+        activity.last_seen_at = utc_now_naive()
         activity.removed_at = None
         # Atividade existente: não é nova
         activity.is_new = False
@@ -267,7 +288,7 @@ async def _upsert_activity(
             if extracted_parts:
                 raw_data["content_text"] = "\n\n".join(extracted_parts)[:25000]
             raw_data["content_fingerprint"] = files_fingerprint
-            raw_data["content_extraction_at"] = datetime.utcnow().isoformat()
+            raw_data["content_extraction_at"] = utc_now_naive().isoformat()
             activity.raw_data = raw_data
         except Exception as e:
             logger.debug(f"Erro ao extrair anexo da atividade {mid}: {e}")
@@ -366,7 +387,7 @@ async def _sync_materials(
             materials_by_key[mat_key] = material
         else:
             material.is_active = True
-            material.updated_at = datetime.utcnow()
+            material.updated_at = utc_now_naive()
             material.title = title[:500]
             if mat_data.get("topic_name"):
                 material.topic_name = mat_data["topic_name"]
@@ -415,13 +436,13 @@ async def _sync_materials(
             if extraction_meta:
                 extraction_meta.fingerprint = fingerprint
                 extraction_meta.extraction_attempted = True
-                extraction_meta.extracted_at = datetime.utcnow() if text_parts else extraction_meta.extracted_at
+                extraction_meta.extracted_at = utc_now_naive() if text_parts else extraction_meta.extracted_at
             else:
                 extraction_meta = MaterialSyncMeta(
                     material_id=material.id,
                     fingerprint=fingerprint,
                     extraction_attempted=True,
-                    extracted_at=datetime.utcnow() if text_parts else None,
+                    extracted_at=utc_now_naive() if text_parts else None,
                 )
                 db.add(extraction_meta)
                 meta_by_material_id[material.id] = extraction_meta
@@ -450,17 +471,17 @@ async def sync_moodle_for_user(user_id: str):
     from app.services.moodle_scraper import MoodleScraper
 
     db: Session = SessionLocal()
-    lock_acquired = False
+    lock_handle = None
     try:
-        lock_acquired = _acquire_distributed_lock(db, user_id)
-        if not lock_acquired:
+        lock_handle = _acquire_distributed_lock(db, user_id)
+        if lock_handle is None:
             logger.info("Sync já em andamento para %s; chamada duplicada ignorada", user_id)
             return
 
         _sync_status[user_id] = {
             "running": True,
             "phase": "syncing",
-            "started_at": datetime.utcnow().isoformat(),
+            "started_at": utc_now_naive().isoformat(),
             "courses_done": 0,
             "activities": 0,
             "materials": 0,
@@ -558,7 +579,48 @@ async def sync_moodle_for_user(user_id: str):
             extraction_budget = [0]
             activity_extraction_budget = [0]
 
-            for idx, course_data in enumerate(courses_data):
+            # A rede domina o tempo da sincronização. Busca no máximo três
+            # disciplinas em paralelo e mantém as escritas no banco seriadas.
+            course_semaphore = asyncio.Semaphore(3)
+
+            async def load_course_content(course_data):
+                async with course_semaphore:
+                    moodle_id = course_data["moodle_id"]
+                    content = None
+                    source = "html"
+                    if ws and use_ws:
+                        try:
+                            content = await collect_course_data(ws, moodle_id)
+                            source = "ws"
+                        except Exception as exc:
+                            logger.warning(
+                                "[%s] WS falhou (%s), usando HTML",
+                                course_data["name"],
+                                exc,
+                            )
+                    if not content:
+                        try:
+                            content = await scraper.get_course_content(moodle_id)
+                            source = "html"
+                        except Exception as exc:
+                            logger.warning(
+                                "[%s] coleta HTML falhou sem interromper as demais: %s",
+                                course_data["name"],
+                                exc,
+                            )
+                            content = {
+                                "activities": [],
+                                "materials": [],
+                                "teacher": None,
+                                "collection_complete": False,
+                            }
+                    return course_data, content, source
+
+            course_payloads = await asyncio.gather(*(
+                load_course_content(course_data) for course_data in courses_data
+            ))
+
+            for idx, (course_data, content, source) in enumerate(course_payloads):
                 moodle_id = course_data["moodle_id"]
                 seen_course_ids.add(moodle_id)
                 course = courses_by_moodle_id.get(moodle_id)
@@ -586,20 +648,8 @@ async def sync_moodle_for_user(user_id: str):
                     if course_data.get("progress") is not None:
                         course.progress = course_data["progress"]
                     course.is_active = True
-                    course.updated_at = datetime.utcnow()
+                    course.updated_at = utc_now_naive()
 
-                # ── Conteúdo do curso ──
-                content = None
-                source = "html"
-                if ws and use_ws:
-                    try:
-                        content = await collect_course_data(ws, moodle_id)
-                        source = "ws"
-                    except Exception as e:
-                        logger.warning(f"[{course_data['name']}] WS falhou ({e}), usando HTML")
-
-                if not content:
-                    content = await scraper.get_course_content(moodle_id)
                 enrichment_jobs.append((course, content, is_new_course, source))
 
                 teacher_from_page = content.get("teacher")
@@ -631,7 +681,7 @@ async def sync_moodle_for_user(user_id: str):
                 if content.get("collection_complete", True):
                     for stored in stored_activities:
                         if str(stored.moodle_id) not in received_activity_ids and not stored.removed_at:
-                            stored.removed_at = datetime.utcnow()
+                            stored.removed_at = utc_now_naive()
                             stored.status = "closed"
                             stored.is_new = False
 
@@ -653,9 +703,12 @@ async def sync_moodle_for_user(user_id: str):
                 _sync_status[user_id]["activities"] += len(content.get("activities", []))
                 _persist_sync_status(db, user_id)
 
-            for stored_course in existing_courses:
-                if stored_course.moodle_id not in seen_course_ids:
-                    stored_course.is_active = False
+            # A lista oficial é autoritativa; descoberta HTML pode ser parcial
+            # e nunca deve ocultar disciplinas válidas por uma falha de página.
+            if use_ws:
+                for stored_course in existing_courses:
+                    if stored_course.moodle_id not in seen_course_ids:
+                        stored_course.is_active = False
 
             # Notifica novas atividades
             courses_by_id = {course.id: course for course in courses_by_moodle_id.values()}
@@ -676,7 +729,7 @@ async def sync_moodle_for_user(user_id: str):
                 except Exception as e:
                     logger.warning(f"Notificação atividade: {e}")
 
-            user.moodle_last_sync = datetime.utcnow()
+            user.moodle_last_sync = utc_now_naive()
             db.commit()
 
             # Prazos + marcação de atrasadas
@@ -686,7 +739,7 @@ async def sync_moodle_for_user(user_id: str):
                 "running": False,
                 "phase": "usable",
                 "enrichment_running": bool(enrichment_jobs),
-                "finished_at": datetime.utcnow().isoformat(),
+                "finished_at": utc_now_naive().isoformat(),
             })
             _persist_sync_status(db, user_id)
 
@@ -723,26 +776,26 @@ async def sync_moodle_for_user(user_id: str):
             _sync_status[user_id].update({
                 "phase": "complete",
                 "enrichment_running": False,
-                "enrichment_finished_at": datetime.utcnow().isoformat(),
+                "enrichment_finished_at": utc_now_naive().isoformat(),
             })
             _persist_sync_status(db, user_id)
             logger.info(f"Sync concluído para {user_id}: {_sync_status[user_id]}")
 
     except Exception as e:
-        logger.error(f"Erro no sync do Moodle para {user_id}: {e}", exc_info=True)
+        logger.error("Erro no sync do Moodle para %s: %s", user_id, e)
         db.rollback()
-        _sync_status[user_id].update({
+        _sync_status.setdefault(user_id, {"running": False}).update({
             "running": False,
             "error": str(e)[:300],
-            "finished_at": datetime.utcnow().isoformat(),
+            "finished_at": utc_now_naive().isoformat(),
         })
         try:
             _persist_sync_status(db, user_id)
         except Exception:
             logger.warning("Falha ao persistir erro de sincronização do usuário %s", user_id)
     finally:
-        if lock_acquired:
-            _release_distributed_lock(db, user_id)
+        if lock_handle is not None:
+            _release_distributed_lock(lock_handle, user_id)
         db.close()
 
 
@@ -754,7 +807,7 @@ async def check_deadlines(db: Session, user_id: str, user):
     from app.models import Activity
     from app.services.notification_service import notification_service
 
-    now = datetime.utcnow()
+    now = utc_now_naive()
     thresholds = [
         ("7d", timedelta(days=7), "7 dias"),
         ("3d", timedelta(days=3), "3 dias"),

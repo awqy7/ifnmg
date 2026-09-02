@@ -14,6 +14,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.config import settings
+from app.services.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,6 @@ class MoodleAuthService:
         3. Fallback Playwright headless.
         """
         username = username.strip()
-        password = password.strip()
 
         # Método 1: REST API oficial (token)
         try:
@@ -69,7 +69,11 @@ class MoodleAuthService:
         except Exception as e:
             logger.warning(f"Login HTTP direto falhou: {e}. Tentando fallback Playwright...")
 
-        # Método 3: Fallback Playwright
+        # Método 3: fallback opcional. Playwright e Chromium não fazem parte da
+        # imagem padrão porque aumentariam bastante startup, build e superfície.
+        if not settings.ENABLE_PLAYWRIGHT_FALLBACK:
+            return None
+
         try:
             logger.info("Tentando login via Playwright headless...")
             session = await self._playwright_login(username, password)
@@ -77,7 +81,7 @@ class MoodleAuthService:
                 logger.info("✅ Login Playwright realizado com sucesso!")
                 return session
         except Exception as e:
-            logger.error(f"Fallback Playwright também falhou: {e}", exc_info=True)
+            logger.error("Fallback Playwright também falhou: %s", e)
 
         return None
 
@@ -141,7 +145,7 @@ class MoodleAuthService:
             "privatetoken": data.get("privatetoken"),
             "user_name": student_name or f"Aluno {username}",
             "moodle_user_id": moodle_user_id,
-            "logged_at": datetime.utcnow().isoformat(),
+            "logged_at": utc_now_naive().isoformat(),
             "base_url": MOODLE_BASE,
         }
 
@@ -212,7 +216,7 @@ class MoodleAuthService:
             return {
                 "cookies": cookies_dict,
                 "user_name": student_name or f"Aluno {username}",
-                "logged_at": datetime.utcnow().isoformat(),
+                "logged_at": utc_now_naive().isoformat(),
                 "base_url": MOODLE_BASE,
             }
 
@@ -287,7 +291,7 @@ class MoodleAuthService:
                     "cookies": cookies_dict,
                     "all_cookies": cookies,
                     "user_name": user_name or f"Aluno {username}",
-                    "logged_at": datetime.utcnow().isoformat(),
+                    "logged_at": utc_now_naive().isoformat(),
                     "base_url": MOODLE_BASE,
                 }
 

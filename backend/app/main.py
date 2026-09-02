@@ -7,6 +7,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import Callable
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,9 @@ from app.database import create_tables
 # Configura logging estruturado
 class SanitizingFormatter(logging.Formatter):
     SENSITIVE_PATTERNS = [
+        (re.compile(r'gsk_[A-Za-z0-9_-]+'), '***GROQ_KEY_REDACTED***'),
+        (re.compile(r'sk-[A-Za-z0-9_-]+'), '***OPENAI_KEY_REDACTED***'),
+        (re.compile(r'AIza[\w-]+'), '***GOOGLE_KEY_REDACTED***'),
         (re.compile(r'(?i)(password|senha|token|secret|key|authorization)=[^\s&]+'), r'\1=***REDACTED***'),
         (re.compile(r'Bearer\s+[A-Za-z0-9\-_=.]+'), 'Bearer ***REDACTED***'),
         (re.compile(r'(?i)eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+'), '***JWT_REDACTED***'),
@@ -44,6 +48,44 @@ logger = logging.getLogger(__name__)
 
 # Rate limiting simples em memória (para produção usar Redis)
 rate_limit_store: dict[str, list[float]] = {}
+_last_rate_limit_cleanup = 0.0
+
+
+def _origin_is_allowed(origin: str) -> bool:
+    if origin in settings.allowed_origins_list:
+        return True
+    return bool(
+        settings.ALLOWED_ORIGIN_REGEX
+        and re.fullmatch(settings.ALLOWED_ORIGIN_REGEX, origin)
+    )
+
+
+class CsrfOriginMiddleware(BaseHTTPMiddleware):
+    """Bloqueia ações cross-site autenticadas por cookie.
+
+    Clientes nativos/Bearer continuam funcionando sem Origin. Navegadores
+    sempre enviam Origin em formulários e fetches mutáveis cross-site.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable):
+        if (
+            request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            and request.url.path.startswith("/api/")
+            and request.cookies.get("ifnmg_token")
+            and not request.headers.get("authorization")
+        ):
+            origin = request.headers.get("origin")
+            referer = request.headers.get("referer")
+            if not origin and referer:
+                parsed = urlsplit(referer)
+                origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else None
+            if not origin or not _origin_is_allowed(origin):
+                return Response(
+                    content='{"detail":"Origem não autorizada"}',
+                    status_code=403,
+                    media_type="application/json",
+                )
+        return await call_next(request)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -53,11 +95,23 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window = window
     
     async def dispatch(self, request: Request, call_next: Callable):
+        global _last_rate_limit_cleanup
         if request.url.path in ("/api/health", "/", "/api/docs", "/api/redoc", "/api/openapi.json"):
             return await call_next(request)
         
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
+
+        # Remove chaves antigas periodicamente para o dicionário não crescer
+        # indefinidamente sob tráfego de muitos endereços.
+        if now - _last_rate_limit_cleanup >= self.window:
+            for key, timestamps in list(rate_limit_store.items()):
+                fresh = [value for value in timestamps if now - value < self.window]
+                if fresh:
+                    rate_limit_store[key] = fresh
+                else:
+                    rate_limit_store.pop(key, None)
+            _last_rate_limit_cleanup = now
         
         if client_ip not in rate_limit_store:
             rate_limit_store[client_ip] = []
@@ -86,6 +140,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         if settings.APP_ENV == "production":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        if request.url.path.startswith("/api/") and request.url.path not in {
+            "/api/health", "/api/health/ready", "/api/openapi.json", "/api/docs", "/api/redoc"
+        }:
+            response.headers["Cache-Control"] = "no-store"
         return response
 
 
@@ -107,14 +165,6 @@ async def lifespan(app: FastAPI):
 
     create_tables()
     logger.info("Banco de dados inicializado")
-
-    if settings.APP_ENV != "production":
-        try:
-            import subprocess
-            subprocess.run(["playwright", "install", "chromium"], capture_output=True, timeout=15)
-            logger.info("Playwright Chromium verificado")
-        except Exception as e:
-            logger.warning(f"Playwright: {e}")
 
     from app.services.scheduler import start_scheduler
     start_scheduler()
@@ -142,6 +192,7 @@ app = FastAPI(
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, limit=200, window=60)
+app.add_middleware(CsrfOriginMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
 app.add_middleware(
@@ -164,7 +215,7 @@ from app.routers.courses import router as courses_router
 from app.routers.activities import router as activities_router
 from app.routers.briefing import router as briefing_router
 from app.routers.chat import router as chat_router
-from app.routers.notifications import notifications_router, schedule_router
+from app.routers.notifications import notifications_router
 from app.routers.websocket import router as ws_router
 from app.routers.dashboard import router as dashboard_router
 
@@ -175,7 +226,6 @@ app.include_router(activities_router)
 app.include_router(briefing_router)
 app.include_router(chat_router)
 app.include_router(notifications_router)
-app.include_router(schedule_router)
 app.include_router(ws_router)
 app.include_router(dashboard_router)
 

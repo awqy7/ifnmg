@@ -4,6 +4,7 @@ Descobre cursos via Timeline, Dashboard e Perfil, além de extrair tópicos,
 materiais e atividades detalhadas.
 """
 import asyncio
+import hashlib
 import re
 import json
 import logging
@@ -14,6 +15,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.config import settings
+from app.services.datetime_utils import SAO_PAULO, UTC, to_utc_naive
 
 logger = logging.getLogger(__name__)
 MOODLE_BASE = settings.MOODLE_BASE_URL.rstrip("/")
@@ -72,7 +74,7 @@ class MoodleScraper:
         ]
         for fmt in formats:
             try:
-                return datetime.strptime(clean_text, fmt)
+                return to_utc_naive(datetime.strptime(clean_text, fmt), SAO_PAULO)
             except ValueError:
                 continue
 
@@ -83,13 +85,13 @@ class MoodleScraper:
             hour = int(match.group(4)) if match.group(4) else 23
             minute = int(match.group(5)) if match.group(5) else 59
             try:
-                return datetime(year, month, day, hour, minute)
+                return to_utc_naive(datetime(year, month, day, hour, minute), SAO_PAULO)
             except Exception:
                 pass
 
         if text.isdigit():
             try:
-                return datetime.fromtimestamp(int(text))
+                return datetime.fromtimestamp(int(text), UTC).replace(tzinfo=None)
             except Exception:
                 pass
 
@@ -376,18 +378,42 @@ class MoodleScraper:
 
             seen_ids = set()
             all_pages = [(soup, 0)]
+            section_fetch_failed = False
 
             # 3. Busca seção por seção (captura conteúdo lazy/colapsado do 4.x)
             if num_sections > 1:
-                for sec in range(min(num_sections, 20)):
-                    try:
-                        sec_resp = await self.client.get(
+                section_semaphore = asyncio.Semaphore(4)
+
+                async def fetch_section(sec: int):
+                    async with section_semaphore:
+                        response = await self.client.get(
                             f"{MOODLE_BASE}/course/view.php?id={moodle_course_id}&section={sec}"
                         )
-                        if sec_resp.status_code == 200:
-                            all_pages.append((self._soup(sec_resp.text), sec))
-                    except Exception:
+                        return sec, response
+
+                section_results = await asyncio.gather(*(
+                    fetch_section(sec) for sec in range(min(num_sections, 20))
+                ), return_exceptions=True)
+                for result in section_results:
+                    if isinstance(result, Exception):
+                        section_fetch_failed = True
+                        logger.warning(
+                            "Falha ao buscar uma seção do curso %s: %s",
+                            moodle_course_id,
+                            result,
+                        )
                         continue
+                    sec, sec_resp = result
+                    if sec_resp.status_code == 200:
+                        all_pages.append((self._soup(sec_resp.text), sec))
+                    else:
+                        section_fetch_failed = True
+                        logger.warning(
+                            "Seção %s do curso %s retornou HTTP %s",
+                            sec,
+                            moodle_course_id,
+                            sec_resp.status_code,
+                        )
 
             for page_soup, page_sec in all_pages:
                 sections = page_soup.select(
@@ -416,7 +442,7 @@ class MoodleScraper:
                         ".modtype_lesson, .modtype_book, .modtype_glossary"
                     )
 
-                    for mod in modules:
+                    for module_index, mod in enumerate(modules):
                         link_el = mod.select_one("a[href]")
                         href = link_el.get("href", "") if link_el else ""
 
@@ -480,7 +506,9 @@ class MoodleScraper:
                         mid = (
                             (moodle_id_match.group(1) if moodle_id_match else None)
                             or mod.get("data-module-id")
-                            or str(page_sec * 1000 + sec_idx * 100 + len(activities))
+                            or "generated-" + hashlib.sha256(
+                                f"{moodle_course_id}:{topic_name}:{module_index}:{title}:{href}".encode()
+                            ).hexdigest()[:16]
                         )
 
                         if mid in seen_ids:
@@ -524,10 +552,10 @@ class MoodleScraper:
                         else:
                             materials.append(item)
 
-            collection_complete = True
+            collection_complete = not section_fetch_failed
 
         except Exception as e:
-            logger.error(f"Erro no scraping de conteúdo do curso {moodle_course_id}: {e}", exc_info=True)
+            logger.error("Erro no scraping de conteúdo do curso %s: %s", moodle_course_id, e)
 
         return {
             "activities": activities,
