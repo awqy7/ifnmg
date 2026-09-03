@@ -111,6 +111,7 @@ def _upgrade_existing_schema():
     material_definitions = {
         "is_active": "BOOLEAN DEFAULT TRUE",
         "updated_at": "TIMESTAMP NULL",
+        "source_files": "JSON NULL",
     }
     with engine.begin() as connection:
         for column, definition in material_definitions.items():

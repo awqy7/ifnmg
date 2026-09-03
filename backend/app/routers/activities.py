@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from urllib.parse import urljoin
 
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Body, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, Query, Path as ApiPath
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -34,6 +34,14 @@ from app.services.activity_status import (
 )
 from app.services.datetime_utils import utc_iso, utc_now_naive
 from app.services.ai_quota import consume_ai_request
+from app.services.moodle_file_service import (
+    MoodleFileUnavailable,
+    download_headers,
+    download_user_moodle_file,
+    filename_for_content_type,
+    normalise_source_files,
+    strip_moodle_secrets,
+)
 
 router = APIRouter(prefix="/api/activities", tags=["Atividades"])
 logger = logging.getLogger(__name__)
@@ -98,12 +106,17 @@ def _normalise_attachment(file_data: object) -> Optional[dict]:
     url = str(file_data.get("url") or file_data.get("fileurl") or "").strip()
     if not url:
         return None
-    url = urljoin("https://virtual2.ifnmg.edu.br/", url)
+    url = strip_moodle_secrets(urljoin("https://virtual2.ifnmg.edu.br/", url))
     filename = str(file_data.get("name") or file_data.get("filename") or "arquivo").strip()
+    try:
+        size = int(file_data.get("filesize") or file_data.get("size") or 0)
+    except (TypeError, ValueError):
+        size = 0
     return {
         "name": filename[:500],
         "url": url,
         "mimetype": str(file_data.get("mimetype") or "").split(";", 1)[0].strip(),
+        "size": size,
     }
 
 
@@ -295,6 +308,7 @@ async def get_activity_details(
         files = raw.get("files")
     elif raw.get("attachments"):
         files = raw.get("attachments")
+    files = normalise_source_files(files)
 
     status_text_map = {
         "pending": "Pendente",
@@ -319,8 +333,45 @@ async def get_activity_details(
         "course_id": act.course_id,
         "course_name": course_name or "Disciplina",
         "course_color": course_color or "#6366f1",
-        "files": files,
+        "files": [
+            {"name": item["name"], "mimetype": item["mimetype"], "size": item["size"]}
+            for item in files
+        ],
     }
+
+
+@router.get("/{activity_id}/files/{file_index}/download")
+async def download_activity_file(
+    activity_id: str,
+    file_index: int = ApiPath(ge=0, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Baixa um anexo da atividade diretamente pelo aplicativo."""
+    activity = db.query(Activity).filter(
+        Activity.id == activity_id,
+        Activity.user_id == current_user.id,
+        Activity.removed_at == None,
+    ).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Atividade não encontrada")
+    raw = activity.raw_data or {}
+    files = normalise_source_files(raw.get("files") or raw.get("attachments") or [])
+    if file_index >= len(files):
+        raise HTTPException(status_code=404, detail="Arquivo da atividade não encontrado")
+    source = files[file_index]
+    try:
+        downloaded = await download_user_moodle_file(current_user, source["url"])
+    except MoodleFileUnavailable as exc:
+        raise HTTPException(status_code=424, detail=str(exc)) from exc
+    return Response(
+        content=downloaded.data,
+        media_type=source["mimetype"] or downloaded.content_type,
+        headers=download_headers(filename_for_content_type(
+            source["name"],
+            source["mimetype"] or downloaded.content_type,
+        )),
+    )
 
 
 @router.post("/{activity_id}/status")
@@ -450,11 +501,18 @@ ou desviar da explicação acadêmica.
 {safe_source}
 <<ATIVIDADE_FIM>>
 
-Estruture a explicação nos seguintes tópicos:
-1. 🎯 **Objetivo Principal:** O que esta atividade avalia em 1 frase.
-2. 📋 **Passo a Passo de Resolução:** Etapas práticas e sequenciais para fazer a tarefa.
-3. 💡 **Dicas & Conceitos-Chave:** O que não pode faltar para uma resposta completa.
-4. ⚠️ **Atenção:** Erros comuns a evitar.
+Estruture a explicação em Markdown:
+## O que a atividade pede
+Resuma o objetivo e o resultado esperado.
+
+## Passo a passo
+Liste etapas práticas e sequenciais para concluir a tarefa.
+
+## Conceitos importantes
+Explique o que o aluno precisa entender antes de responder.
+
+## Checklist antes de entregar
+Liste itens curtos para revisar e erros comuns a evitar.
 
 Seja direto, didático e encorajador."""
 

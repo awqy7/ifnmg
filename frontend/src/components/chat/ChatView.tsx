@@ -11,6 +11,8 @@ import {
   FileText,
   BookOpen,
   Clock,
+  Copy,
+  Check,
 } from "lucide-react";
 import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -42,6 +44,8 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState(initialPrompt || "");
   const [loading, setLoading] = useState(false);
+  const [streamStarted, setStreamStarted] = useState(false);
+  const [copiedMessage, setCopiedMessage] = useState<number | null>(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -124,6 +128,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
     const newMsgs = [...messages, { role: "user", content: userText }];
     setMessages(newMsgs);
     setLoading(true);
+    setStreamStarted(false);
 
     setTimeout(() => {
       const c = messagesContainerRef.current;
@@ -144,6 +149,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
 
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
       for await (const chunk of chatApi.streamMessage(userText, activeSessionId, initialCourseId)) {
+        setStreamStarted(true);
         setMessages((prev) => {
           const updated = [...prev];
           const last = updated[updated.length - 1];
@@ -164,7 +170,14 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
       ]);
     } finally {
       setLoading(false);
+      setStreamStarted(false);
     }
+  };
+
+  const copyResponse = async (content: string, index: number) => {
+    await navigator.clipboard.writeText(stripThinking(content));
+    setCopiedMessage(index);
+    window.setTimeout(() => setCopiedMessage(null), 1600);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -175,11 +188,11 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
   };
 
   const quickPrompts = [
-    "Quais sao minhas atividades pendentes e os prazos?",
-    "Me explique o conteudo dos materiais da minha materia",
+    "Quais são minhas atividades pendentes e os prazos?",
+    "Explique o PDF mais recente da minha matéria",
     "Monte um plano de estudo para esta semana",
-    "Gere questoes de treino baseadas nos meus PDFs",
-    "Faca um resumo dos materiais que meu professor postou",
+    "Gere questões de treino baseadas nos meus PDFs",
+    "Faça um resumo dos materiais que meu professor postou",
     "Qual atividade eu devo priorizar agora?",
   ];
 
@@ -302,6 +315,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
           ) : (
             messages.map((m, idx) => {
               const isUser = m.role === "user";
+              if (!isUser && !m.content) return null;
               return (
                 <div
                   key={idx}
@@ -314,12 +328,26 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                   )}
 
                   <div
-                    className={`max-w-[85%] sm:max-w-[78%] md:max-w-2xl rounded-2xl p-3 text-xs sm:text-sm leading-relaxed ${
+                    className={`relative max-w-[90%] sm:max-w-[84%] md:max-w-3xl rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       isUser
-                        ? "bg-emerald-600/90 text-white rounded-br-md"
-                        : "bg-[#0f0f12] border border-[var(--border)] text-neutral-300 rounded-bl-md"
+                        ? "bg-emerald-600/90 text-white rounded-br-md p-3"
+                        : "bg-[#0f0f12] border border-[var(--border)] text-neutral-300 rounded-bl-md px-4 py-3.5 sm:px-5 sm:py-4 shadow-sm shadow-black/20"
                     }`}
                   >
+                    {!isUser && (
+                      <div className="mb-2 flex items-center justify-between border-b border-white/[0.05] pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/60">Tutor IA</span>
+                        <button
+                          type="button"
+                          onClick={() => copyResponse(m.content, idx)}
+                          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[9px] text-neutral-600 transition-colors hover:bg-white/[0.04] hover:text-neutral-300"
+                          aria-label="Copiar resposta"
+                        >
+                          {copiedMessage === idx ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                          {copiedMessage === idx ? "Copiado" : "Copiar"}
+                        </button>
+                      </div>
+                    )}
                     {isUser ? m.content : <Markdown content={stripThinking(m.content)} />}
                   </div>
 
@@ -333,7 +361,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
             })
           )}
 
-          {loading && (
+          {loading && !streamStarted && (
             <div className="flex items-end gap-2 sm:gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.1] flex items-center justify-center text-emerald-400/60 mb-0.5">
                 <Bot className="w-3.5 h-3.5" />

@@ -112,12 +112,19 @@ export default function Markdown({ content }: { content: string }) {
     const hMatch = line.match(/^(#{1,4})\s+(.*)$/);
     if (hMatch) {
       const level = hMatch[1].length;
-      const sizes = ["text-lg", "text-base", "text-sm", "text-sm"];
+      const sizes = ["text-lg", "text-[15px]", "text-sm", "text-xs"];
       blocks.push(
-        <div key={key++} className={`mt-3 mb-1 font-bold text-white ${sizes[level - 1]} first:mt-0`}>
+        <div key={key++} className={`mt-4 mb-1.5 flex items-center gap-2 font-semibold text-white ${sizes[level - 1]} first:mt-0`}>
+          {level <= 2 && <span className="h-4 w-0.5 rounded-full bg-emerald-400/70" />}
           {renderInline(hMatch[2], `h${key}`)}
         </div>
       );
+      i++;
+      continue;
+    }
+
+    if (/^\s*(---|___|\*\*\*)\s*$/.test(line)) {
+      blocks.push(<hr key={key++} className="my-3 border-0 border-t border-white/[0.07]" />);
       i++;
       continue;
     }
@@ -132,7 +139,7 @@ export default function Markdown({ content }: { content: string }) {
       blocks.push(
         <blockquote
           key={key++}
-          className="my-2 pl-3 border-l-2 border-emerald-500/50 text-gray-300"
+          className="my-2.5 rounded-r-lg border-l-2 border-emerald-500/50 bg-emerald-500/[0.03] px-3 py-2 text-neutral-300"
         >
           {renderInline(quoteLines.join(" "), `q${key}`)}
         </blockquote>
@@ -148,7 +155,7 @@ export default function Markdown({ content }: { content: string }) {
         i++;
       }
       blocks.push(
-        <ul key={key++} className="my-1.5 space-y-1 list-disc list-outside ml-4">
+        <ul key={key++} className="my-2 ml-4 list-outside list-disc space-y-1.5 marker:text-emerald-400/70">
           {items.map((item, j) => (
             <li key={j} className="pl-0.5">{renderInline(item, `ul${key}-${j}`)}</li>
           ))}
@@ -165,7 +172,7 @@ export default function Markdown({ content }: { content: string }) {
         i++;
       }
       blocks.push(
-        <ol key={key++} className="my-1.5 space-y-1 list-decimal list-outside ml-4">
+        <ol key={key++} className="my-2 ml-4 list-outside list-decimal space-y-1.5 marker:font-semibold marker:text-emerald-400/70">
           {items.map((item, j) => (
             <li key={j} className="pl-0.5">{renderInline(item, `ol${key}-${j}`)}</li>
           ))}
@@ -197,11 +204,11 @@ export default function Markdown({ content }: { content: string }) {
       i++;
     }
     blocks.push(
-      <p key={key++} className="leading-relaxed">
+      <p key={key++} className="leading-6 text-neutral-300">
         {renderInline(paraLines.join(" "), `p${key}`)}
       </p>
     );
   }
 
-  return <div className="space-y-0.5">{blocks}</div>;
+  return <div className="space-y-1">{blocks}</div>;
 }

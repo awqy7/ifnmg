@@ -128,6 +128,30 @@ class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
+  async download(path: string): Promise<{ blob: Blob; filename: string }> {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+      credentials: "include",
+    });
+    if (res.status === 401) notifyUnauthorized();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "Não foi possível baixar o arquivo");
+    }
+
+    const disposition = res.headers.get("content-disposition") || "";
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+    let filename = "arquivo";
+    try {
+      filename = utf8Match ? decodeURIComponent(utf8Match[1]) : simpleMatch?.[1] || filename;
+    } catch {
+      filename = simpleMatch?.[1] || filename;
+    }
+    return { blob: await res.blob(), filename };
+  }
+
   // Streaming para chat (com buffer para chunks cortados no meio da linha)
   async *streamPost(path: string, body: unknown): AsyncGenerator<string> {
     const token = tokenStore.get();
@@ -225,6 +249,8 @@ export const activitiesApi = {
   }),
   explainWithAI: (id: string) =>
     api.post<any>(`/api/activities/${id}/explain-ai`),
+  downloadAttachment: (id: string, fileIndex: number) =>
+    api.download(`/api/activities/${id}/files/${fileIndex}/download`),
   generateResponsePDF: async (id: string): Promise<Blob> => {
     const token = tokenStore.get();
     const res = await fetch(`${API_BASE}/api/activities/${id}/generate-response-pdf`, {
@@ -244,7 +270,22 @@ export const activitiesApi = {
 export const coursesApi = {
   list: () => api.getCached<any[]>("/api/courses", 60_000),
   getMaterials: (courseId: string) => api.getCached<any[]>(`/api/courses/${courseId}/materials`, 60_000),
+  downloadMaterial: (courseId: string, materialId: string, fileIndex = 0) =>
+    api.download(`/api/courses/${courseId}/materials/${materialId}/download?file_index=${fileIndex}`),
+  explainMaterial: (courseId: string, materialId: string) =>
+    api.post<any>(`/api/courses/${courseId}/materials/${materialId}/explain-ai`),
 };
+
+export function saveDownloadedFile(download: { blob: Blob; filename: string }, fallbackName = "arquivo") {
+  const url = URL.createObjectURL(download.blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = download.filename || fallbackName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export const briefingApi = {
   getToday: () => api.get<any>("/api/briefing/today"),

@@ -40,8 +40,8 @@ export default function Sidebar({
     { id: "home", label: "Inicio", icon: Home },
     { id: "atividades", label: "Atividades", icon: CheckSquare },
     { id: "cursos", label: "Disciplinas", icon: BookOpen },
-    { id: "chat", label: "Chat IA", icon: MessageSquare, badge: "BETA" },
-    { id: "estudo", label: "Estudo", icon: Sparkles, badge: "BETA" },
+    { id: "chat", label: "Chat IA", icon: MessageSquare },
+    { id: "estudo", label: "Estudo", icon: Sparkles },
     { id: "configuracoes", label: "Configuracoes", icon: Settings },
   ];
 

@@ -12,8 +12,9 @@ import {
   Calendar,
   Users,
 } from "lucide-react";
-import { activitiesApi } from "@/lib/api";
+import { activitiesApi, saveDownloadedFile } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import Markdown from "@/components/Markdown";
 import ManualCompletionDialog, { ManualCompletionReason } from "./ManualCompletionDialog";
 
 interface ActivityModalProps {
@@ -35,6 +36,10 @@ export default function ActivityModal({
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [downloadingFile, setDownloadingFile] = useState<number | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
   const pdfUrlRef = useRef<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -58,6 +63,8 @@ export default function ActivityModal({
       pdfUrlRef.current = null;
     }
     setPdfUrl(null);
+    setExplanation("");
+    setAiError(null);
 
     loadDetails(activityId);
   }, [activityId, loadDetails]);
@@ -106,6 +113,36 @@ export default function ActivityModal({
       alert(err.message || "Erro ao gerar PDF");
     } finally {
       setGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadFile = async (file: any, fileIndex: number) => {
+    setDownloadingFile(fileIndex);
+    setAiError(null);
+    try {
+      const download = await activitiesApi.downloadAttachment(activityId, fileIndex);
+      saveDownloadedFile(download, file.name || "anexo");
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
+  const handleExplain = async () => {
+    if (explanation) {
+      setExplanation("");
+      return;
+    }
+    setExplaining(true);
+    setAiError(null);
+    try {
+      const result = await activitiesApi.explainWithAI(activityId);
+      setExplanation(result.explanation || "");
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "A IA não conseguiu explicar esta atividade.");
+    } finally {
+      setExplaining(false);
     }
   };
 
@@ -285,17 +322,34 @@ export default function ActivityModal({
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {details.files.map((file: any, idx: number) => (
-                      <a
+                      <button
                         key={idx}
-                        href={file.url}
-                        target="_blank"
-                        rel="noreferrer"
+                        type="button"
+                        onClick={() => handleDownloadFile(file, idx)}
+                        disabled={downloadingFile === idx}
                         className="p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-[var(--border)] hover:border-emerald-500/[0.12] flex items-center justify-between gap-2 text-[11px] text-neutral-400 hover:text-emerald-400/80 transition-colors"
                       >
                         <span className="truncate">{file.name}</span>
-                        <Download className="w-3 h-3 shrink-0" />
-                      </a>
+                        {downloadingFile === idx ? <CogSpinner size={12} /> : <Download className="w-3 h-3 shrink-0" />}
+                      </button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {aiError && (
+                <div role="alert" className="rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-[11px] text-red-300">
+                  {aiError}
+                </div>
+              )}
+
+              {explanation && (
+                <div className="space-y-2 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.025] p-3.5">
+                  <h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400/70">
+                    <Bot className="h-3 w-3" /> Explicação da IA
+                  </h3>
+                  <div className="text-xs text-neutral-300">
+                    <Markdown content={explanation} />
                   </div>
                 </div>
               )}
@@ -316,6 +370,16 @@ export default function ActivityModal({
               </button>
             )}
             <button
+              type="button"
+              onClick={handleExplain}
+              disabled={!details || explaining}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/[0.07] hover:bg-emerald-500/[0.12] border border-emerald-500/10 text-emerald-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
+            >
+              {explaining ? <CogSpinner size={13} /> : <Bot className="w-3.5 h-3.5" />}
+              {explaining ? "Lendo anexos" : explanation ? "Fechar explicação" : "Explicar com IA"}
+            </button>
+            <button
+              type="button"
               onClick={() => openChatWithContext?.(
                 details?.course_id,
                 `Ajude-me a entender e planejar a atividade: ${details?.title || "atividade"}`
@@ -323,7 +387,7 @@ export default function ActivityModal({
               disabled={!details || !openChatWithContext}
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[var(--border)] text-neutral-300 text-xs font-medium transition-colors disabled:opacity-40 w-full sm:w-auto"
             >
-              <Bot className="w-3.5 h-3.5 text-emerald-400" /> Tutor
+              <Bot className="w-3.5 h-3.5 text-emerald-400" /> Perguntar no chat
             </button>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

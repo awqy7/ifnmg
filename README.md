@@ -21,8 +21,10 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
    - Abre instantaneamente com o último snapshot local enquanto atualiza em segundo plano.
 
 4. 💬 **Tutor IA Especialista por Disciplina**:
-   - Chat com contexto real das suas disciplinas e materiais postados pelos professores.
-   - Suporte nativo gratuito via **Google Gemini 1.5 Flash** e multi-provedor (Groq, OpenAI, Anthropic, Ollama).
+   - Chat com contexto real das suas disciplinas, atividades e textos extraídos de PDFs.
+   - Download autenticado direto no aplicativo, sem abrir outra aba ou expor o token do Moodle.
+   - Leitura sob demanda e explicação estruturada de PDFs, inclusive OCR de documentos escaneados.
+   - Suporte gratuito padrão via **Groq GPT-OSS 20B** e multi-provedor (Gemini, OpenAI, Anthropic, Ollama).
 
 5. 🧠 **Ferramentas Ativas de Estudo**:
    - **Gerador de Flashcards**: Criação de baralhos de memorização a partir dos materiais da aula.
@@ -38,7 +40,7 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS, Lucide Icons, Date-fns
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy, APScheduler, LiteLLM, PyWebPush e Passlib/Bcrypt
 - **Banco de Dados**: SQLite (desenvolvimento) / PostgreSQL (produção)
-- **IA**: Google Gemini 1.5 Flash (Gratuito por padrão), Groq, OpenAI GPT-4o Mini, Claude 3, Ollama
+- **IA**: Groq GPT-OSS 20B (padrão), Gemini, OpenAI GPT-4o Mini, Claude 3 e Ollama
 
 ---
 

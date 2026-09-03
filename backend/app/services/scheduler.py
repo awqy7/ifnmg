@@ -21,6 +21,7 @@ from app.database import SessionLocal
 from app.config import settings
 from app.services.activity_status import effective_activity_status, normalise_moodle_status
 from app.services.datetime_utils import UTC, to_utc_naive, utc_now_naive
+from app.services.moodle_file_service import normalise_source_files
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +346,7 @@ async def _sync_materials(
             continue
 
         files_meta = mat_data.get("files", []) or []
+        source_files = normalise_source_files(files_meta)
         fingerprint_payload = {
             "title": title,
             "url": mat_data.get("url", ""),
@@ -380,6 +382,7 @@ async def _sync_materials(
                 topic_number=mat_data.get("topic_number"),
                 is_new=True,
                 content_text="",
+                source_files=source_files,
                 is_active=True,
             )
             db.add(material)
@@ -393,6 +396,8 @@ async def _sync_materials(
                 material.topic_name = mat_data["topic_name"]
             material.topic_number = mat_data.get("topic_number")
             material.url = mat_data.get("url", "") or material.url
+            if source_files:
+                material.source_files = source_files
 
         extraction_meta = meta_by_material_id.get(material.id)
         source_changed = not extraction_meta or extraction_meta.fingerprint != fingerprint

@@ -230,7 +230,7 @@ class AIService:
             kwargs.update({
                 "messages": messages,
                 "stream": True,
-                "max_tokens": 700,
+                "max_tokens": 1400,
                 "temperature": 0.5,
             })
 

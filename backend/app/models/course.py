@@ -83,6 +83,7 @@ class Material(Base):
     title = Column(String(500), nullable=False)
     material_type = Column(String(50))  # pdf, video, page, link, file
     url = Column(String(1000))
+    source_files = Column(JSON, default=list)  # Arquivos Moodle sem token; autenticação é adicionada sob demanda
     content_text = Column(Text, nullable=True)  # Texto extraído (para IA)
     topic_name = Column(String(500))  # Nome do tópico/semana
     topic_number = Column(Integer)
