@@ -15,7 +15,7 @@ apscheduler==3.11.3
 pywebpush==2.5.0
 python-multipart==0.0.32
 litellm==1.99.0
-pypdf==6.16.2
+pypdf==6.17.0
 pdfplumber==0.11.10
 pytesseract==0.3.13
 youtube-transcript-api==1.2.4
