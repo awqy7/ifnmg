@@ -7,8 +7,8 @@ from pathlib import PurePosixPath
 from typing import Literal, Optional
 from urllib.parse import urljoin
 
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Body, Response, Query, Path as ApiPath
+from datetime import UTC, datetime
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, Query, Path as ApiPath, File, Form, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -40,6 +40,7 @@ from app.services.moodle_file_service import (
     download_user_moodle_file,
     filename_for_content_type,
     normalise_source_files,
+    open_user_moodle_access,
     strip_moodle_secrets,
 )
 
@@ -48,6 +49,9 @@ logger = logging.getLogger(__name__)
 
 MAX_ACTIVITY_FILES = 8
 MAX_ACTIVITY_SOURCE_CHARS = 45_000
+MAX_SUBMISSION_FILES = 5
+MAX_SUBMISSION_FILE_BYTES = 10 * 1024 * 1024
+MAX_SUBMISSION_TOTAL_BYTES = 20 * 1024 * 1024
 SUPPORTED_ACTIVITY_FILE_EXTENSIONS = {
     ".pdf", ".txt", ".md", ".csv", ".html", ".htm", ".docx",
     ".pptx", ".xlsx", ".odt", ".ods", ".odp",
@@ -62,6 +66,32 @@ class ManualCompletionBody(BaseModel):
     completed: bool
     reason: Literal["group_member_submitted", "submitted_elsewhere", "other"] = "group_member_submitted"
     note: Optional[str] = Field(default=None, max_length=500)
+
+
+def _submission_filename(filename: str) -> str:
+    """Remove caminhos e caracteres de controle do nome enviado ao Moodle."""
+    name = PurePosixPath((filename or "").replace("\\", "/")).name
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()
+    if not name or name in {".", ".."}:
+        raise HTTPException(status_code=400, detail="Nome de arquivo inválido.")
+    return name[:255]
+
+
+def _submitted_status(status_data: dict) -> tuple[bool, Optional[datetime], bool]:
+    """Lê a confirmação oficial de uma entrega individual ou em grupo."""
+    last_attempt = status_data.get("lastattempt") or {}
+    submission = last_attempt.get("submission") or {}
+    team_submission = last_attempt.get("teamsubmission") or {}
+    confirmed = "submitted" in {submission.get("status"), team_submission.get("status")}
+    try:
+        timestamp = max(
+            int(submission.get("timemodified") or 0),
+            int(team_submission.get("timemodified") or 0),
+        )
+    except (TypeError, ValueError):
+        timestamp = 0
+    submitted_at = datetime.fromtimestamp(timestamp, UTC).replace(tzinfo=None) if timestamp else None
+    return confirmed, submitted_at, bool(team_submission)
 
 
 def _status_payload(activity: Activity) -> dict:
@@ -372,6 +402,162 @@ async def download_activity_file(
             source["mimetype"] or downloaded.content_type,
         )),
     )
+
+
+@router.post("/{activity_id}/submit")
+async def submit_activity_to_moodle(
+    activity_id: str,
+    confirm: bool = Form(default=False),
+    message: str = Form(default="", max_length=20_000),
+    files: list[UploadFile] = File(default=[]),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Envia uma tarefa do tipo ``assign`` ao Virtual2 e confirma o resultado.
+
+    A confirmação explícita evita entregas acidentais. O painel só passa a
+    mostrar a atividade como entregue depois que o Moodle retorna o status
+    oficial ``submitted``.
+    """
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Confirme que deseja enviar esta atividade ao Virtual2.")
+
+    text_message = message.strip()
+    if len(files) > MAX_SUBMISSION_FILES:
+        raise HTTPException(status_code=400, detail=f"Envie no máximo {MAX_SUBMISSION_FILES} arquivos por vez.")
+    if not text_message and not files:
+        raise HTTPException(status_code=400, detail="Adicione um texto ou pelo menos um arquivo para enviar.")
+
+    res = db.query(Activity, Course).join(Course, Activity.course_id == Course.id).filter(
+        Activity.id == activity_id,
+        Activity.user_id == current_user.id,
+        Activity.removed_at == None,
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="Atividade não encontrada")
+
+    activity, course = res
+    if (activity.activity_type or "").lower() != "assign":
+        raise HTTPException(
+            status_code=422,
+            detail="O envio direto está disponível apenas para tarefas do tipo Atividade no Virtual2.",
+        )
+    try:
+        course_moodle_id = int(course.moodle_id)
+        course_module_id = int(activity.moodle_id)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Identificador da atividade inválido. Sincronize o Virtual2 e tente novamente.") from exc
+
+    prepared_files: list[tuple[str, bytes, str]] = []
+    total_size = 0
+    used_filenames: set[str] = set()
+    for uploaded_file in files:
+        filename = _submission_filename(uploaded_file.filename or "")
+        if filename.casefold() in used_filenames:
+            raise HTTPException(status_code=400, detail=f'O arquivo "{filename}" foi selecionado mais de uma vez.')
+        used_filenames.add(filename.casefold())
+        data = await uploaded_file.read(MAX_SUBMISSION_FILE_BYTES + 1)
+        await uploaded_file.close()
+        if not data:
+            raise HTTPException(status_code=400, detail=f'O arquivo "{filename}" está vazio.')
+        if len(data) > MAX_SUBMISSION_FILE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f'O arquivo "{filename}" ultrapassa o limite de 10 MB.',
+            )
+        total_size += len(data)
+        if total_size > MAX_SUBMISSION_TOTAL_BYTES:
+            raise HTTPException(status_code=413, detail="O total dos arquivos ultrapassa o limite de 20 MB.")
+        prepared_files.append((filename, data, uploaded_file.content_type or "application/octet-stream"))
+
+    try:
+        async with open_user_moodle_access(current_user) as (_, ws):
+            if not ws:
+                raise MoodleFileUnavailable("Reconecte sua conta do Virtual2 para enviar atividades.")
+
+            assignments = await ws.get_assignments(course_moodle_id)
+            assignment = next(
+                (item for item in assignments if str(item.get("cmid") or "") == str(course_module_id)),
+                None,
+            )
+            if not assignment:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Esta atividade não está disponível para envio direto. Sincronize ou abra no Virtual2.",
+                )
+            assignment_id = int(assignment.get("id") or 0)
+            if not assignment_id:
+                raise HTTPException(status_code=422, detail="Não foi possível identificar a tarefa no Virtual2.")
+
+            previous_status = await ws.get_assignment_submission_status(assignment_id)
+            already_submitted, _, _ = _submitted_status(previous_status)
+            if already_submitted:
+                raise HTTPException(status_code=409, detail="O Virtual2 já registra esta atividade como entregue.")
+
+            draft_item_id: Optional[int] = None
+            for filename, data, content_type in prepared_files:
+                draft_item_id = await ws.upload_draft_file(
+                    filename,
+                    data,
+                    content_type,
+                    draft_item_id or 0,
+                )
+
+            await ws.save_assignment_submission(
+                assignment_id,
+                message=text_message,
+                draft_item_id=draft_item_id,
+            )
+
+            status_data = await ws.get_assignment_submission_status(assignment_id)
+            confirmed, submitted_at, is_group_activity = _submitted_status(status_data)
+            if not confirmed:
+                try:
+                    await ws.submit_assignment_for_grading(assignment_id)
+                except RuntimeError:
+                    # Alguns formatos não exigem botão de envio; nessa situação
+                    # a confirmação retornada pelo status ainda é a fonte oficial.
+                    status_data = await ws.get_assignment_submission_status(assignment_id)
+                    confirmed, submitted_at, is_group_activity = _submitted_status(status_data)
+                    if not confirmed:
+                        raise
+                else:
+                    status_data = await ws.get_assignment_submission_status(assignment_id)
+                    confirmed, submitted_at, is_group_activity = _submitted_status(status_data)
+    except MoodleFileUnavailable as exc:
+        raise HTTPException(status_code=424, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        logger.warning("Envio da atividade %s recusado pelo Virtual2: %s", activity_id, exc)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if not confirmed:
+        raise HTTPException(
+            status_code=409,
+            detail="O Virtual2 recebeu os dados, mas ainda não confirmou a entrega. Confira a atividade no Virtual2.",
+        )
+
+    activity.moodle_status = "submitted"
+    activity.moodle_submission_at = submitted_at or utc_now_naive()
+    activity.manual_completed_at = None
+    activity.manual_completion_reason = None
+    activity.manual_completion_note = None
+    activity.is_group_activity = bool(activity.is_group_activity or is_group_activity)
+    activity.status = effective_activity_status(
+        activity.moodle_status,
+        activity.manual_completed_at,
+        activity.due_date,
+        removed_at=activity.removed_at,
+    )
+    activity.updated_at = utc_now_naive()
+    db.commit()
+    db.refresh(activity)
+
+    return {
+        "id": activity.id,
+        **_status_payload(activity),
+        "status_text": "Enviado para avaliação",
+        "uploaded_files": [name for name, _, _ in prepared_files],
+    }
 
 
 @router.post("/{activity_id}/status")

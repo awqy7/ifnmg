@@ -4,12 +4,9 @@
  * Isso mantém o cookie como first-party em todos os ambientes.
  */
 
-import { tokenStore } from "./token-store";
-
 const API_BASE = "";
 
 function notifyUnauthorized() {
-  tokenStore.clear();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("auth-expired"));
   }
@@ -23,15 +20,11 @@ class ApiClient {
   }
 
   /**
-   * Monta os headers de autenticação.
-   * Sempre inclui o Bearer token quando disponível (iOS Safari / cross-site).
-   * Envia também credentials: "include" para cookies funcionar no desktop.
+   * O proxy de mesma origem envia somente o cookie httpOnly de sessão.
    */
   private getAuthHeaders(): HeadersInit {
-    const token = tokenStore.get();
     return {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   }
 
@@ -49,7 +42,7 @@ class ApiClient {
     });
 
     if (res.status === 401) {
-      // Token inválido ou expirado: limpa o store
+      // Sessão inválida ou expirada: atualiza a interface de autenticação.
       notifyUnauthorized();
     }
 
@@ -91,12 +84,10 @@ class ApiClient {
   }
 
   async postForm<T>(path: string, body: URLSearchParams): Promise<T> {
-    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body.toString(),
       credentials: "include",
@@ -154,12 +145,10 @@ class ApiClient {
 
   // Streaming para chat (com buffer para chunks cortados no meio da linha)
   async *streamPost(path: string, body: unknown): AsyncGenerator<string> {
-    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
       credentials: "include",
@@ -210,7 +199,7 @@ export const api = new ApiClient();
 
 export const authApi = {
   moodleLogin: (username: string, password: string) =>
-    api.post<{ access_token: string; user: any }>("/api/auth/moodle-login", { username, password }),
+    api.post<{ user: any }>("/api/auth/moodle-login", { username, password }),
   logout: () => api.post<any>("/api/auth/logout"),
   getMe: () => api.get<any>("/api/auth/me"),
   updateMe: (data: any) => api.put<any>("/api/auth/me", data),
@@ -247,15 +236,26 @@ export const activitiesApi = {
     reason,
     note,
   }),
+  submitToMoodle: async (id: string, submission: FormData) => {
+    const res = await fetch(`${API_BASE}/api/activities/${id}/submit`, {
+      method: "POST",
+      body: submission,
+      credentials: "include",
+    });
+    if (res.status === 401) notifyUnauthorized();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "Não foi possível enviar a atividade ao Virtual2.");
+    }
+    return res.json();
+  },
   explainWithAI: (id: string) =>
     api.post<any>(`/api/activities/${id}/explain-ai`),
   downloadAttachment: (id: string, fileIndex: number) =>
     api.download(`/api/activities/${id}/files/${fileIndex}/download`),
   generateResponsePDF: async (id: string): Promise<Blob> => {
-    const token = tokenStore.get();
     const res = await fetch(`${API_BASE}/api/activities/${id}/generate-response-pdf`, {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: "include",
     });
     if (res.status === 401) notifyUnauthorized();

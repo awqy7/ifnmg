@@ -14,11 +14,29 @@ echo -e "${BLUE}==========================================================${NC}"
 # Diretório base
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Libera portas 8000 e 3000 se já estiverem ocupadas
-echo -e "${YELLOW}🔍 Verificando processos anteriores...${NC}"
-fuser -k 8000/tcp 2>/dev/null || true
-fuser -k 3000/tcp 2>/dev/null || true
-sleep 1
+# Não encerra processos de outros projetos que possam usar as mesmas portas.
+echo -e "${YELLOW}🔍 Verificando portas...${NC}"
+for PORT in 8000 3000; do
+    if fuser "${PORT}/tcp" >/dev/null 2>&1; then
+        echo -e "${RED}❌ A porta ${PORT} já está em uso. Encerre o processo correto ou use outra porta.${NC}"
+        exit 1
+    fi
+done
+
+if [ ! -x "$BASE_DIR/backend/venv/bin/python" ]; then
+    echo -e "${RED}❌ Ambiente Python ausente em backend/venv. Crie-o e instale backend/requirements.txt.${NC}"
+    exit 1
+fi
+
+if [ ! -f "$BASE_DIR/backend/.env" ]; then
+    echo -e "${RED}❌ backend/.env ausente. Copie backend/.env.example e preencha as variáveis obrigatórias.${NC}"
+    exit 1
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+    echo -e "${RED}❌ npm não encontrado. Instale o Node.js antes de iniciar.${NC}"
+    exit 1
+fi
 
 # Função de limpeza ao fechar (Ctrl+C)
 cleanup() {

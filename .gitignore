@@ -24,3 +24,8 @@ frontend/tests/screenshot_*.png
 dist/
 build/
 .upuai/
+
+# Segredos e configurações locais; mantenha apenas os modelos versionados.
+.env
+.env.*
+!.env.example

@@ -16,11 +16,22 @@ export default function NotificationSocket() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttempts = useRef(0);
 
   useEffect(() => {
     if (loading || !user) return;
 
     let closed = false;
+
+    const scheduleReconnect = () => {
+      if (closed || reconnectTimer.current) return;
+      const delay = Math.min(30_000, 1_000 * 2 ** reconnectAttempts.current);
+      reconnectAttempts.current += 1;
+      reconnectTimer.current = setTimeout(() => {
+        reconnectTimer.current = null;
+        void connect();
+      }, delay);
+    };
 
     const connect = async () => {
       if (closed) return;
@@ -32,6 +43,10 @@ export default function NotificationSocket() {
         const wsUrl = `${apiHost.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(ticket)}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
+
+        ws.onopen = () => {
+          reconnectAttempts.current = 0;
+        };
 
         ws.onmessage = (event) => {
           try {
@@ -56,11 +71,11 @@ export default function NotificationSocket() {
         };
 
         ws.onclose = () => {
-          if (!closed) {
-            reconnectTimer.current = setTimeout(() => void connect(), 15000);
-          }
+          scheduleReconnect();
         };
-      } catch {}
+      } catch {
+        scheduleReconnect();
+      }
     };
 
     void connect();
@@ -68,6 +83,8 @@ export default function NotificationSocket() {
     return () => {
       closed = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+      reconnectAttempts.current = 0;
       wsRef.current?.close();
     };
   }, [user, loading]);

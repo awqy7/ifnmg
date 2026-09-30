@@ -35,12 +35,6 @@ class UserUpdate(BaseModel):
     ai_provider: Optional[str] = Field(default=None, max_length=50)
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: dict
-
-
 class UserResponse(BaseModel):
     id: str
     name: str
@@ -249,8 +243,6 @@ async def moodle_login(
     set_auth_cookie(response, token)
 
     return {
-        "access_token": token,
-        "token_type": "bearer",
         "user": {
             "id": user.id,
             "name": user.name,

@@ -13,6 +13,10 @@
 #      - GROQ_API_KEY (https://console.groq.com)
 #      - ALLOWED_ORIGINS (ex: https://ifnmg.vercel.app,http://localhost:3000)
 #
+# IMPORTANTE: este projeto mantém sincronização e lembretes no APScheduler.
+# Por isso o deploy abaixo mantém uma instância com CPU sempre alocada. Isso
+# evita que os jobs parem durante períodos sem requisições, mas pode gerar custo.
+#
 # Uso:  ./deploy/cloud_run.sh
 # ═══════════════════════════════════════════════════════════════════════════
 set -euo pipefail
@@ -59,8 +63,9 @@ gcloud run deploy "$SERVICE" \
   --project "$PROJECT_ID" \
   --allow-unauthenticated \
   --platform managed \
-  --min-instances 0 \
-  --max-instances 3 \
+  --min-instances 1 \
+  --max-instances 1 \
+  --no-cpu-throttling \
   --cpu 1 \
   --memory 1Gi \
   --timeout 120 \

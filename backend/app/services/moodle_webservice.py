@@ -239,6 +239,84 @@ class MoodleWebService:
             logger.warning(f"Falha ao baixar {fileurl[:100]}: {e}")
             return None
 
+    async def upload_draft_file(
+        self,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        draft_item_id: int = 0,
+    ) -> int:
+        """Envia um arquivo ao rascunho privado do usuário no Moodle.
+
+        O item de rascunho retornado é usado em ``mod_assign_save_submission``;
+        o arquivo nunca é gravado permanentemente neste serviço.
+        """
+        if not self.token:
+            raise RuntimeError("A sessão do Virtual2 não possui um token de envio.")
+        if not filename or not content:
+            raise RuntimeError("Arquivo de envio inválido.")
+
+        params = {
+            "token": self.token,
+            "filepath": "/",
+            "filearea": "draft",
+            "itemid": str(draft_item_id),
+        }
+        files = {"file_1": (filename, content, content_type or "application/octet-stream")}
+
+        async def upload(client: httpx.AsyncClient) -> int:
+            response = await client.post(
+                f"{self.base_url}/webservice/upload.php",
+                params=params,
+                files=files,
+            )
+            if response.status_code != 200:
+                raise RuntimeError("O Virtual2 recusou o upload do arquivo.")
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise RuntimeError("O Virtual2 retornou uma resposta inválida ao enviar o arquivo.") from exc
+            if not isinstance(data, dict) or data.get("error") or data.get("exception"):
+                raise RuntimeError(str(data.get("message") or data.get("error") or "Falha ao enviar arquivo ao Virtual2."))
+            try:
+                item_id = int(data.get("itemid"))
+            except (TypeError, ValueError) as exc:
+                raise RuntimeError("O Virtual2 não confirmou o arquivo enviado.") from exc
+            if item_id <= 0:
+                raise RuntimeError("O Virtual2 não confirmou o arquivo enviado.")
+            return item_id
+
+        if self.client:
+            return await upload(self.client)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            return await upload(client)
+
+    async def save_assignment_submission(
+        self,
+        assignment_id: int,
+        message: str = "",
+        draft_item_id: Optional[int] = None,
+    ) -> Any:
+        """Salva texto e/ou arquivos de uma tarefa, ainda sem afirmar entrega."""
+        params: Dict[str, Any] = {"assignmentid": assignment_id}
+        if message:
+            params["plugindata[onlinetext_editor][text]"] = message
+            params["plugindata[onlinetext_editor][format]"] = 1  # HTML seguro do editor Moodle.
+        if draft_item_id:
+            params["plugindata[files_filemanager]"] = draft_item_id
+        return await self._call("mod_assign_save_submission", params)
+
+    async def submit_assignment_for_grading(self, assignment_id: int) -> Any:
+        """Confirma a entrega da tarefa para avaliação no Moodle."""
+        return await self._call("mod_assign_submit_for_grading", {
+            "assignmentid": assignment_id,
+            "acceptsubmissionstatement": 1,
+        })
+
+    async def get_assignment_submission_status(self, assignment_id: int) -> Dict:
+        data = await self._call("mod_assign_get_submission_status", {"assignid": assignment_id})
+        return data if isinstance(data, dict) else {}
+
 
 def ts_to_datetime(ts) -> Optional[datetime]:
     """Converte timestamp unix do Moodle em datetime UTC."""

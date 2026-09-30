@@ -14,6 +14,8 @@ O **IFNMG Assistente** é uma plataforma moderna e inteligente desenvolvida para
    - Lista todas as tarefas, questionários e fóruns de todas as disciplinas.
    - Indicadores visuais de status (*Pendente*, *Entregue*, *Atrasado*).
    - Links diretos para as páginas do Moodle.
+   - Envio direto de tarefas do tipo **Atividade**: resposta em texto e/ou anexos,
+     sempre com confirmação explícita e status oficial retornado pelo Virtual2.
 
 3. 🌅 **Briefing Matinal Diário com IA**:
    - Analisa tarefas pendentes, disciplinas e materiais recentes.
@@ -89,7 +91,8 @@ PaaS brasileira (datacenter no Brasil → IP brasileiro → passa no Moodle). Ig
    ```bash
    ./deploy/upuai.sh
    ```
-   (o script conecta o repo, injeta as env vars do `backend/.env.supabase.bak` e faz o deploy).
+   O script lê `backend/.env.local` somente na máquina local, aplica as variáveis
+   no painel da Upuai e faz o deploy. Esse arquivo não deve ser versionado.
 5. O script imprime a URL `*.upuai.com.br` — valide com `curl URL/api/health` e depois aponte a Vercel.
 
 > O deploy usa `backend/upuai.toml` (build por detecção de FastAPI + health check `/api/health`).
@@ -99,7 +102,9 @@ PaaS brasileira (datacenter no Brasil → IP brasileiro → passa no Moodle). Ig
 Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
 
 1. Crie uma conta Google Cloud e um projeto (`gcloud config set project SEU_PROJETO_ID`).
-2. Execute `./deploy/cloud_run.sh` (usa o `backend/Dockerfile`).
+2. Execute `./deploy/cloud_run.sh` (usa o `backend/Dockerfile`). O script fixa
+   uma instância com CPU sem throttling, pois o agendador de sincronização precisa
+   continuar executando mesmo sem tráfego; considere o custo antes de usar essa alternativa.
 3. Aponte a Vercel para a URL `https://ifnmg-backend-....run.app`.
 
 #### d) Render (backend — NÃO recomendado)
@@ -124,6 +129,11 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
    - `NEXT_PUBLIC_API_URL=https://SEU-BACKEND.upuai.com.br` (URL do Upuai)
 4. **Deploy**. 
 
+O navegador sempre chama `/api` pela própria URL da Vercel; o rewrite do Next.js
+encaminha as requisições ao backend. Isso mantém a sessão em cookie `httpOnly` de
+primeira parte e evita salvar JWT no JavaScript. Cadastre em `ALLOWED_ORIGINS` o
+domínio de produção e cada domínio de preview que realmente for utilizar.
+
 ---
 
 ## 🔒 Segurança e Privacidade
@@ -138,8 +148,11 @@ Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
 ## ✅ Validação
 
 ```bash
-# Backend (testes unitários)
-cd backend && ./venv/bin/python -m unittest discover -s tests -v
+# Backend (testes unitários em banco SQLite temporário)
+cd backend
+TEST_DB="$(mktemp /tmp/ifnmg-tests.XXXXXX.db)"
+DATABASE_URL="sqlite:///$TEST_DB" ./venv/bin/python -m unittest discover -s tests -v
+rm -f "$TEST_DB"
 
 # Frontend (qualidade, tipos e build de produção)
 cd frontend && npm run lint && npm run build

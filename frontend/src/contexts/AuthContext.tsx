@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { tokenStore } from "@/lib/token-store";
 import { api } from "@/lib/api";
 
 interface User {
@@ -28,16 +27,13 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const API_BASE = "";
 
 /**
- * Usa o cookie httpOnly pela mesma origem e um Bearer apenas na requisição
- * imediatamente posterior ao login.
+ * Usa o cookie httpOnly pela mesma origem.
  */
 async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = tokenStore.get();
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers as Record<string, string> || {}),
     },
     credentials: "include",
@@ -57,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await apiFetch("/api/auth/me");
       if (res.status === 401) {
-        tokenStore.clear();
         return null;
       }
       if (!res.ok) return null;
@@ -92,12 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    const data = await res.json();
-
-    // Mantém o token apenas em memória; a persistência é do cookie httpOnly.
-    if (data.access_token) {
-      tokenStore.set(data.access_token);
-    }
     api.clearCache();
 
     const me = await fetchMe();
@@ -109,7 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
-    tokenStore.clear();
     api.clearCache();
     setUser(null);
   };
