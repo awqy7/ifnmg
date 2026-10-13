@@ -25,7 +25,7 @@
 set -euo pipefail
 
 BACKEND_DIR="$(cd "$(dirname "$0")/../backend" && pwd)"
-SERVICE="${SERVICE:-ifnmg-backend}"
+SERVICE="${SERVICE:-ifnmg}"
 BRANCH="${BRANCH:-main}"
 
 command -v upuai >/dev/null 2>&1 || {
@@ -90,7 +90,7 @@ upuai deploy --wait --yes -o json
 
 echo
 echo "══════════════════════════════════════════════════════════════"
-echo "✅ Backend no ar. Passe a URL *.upuai.com.br (último campo do"
+echo "✅ Backend no ar. Passe a URL *.apps.upuai.cloud (último campo do"
 echo "   JSON acima) para o próximo passo — apontar a Vercel."
 echo
 echo "Próximos passos:"
