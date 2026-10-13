@@ -38,6 +38,62 @@ def _strip_thinking(text: str) -> str:
     return text.strip()
 
 
+def _is_context_overflow(error_message: str) -> bool:
+    """Detecta erros de estouro de contexto/limite de tokens por minuto (TPM)."""
+    msg = (error_message or "").lower()
+    return any(marker in msg for marker in (
+        "request too large",
+        "tokens per minute",
+        "context length",
+        "context_length_exceeded",
+        "maximum context",
+        "reduce your message size",
+        "413",
+    ))
+
+
+def _shrink_messages(messages: List[Dict], max_chars: int) -> List[Dict]:
+    """Reduz o conteúdo das mensagens para caber em ``max_chars``.
+
+    O prompt de sistema traz primeiro as instruções e depois os DADOS
+    (DADOS_VIRTUAL2), então mantemos o início e cortamos o fim — assim os
+    dados são descartados antes das instruções. Mensagens de histórico mais
+    antigas também são removidas se necessário.
+    """
+    if not messages:
+        return messages
+
+    total = sum(len(m.get("content") or "") for m in messages)
+    if total <= max_chars:
+        return messages
+
+    system_msgs = [m for m in messages if m.get("role") == "system"]
+    other_msgs = [m for m in messages if m.get("role") != "system"]
+
+    system_budget = max(1000, int(max_chars * 0.7))
+    other_budget = max(0, max_chars - system_budget)
+
+    shrunk: List[Dict] = []
+    for msg in system_msgs:
+        content = msg.get("content") or ""
+        if len(content) > system_budget:
+            content = content[:system_budget] + "\n...[contexto reduzido]..."
+        shrunk.append({**msg, "content": content})
+
+    kept: List[Dict] = []
+    used = 0
+    for msg in reversed(other_msgs):
+        content = msg.get("content") or ""
+        if kept and used + len(content) > other_budget:
+            break
+        kept.append({**msg, "content": content})
+        used += len(content)
+    kept.reverse()
+
+    shrunk.extend(kept)
+    return shrunk
+
+
 def _sanitize_user_input(text: str, max_len: int = 10000) -> str:
     """Sanitiza entrada do usuário para prevenir prompt injection."""
     if not text:
@@ -155,6 +211,27 @@ class AIService:
 
         return kwargs
 
+    def _chat_attempts(
+        self,
+        messages: List[Dict],
+        max_tokens: int,
+        provider: AIProvider,
+    ) -> List[tuple]:
+        """Gera tentativas progressivas de (mensagens, max_tokens).
+
+        A primeira usa o contexto completo; as seguintes reduzem o orçamento de
+        caracteres para contornar o limite de TPM do provider.
+        """
+        attempts: List[tuple] = [(messages, max_tokens)]
+        if provider == AIProvider.GROQ:
+            total = sum(len(m.get("content") or "") for m in messages)
+            for budget in (9000, 5000, 2500):
+                if total > budget:
+                    attempts.append(
+                        (_shrink_messages(messages, budget), min(max_tokens, 1500))
+                    )
+        return attempts
+
     async def chat(
         self,
         messages: List[Dict],
@@ -164,52 +241,75 @@ class AIService:
         max_tokens: int = 2048,
         temperature: float = 0.7,
     ) -> str:
-        """Envia mensagens e retorna a resposta da IA."""
-        try:
-            import litellm
-            litellm.telemetry = False
-            litellm.suppress_debug_info = True
-            # Silencia loggers verbose do litellm que vazam API keys
-            for _name in ("litellm", "LiteLLM", "litellm.utils", "litellm_logging"):
-                logging.getLogger(_name).setLevel(logging.WARNING)
+        """Envia mensagens e retorna a resposta da IA.
 
+        Em caso de estouro do limite de tokens por minuto (TPM) do Groq, o
+        contexto é reduzido progressivamente e a chamada é repetida antes de
+        acionar o modelo de fallback.
+        """
+        import litellm
+        litellm.telemetry = False
+        litellm.suppress_debug_info = True
+        # Silencia loggers verbose do litellm que vazam API keys
+        for _name in ("litellm", "LiteLLM", "litellm.utils", "litellm_logging"):
+            logging.getLogger(_name).setLevel(logging.WARNING)
+
+        last_error: Optional[Exception] = None
+        for attempt_messages, attempt_max_tokens in self._chat_attempts(
+            messages, max_tokens, provider
+        ):
             kwargs = self._build_litellm_kwargs(provider, api_key, custom_api_keys)
             kwargs.update({
-                "messages": messages,
-                "max_tokens": max_tokens,
+                "messages": attempt_messages,
+                "max_tokens": attempt_max_tokens,
                 "temperature": temperature,
             })
+            try:
+                response = await litellm.acompletion(**kwargs)
+                content = response.choices[0].message.content or ""
+                return _strip_thinking(content)
+            except Exception as e:
+                last_error = e
+                if provider == AIProvider.GROQ and _is_context_overflow(_safe_error(e)):
+                    logger.warning(
+                        "Contexto excede o limite do Groq; tentando contexto reduzido"
+                    )
+                    continue
+                break
 
-            response = await litellm.acompletion(**kwargs)
-            content = response.choices[0].message.content or ""
-            return _strip_thinking(content)
-
-        except Exception as e:
-            error_message = str(e).lower()
-            if provider == AIProvider.GROQ and any(marker in error_message for marker in (
+        error_message = _safe_error(last_error).lower() if last_error else ""
+        if provider == AIProvider.GROQ and last_error is not None and any(
+            marker in error_message for marker in (
                 "model_not_found", "does not exist", "do not have access",
-                "rate_limit", "413", "429",
-            )):
-                try:
-                    from app.config import settings
+                "rate_limit", "rate limit", "429", "413",
+                "request too large", "tokens per minute",
+            )
+        ):
+            try:
+                from app.config import settings
 
-                    fallback_model = settings.GROQ_FALLBACK_MODEL.removeprefix("groq/")
-                    logger.warning("Modelo Groq principal indisponível; tentando fallback configurado")
-                    fallback_kwargs = self._build_litellm_kwargs(provider, api_key, custom_api_keys)
-                    fallback_kwargs.update({
-                        "model": f"groq/{fallback_model}",
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                    })
-                    response = await litellm.acompletion(**fallback_kwargs)
-                    content = response.choices[0].message.content or ""
-                    return _strip_thinking(content)
-                except Exception as fallback_err:
-                    logger.error("Fallback Groq falhou: %s", fallback_err)
+                fallback_model = settings.GROQ_FALLBACK_MODEL.removeprefix("groq/")
+                logger.warning("Modelo Groq principal indisponível; tentando fallback configurado")
+                fallback_kwargs = self._build_litellm_kwargs(provider, api_key, custom_api_keys)
+                fallback_kwargs.update({
+                    "model": f"groq/{fallback_model}",
+                    "messages": _shrink_messages(messages, 6000),
+                    "max_tokens": min(max_tokens, 1500),
+                    "temperature": temperature,
+                })
+                response = await litellm.acompletion(**fallback_kwargs)
+                content = response.choices[0].message.content or ""
+                return _strip_thinking(content)
+            except Exception as fallback_err:
+                logger.error("Fallback Groq falhou: %s", _safe_error(fallback_err))
 
-            logger.error("Erro na chamada de IA [%s]: %s", provider, _safe_error(e))
-            raise
+        logger.error(
+            "Erro na chamada de IA [%s]: %s",
+            provider,
+            _safe_error(last_error) if last_error else "",
+        )
+        if last_error is not None:
+            raise last_error
 
     async def stream_chat(
         self,

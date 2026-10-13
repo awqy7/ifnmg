@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "openai/gpt-oss-20b"
     GROQ_FALLBACK_MODEL: str = "openai/gpt-oss-120b"
+    # Orçamento de contexto/geração para caber no limite de tokens por minuto
+    # (TPM) do provider. O Groq free tier, por exemplo, limita a 8000 TPM.
+    CHAT_CONTEXT_MAX_CHARS: int = 12000
+    AI_MAX_OUTPUT_TOKENS: int = 2048
 
     # Web Push
     VAPID_PUBLIC_KEY: Optional[str] = None
