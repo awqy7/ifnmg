@@ -54,10 +54,9 @@ O script guia você passo a passo:
 #### 3. Obter connection string
 
 1. Clique em "Connect" (canto superior direito)
-2. Copie a string:
-```
-postgresql://postgres.abc123:senha123@aws-us-east-1.neon.tech:5432/DBNAME?sslmode=require
-```
+2. Selecione 'Python' ou 'Generic'
+3. Copie a connection string (parece com:
+   `postgresql://postgres.xxx:senha@aws-us-east-1.neon.tech/neondb?sslmode=require`)
 
 #### 4. Configurar .env
 
@@ -143,7 +142,7 @@ No dashboard do Railway, adicione:
 APP_ENV=production
 DEBUG=false
 DATABASE_URL=postgresql+psycopg://...  # Sua URL do Neon
-ALLOWED_ORIGINS=https://ifnmg.vercel.app
+ALLOWED_ORIGINS=https://ifnmg.vercel.app,http://localhost:3000,http://127.0.0.1:3000
 DEFAULT_AI_PROVIDER=groq
 GROQ_API_KEY=gsk_...
 SECRET_KEY=97a958f1a74a614d16ee927d3fffb31b203d6edc875afb71ef1037f155a20d70
@@ -173,8 +172,8 @@ python migrate_supabase_to_neon.py
 ```
 
 **O script:**
-- Conecta ao Supabase
-- Conecta ao Neon
+- Conecta-se ao Supabase
+- Conecta-se ao Neon
 - Copia todas as tabelas
 - Preserva IDs e relacionamentos
 

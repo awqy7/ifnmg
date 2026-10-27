@@ -60,29 +60,19 @@ Acesse no navegador:
 - **Aplicação Web**: `http://localhost:3000`
 - **Documentação da API (Swagger)**: `http://localhost:8000/api/docs`
 
-### 2. Deploy (Vercel + Supabase + Upuai)
+### 2. Deploy (Upuai + Vercel) — **Apenas com IP brasileiro para login no Moodle**
 
-O sistema usa **3 serviços**:
+O sistema usa **2 serviços**:
 
 | Serviço | O que roda | Host |
 |---|---|---|
 | Frontend (Next.js) | Interface web (porta 3000) | **Vercel** |
 | Backend (FastAPI/Python) | API, IA, sincronização e WebSocket | **Upuai Cloud (Brasil)** |
-| Banco de dados | PostgreSQL | **Supabase** |
 
-> ⚠️ **O backend precisa rodar com IP brasileiro.** O Moodle do Virtual2 (`virtual2.ifnmg.edu.br`) bloqueia autenticação vinda de IPs estrangeiros/datacenters fora do Brasil — por isso o **Render (EUA) não funciona** para o login. Soluções com IP no Brasil: **Upuai Cloud** (PaaS BR, recomendado), Brasa Cloud (beta) ou Google Cloud Run em `southamerica-east1`.
-> ⚠️ O backend **não roda na Vercel** (é um servidor Python persistente). A Vercel hospeda apenas o Next.js em `frontend/`.
+> ✅ **Upuai Cloud** fornece IP no Brasil → passa no Moodle Virtual2 sem bloqueios.
+> ❌ **Railway/Render** (EUA) → bloqueado pelo Moodle → **NÃO RECOMENDADO**.
 
-#### a) Supabase (banco)
-
-1. Crie o projeto (região `us-east-2`).
-2. Em **Project Settings → Database → Connection string**, copie a string do **Pooler** (não a "Direct connection" — ela é IPv6-only).
-3. Use o formato:
-   `postgresql+psycopg://postgres.<PROJECT_REF>:<SENHA>@aws-0-<REGIAO>.pooler.supabase.com:5432/postgres?sslmode=require`
-
-#### b) Upuai Cloud (backend — recomendado)
-
-PaaS brasileira (datacenter no Brasil → IP brasileiro → passa no Moodle). Igual ao Railway/Render: `git push`, CLI amigável, plano FREE sem cartão.
+#### a) Upuai Cloud (backend — recomendado)
 
 1. Crie a conta grátis (sem cartão) em `upuai.com.br`.
 2. Instale a CLI: `brew install saiph-ti/upuai-cli/upuai` (ou binário em `github.com/saiph-ti/upuai-cli/releases`).
@@ -97,31 +87,7 @@ PaaS brasileira (datacenter no Brasil → IP brasileiro → passa no Moodle). Ig
 
 > O deploy usa `backend/upuai.toml` (build por detecção de FastAPI + health check `/api/health`).
 
-#### c) Google Cloud Run (backend — alternativa)
-
-Roda em São Paulo (IP brasileiro) e usa o **free tier do Cloud Run**.
-
-1. Crie uma conta Google Cloud e um projeto (`gcloud config set project SEU_PROJETO_ID`).
-2. Execute `./deploy/cloud_run.sh` (usa o `backend/Dockerfile`). O script fixa
-   uma instância com CPU sem throttling, pois o agendador de sincronização precisa
-   continuar executando mesmo sem tráfego; considere o custo antes de usar essa alternativa.
-3. Aponte a Vercel para a URL `https://ifnmg-backend-....run.app`.
-
-#### d) Render (backend — NÃO recomendado)
-
-> ⚠️ Bloqueado pelo Moodle (IP nos EUA não autentica no Virtual2). Mantido só como referência.
-
-1. GitHub → **New Web Service** → repo `awqy7/ifnmg`.
-2. **Root Directory**: `backend`
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Adicione as env vars:
-   - `APP_ENV=production`
-   - `DATABASE_URL` (string do pooler acima — troque SENHA pela senha real do banco)
-   - `ALLOWED_ORIGINS=https://SEU-DOMINIO.vercel.app` (inclua cada domínio de produção/preview explicitamente)
-   - `GROQ_API_KEY`, `SECRET_KEY`, `ENCRYPTION_KEY` etc. conforme necessário
-
-#### e) Vercel (frontend)
+#### b) Vercel (frontend)
 
 1. Importe o repo `awqy7/ifnmg`.
 2. **Root Directory**: `frontend` ← **importante, senão dá erro 404**
@@ -133,6 +99,27 @@ O navegador sempre chama `/api` pela própria URL da Vercel; o rewrite do Next.j
 encaminha as requisições ao backend. Isso mantém a sessão em cookie `httpOnly` de
 primeira parte e evita salvar JWT no JavaScript. Cadastre em `ALLOWED_ORIGINS` o
 domínio de produção e cada domínio de preview que realmente for utilizar.
+
+### 3. Deploy Alternativo (upuai.com.br)
+
+```bash
+# Pré-requisitos: upuai login, variáveis em backend/.env.local
+./deploy/upuai.sh
+```
+
+### 4. Alternativas (considere os riscos)
+
+#### a) Render (backend — NÃO recomendado)
+> ⚠️ Bloqueado pelo Moodle (IP nos EUA não autentica no Virtual2). Mantido só como referência.
+
+#### b) Railway (backend — NÃO recomendado)
+> ⚠️ Mesma limitação do Render (IP nos EUA).
+
+#### c) Google Cloud Run (backend — alternativo)
+> ✅ Roda em São Paulo (`southamerica-east1`) com IP brasileiro.
+> 🔴 Custo: precisa de máquina persistente (taxa horária) para agendamento ativo.
+
+#### d) Vercel (frontend) — sempre use o diretório `frontend/`
 
 ---
 
@@ -162,3 +149,84 @@ O smoke test responsivo em `frontend/tests/mobile_viewport_smoke.py` valida as
 larguras 320, 375 e 430 px e um telefone em paisagem contra um `next start`
 local. O teste integrado `backend/tests/live_virtual2_smoke.py` usa somente as
 credenciais já criptografadas no banco e imprime apenas contagens agregadas.
+
+---
+
+## 📂 Lista de Arquivos (raiz)
+
+- `README.md` (este arquivo) — Visão geral do projeto e instruções de deploy
+- `start.sh` — Script de inicialização local (SQLite + Next.js)
+- `deploy/upuai.sh` — Deploy automatizado para Upuai Cloud
+- `deploy/railway.sh` — Deploy para Railway (fallback)
+- `backend/.env.example` — Template de variáveis de ambiente para produção
+- `backend/.env.local` — **SEGREDO** — variáveis locais para Upuai/Cloud
+- `backend/.env.neon` — Template de configuração do Neon.tech (PostgreSQL gratuito)
+- `backend/.env.supabase.bak` — String de conexão do Supabase para referência
+- `backend/upuai.toml` — Configuração de build/deploy do Upuai Cloud
+- `backend/README_NEON.md` — Guia de referência para Neon.tech + Railway
+- `NEON_RAILWAY_SETUP.md` — Guia completo de configuração do Neon + Railway
+- `backend/.mcp.json` — Configuração do MCP (Model Context Protocol)
+- `backend/.upuai.md` — Documentação do Upuai integrada
+
+---
+
+## 🏗️ Estrutura de Diretórios
+
+```
+ifnmg-assistente/
+├── README.md
+├── start.sh
+├── deploy/
+│   ├── upuai.sh
+│   └── railway.sh
+├── backend/
+│   ├── .env.example
+│   ├── .env.local      ← MODIFIQUE ESTE ARQUIVO (CUIDADO!)
+│   ├── .env.neon      ← Template Neon
+│   ├── .env.supabase.bak
+│   ├── .mcp.json
+│   ├── upuai.toml
+│   ├── README_NEON.md
+│   └── .upuai.md
+│   ├── app/
+│   ├── tests/
+│   └── venv/
+├── frontend/
+│   ├── .env.local
+│   ├── src/
+│   └── package.json
+└── .github/
+    └── workflows/
+        └── ci.yml
+```
+avoidar arquivo .env com segredos para commit
+
+## 📡 URLs Principais
+
+| Componente | Preview (última) | Produção (ainda em construção) |
+|-------------|------------------|----------------------------|
+| **Frontend Vercel** | `https://ifnmg-kjiirqiuv-awqy.vercel.app` | `https://ifnmg.vercel.app` |
+| **Backend Upuai** | `https://ifnmg-backend-production.upuai.com.br` | `https://ifnmg-backend-production.upuai.com.br` |
+| **API Health Check** | `https://ifnmg-backend-production.upuai.com.br/api/health` | Igual ao backend |
+| **Dashboard Admin** | `https://ifnmg-backend-production.upuai.com.br/api/admin/dashboard` | Igual ao backend |
+
+## 🎯 Objetivo
+
+Prover uma experiência de aprendizagem inteligente e personalizada para estudantes do IFNMG, integrando automaticamente o Moodle Virtual2, fornecendo lembretes de tarefas, resumos diários com IA, tutoria especializada por disciplina e ferramentas ativas de estudo — tudo rodando com IP brasileiro para garantir login contínuo no ambiente virtual.
+
+## 🌐 Sobre oIFNMG
+
+O IFNMG (Instituto Federal do Norte de Minas Gerais) é uma instituição pública de ensino superior que oferece cursos técnicos, de graduação e pós-graduação nas áreas de ciência, tecnologia e inovação. O **IFNMG Assistente** é uma plataforma complementar desenvolvida para apoiar estudantes no acompanhamento de atividades acadêmicas, deadlines e materiais das disciplinas oferecidas pelo instituto.
+
+## 📧 Contato
+
+- **GitHub**: https://github.com/awqy7/ifnmg
+- **E-mail de contato**: awqy@aluno.ifnmg.edu.br
+
+## 📝 Licença
+
+Este projeto está licenciado sob a licença MIT. Sinta-se à vontade para contribuir, relatar problemas ou usar este código como base para seus próprios projetos acadêmicos.
+
+---
+
+**✨ Feito com ♡ por estudantes e professores do IFNMG**

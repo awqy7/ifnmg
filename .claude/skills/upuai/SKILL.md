@@ -3,7 +3,7 @@ name: "upuai"
 description: "Deploy, manage, and troubleshoot projects on Upuai Cloud using the upuai CLI. Route-first skill — read the routing table below and follow the matching section."
 when_to_use: "When the user wants to deploy a project to Upuai, check status/logs, configure env vars or domains, manage databases, roll back, promote between environments, or use the upuai CLI for any task."
 ---
-<!-- upuai skill v1.1.0 · sha256:b04e8a7ee79b7b4cd243a5ff9480c0809cad4a5d02525723c0de4c85e4d8ad70 · managed by the upuai CLI (upstream: saiph-ti/upuai-cli skills/upuai). Do not edit here — run `upuai skill install --force` to refresh. -->
+<!-- upuai skill v1.4.1 · sha256:c1b7aa0c60b57c4256cbc2a6fa66b93b83019dc320ca72edb0fbbbb5d81f3467 · managed by the upuai CLI (upstream: saiph-ti/upuai-cli skills/upuai). Do not edit here — run `upuai skill install --force` to refresh. -->
 
 # Upuai Cloud — deploy via CLI
 
@@ -19,6 +19,9 @@ Read only the section(s) that match the user's intent.
 | "what's broken / logs / status / rollback" | [Troubleshoot](#troubleshoot) |
 | "set env var / add domain / change build" | [Configure](#configure) |
 | "connect to db / backup / restore" | [Database](#database) |
+| "PostGIS / pgvector / Postgres extensions / db update" | [Database](#database) |
+| "MySQL access denied / reset or rotate the database password" | [Database](#database) |
+| "connect to MySQL from my machine / mysqldump / MySQL public access" | [Database](#database) |
 | Promote staging → production | [Environments](#environments) |
 | "project not found" / empty project list / user is in more than one org | [Workspaces](#workspaces) |
 | Anything else | Read `https://upuai.com.br/llms-full.txt` |
@@ -27,12 +30,13 @@ Read only the section(s) that match the user's intent.
 
 Always invoke `upuai` in non-interactive mode. Without these, prompts will hang in agent environments.
 
-1. **Auth**: always run `upuai whoami` first. If it returns the expected user, you're authenticated — the CLI reads `~/.upuai/credentials.json` and auto-refreshes the JWT on 401. If `whoami` fails, ask the user to run `upuai login` once on their own machine (browser OAuth or email OTP — both interactive), same pattern as `railway login`, `vercel login`, `fly auth login`. For **CI/automation**, the sanctioned headless path is a scoped token: a human runs `upuai token create --name <name> --scope deploy` (add `--project <id>` to scope it to one project, `--expires <days>` for a TTL), then sets the printed secret in `UPUAI_TOKEN` (opaque, long-lived, revocable). `--scope read` mints a GET-only token. List with `upuai token list`, revoke with `upuai token revoke <id>`. Never stuff a user JWT into an env var — use `upuai token`.
-2. **Skip confirmations**: pass `-y` / `--yes` on any command that mutates state (`init`, `deploy`, `down`, `delete`, `rollback`, `promote`, `db restore`, `vars delete`, `domain delete`).
+1. **Auth**: always run `upuai whoami` first. If it returns the expected user, you're authenticated — the CLI reads `~/.upuai/credentials.json` and auto-refreshes the JWT on 401. If `whoami` fails, ask the user to run `upuai login` once on their own machine (browser OAuth or email OTP — both interactive), same pattern as `railway login`, `vercel login`, `fly auth login`. For **CI/automation**, the sanctioned headless path is a scoped token: a human runs `upuai token create --name <name> --scope deploy` (add `--project <id>` to scope it to one project, `--expires <days>` for a TTL), then sets the printed secret in `UPUAI_TOKEN` (opaque, long-lived, revocable). `--scope read` mints a read-only token (GET only, and neither `upuai ssh` nor bucket credentials). List with `upuai token list`, revoke with `upuai token revoke <id>`. Never stuff a user JWT into an env var — use `upuai token`.
+2. **Skip confirmations**: pass `-y` / `--yes` on any command that mutates state (`init`, `deploy`, `down`, `delete`, `rollback`, `promote`, `db restore`, `db public enable`, `db update`, `db extensions disable`, `vars delete`, `domain delete`).
 3. **JSON output for parsing**: pass `-o json` on `status`, `logs`, `list`, `vars list`, `domain list`, `env list`, and (when waiting) `deploy --wait -o json`.
 4. **Pre-supply flags on `init`**: when `--yes` is set, `init` requires `--name <slug>`. Pass `--framework <name>` to skip auto-detect prompts. Pass `--repo <owner>/<repo>` (or `--image <ref>`) to create a deployable service in one step instead of an empty placeholder. The CLI errors out with a clear message if a flag is missing rather than hanging on a prompt.
 5. **Block until terminal**: prefer `upuai deploy --wait` over polling `upuai status` yourself — the CLI already handles the polling, status transitions, timeout, and non-zero exit on failure.
-6. **Know your workspace**: every session is scoped to ONE workspace, and the API returns a plain 404 for anything outside it. `upuai whoami -o json` reports `workspace` / `workspaceId` / `role` — **except under `UPUAI_TOKEN`**, where it reports `machineToken: true` and omits them, because a machine token is opaque and its workspace is not readable client-side (it is fixed at creation; mint the token inside the workspace you intend to deploy to). A linked directory pins its workspace and the CLI realigns the session before any command that touches the linked project or service, printing `→ workspace: <name>` to **stderr** (stdout stays clean for `-o json`). See [Workspaces](#workspaces).
+   - **Image services**: `upuai deploy -s <service> --image <ref> --wait --yes` sets the image and deploys in one step (refused on git services — it would convert them). Every deploy re-pulls the image, so a mutable tag only needs `upuai deploy -s <service> --wait --yes`. Read the current image with `upuai config show -s <service> -o json | jq -r '.config.source.image'`.
+6. **Know your workspace**: every session is scoped to ONE workspace, and the API returns a plain 404 for anything outside it. `upuai whoami -o json` reports `workspace` / `workspaceId` / `role`; **under `UPUAI_TOKEN`** it reports `machineToken: true` with `tokenName`, `scopes`, `workspace`/`workspaceId` and `tokenProjectId`/`tokenProjectName` when the token is restricted to one project (a token's workspace is fixed at creation; mint it inside the workspace you intend to deploy to). A linked directory pins its workspace and the CLI realigns the session before any command that touches the linked project or service, printing `→ workspace: <name>` to **stderr** (stdout stays clean for `-o json`). See [Workspaces](#workspaces).
 
 Before running any command that touches user state, confirm the action with the user. Read flags from the user — do not invent project names, custom domains, or env-var values.
 
@@ -44,6 +48,9 @@ Run once per machine. Skip if `upuai version` is **>= 0.10.0** and `upuai whoami
 # macOS / Linux
 brew tap saiph-ti/upuai-cli
 brew install upuai
+
+# Linux / macOS without Homebrew (servers, CI runners) — verifies the SHA-256
+curl -fsSL https://raw.githubusercontent.com/saiph-ti/upuai-cli/main/install.sh | sh
 
 # Windows (PowerShell)
 scoop bucket add upuai https://github.com/saiph-ti/scoop-upuai-cli
@@ -98,7 +105,7 @@ upuai init \
 upuai deploy --wait --yes -o json
 ```
 
-`--wait` polls every 3 seconds until status is `success` / `failed` / `cancelled` / `build_failed` / `superseded`. Default timeout: 300s — override with `--wait-timeout 600`. Exit code is non-zero on `failed` / `cancelled` / `build_failed`.
+`--wait` polls every 3 seconds until status is `success` / `failed` / `cancelled` / `build_failed` / `superseded`. There is no client-side timeout by default: the wait ends when the platform ends the deployment (every deployment reaches a terminal status). Pass `--wait-timeout <seconds>` to cap it; when the cap is hit the command exits non-zero and the deployment keeps running. Exit code is non-zero on `failed` / `cancelled` / `build_failed`.
 
 ### Deploy from local source — `upuai up` (no git repo)
 
@@ -112,7 +119,7 @@ upuai up --wait --yes -o json
 
 - Honors `.gitignore` / `.upuaiignore`; always excludes `.git`, `node_modules`, `.env*`.
 - Reads local `upuai.toml` exactly like the git path — release-phase / migrations apply identically.
-- `--wait` blocks until the deployment reaches a terminal status (exits non-zero on failure); `--wait-timeout <seconds>` caps the wait (default 300).
+- `--wait` blocks until the deployment reaches a terminal status (exits non-zero on failure); `--wait-timeout <seconds>` caps the wait (default: no cap).
 
 ### Variants
 
@@ -137,7 +144,7 @@ upuai up --wait --yes -o json
 - `--name <slug>` — kebab-case project slug. **Required when `--yes` is set.**
 - `--repo <owner>/<repo>` — creates a repo-backed service. **GitHub and GitLab are both supported** — the provider is auto-detected from the URL/host. URLs (`https://github.com/owner/repo[.git]`, `git@github.com:owner/repo`, GitLab equivalents) are normalized to `owner/repo`. If you also pass `--type`, it must be `github` or `gitlab` to match the detected provider. Same auto-detect applies to `upuai add --repo <url>`.
 - `--branch <name>` — git branch (default `main`).
-- `--root-dir <path>` — subdirectory within the repo for monorepos (e.g. `apps/api`).
+- `--root-dir <path>` — subdirectory within the repo for monorepos (e.g. `apps/api`), or `.` to build from the repo root. The service's `upuai.toml` lives in this directory. For a Dockerfile service in a monorepo whose Dockerfile needs the lockfile or sibling packages, keep `--root-dir apps/api` and set the build context to the repo root with `upuai config set --builder dockerfile --docker-context ../..` (CLI v0.28.0+; or `dockerContext = "../.."` in `apps/api/upuai.toml`). A `<Dockerfile name>.dockerignore` next to the Dockerfile (e.g. `apps/api/Dockerfile.dockerignore`) replaces the root `.dockerignore` for that build. On a push, a service with a subdirectory redeploys when the push changes a file inside it or outside every sibling service's root dir (shared packages, lockfile); a repo-root service redeploys on every push.
 - `--image <ref>` — creates a `docker_image`-type service; mutually exclusive with `--repo`.
 - `--framework <name>` — one of `Next.js`, `Vite`, `React`, `Node.js`, `Go`, `Django`, `Flask`, `Python`, `Rails`, `Docker`, `Static`. **Required when `--yes` is set and the CLI cannot auto-detect.** When in doubt, ask the user — a repo with both `Dockerfile` and `next.config.js` could go either way.
 
@@ -166,16 +173,17 @@ If `status === "success"` and `url` responds 200, report it to the user. Otherwi
 
 Decision tree for "it's not working":
 
-0. **"Project not found" / `upuai list` is empty / a project you know exists 404s?** → you are almost certainly in the wrong workspace. `upuai workspace list` shows all of them and marks the active one; `upuai workspace switch <slug>` moves. The API cannot tell you "wrong workspace" directly — it returns 404 for anything outside the active one, by design. See [Workspaces](#workspaces).
+0. **"Project not found" / `upuai list` is empty / a project you know exists 404s?** → you are almost certainly in the wrong workspace. `upuai workspace list` shows all of them and marks the active one; `upuai workspace switch <slug>` moves. With `UPUAI_TOKEN` set, both are refused: `upuai whoami` shows the token's workspace and project — mint a token inside the right workspace. The API cannot tell you "wrong workspace" directly — it returns 404 for anything outside the active one, by design. See [Workspaces](#workspaces).
 1. **Did `deploy` even trigger?** → `upuai status -o json | jq '.environments[].services[].lastDeployment'`. If everything is `null`, the project isn't linked or has no deployments yet — run `upuai link <project-id> --service <name> --env <env>` (the `--service` / `--env` flags skip the interactive picker).
 2. **Status `failed` or `build_failed`?** → `upuai logs -n 100 --build` shows the build output; `upuai logs -n 100 --deploy` shows the release-phase + rollout log; `upuai logs -n 100` shows runtime logs. Common causes:
    - **Build failure** (`build_failed`): missing `buildCommand` for the framework, missing dependency, wrong Node/Python version. Suggest `upuai.toml` with explicit `[build]` block — see [Configure](#configure).
    - **Release phase fail** (`failed` during release): if `releaseCommand` is set (e.g. `prisma migrate deploy`), it runs before the rollout. Check `--deploy` logs for the release-phase output.
-   - **Runtime crash** (deployment is `success` but service unhealthy / restarting): wrong `startCommand`, missing env var, port mismatch. Check `upuai vars list -o json` and confirm the app listens on `process.env.PORT` (Upuai injects `PORT`).
+   - **Runtime crash** (deployment is `success` but the service is `crashed` / restarting): wrong `startCommand`, missing env var, port mismatch. Check `upuai vars list -o json` and confirm the app listens on `process.env.PORT` (Upuai injects `PORT`).
 3. **Status `success` but URL doesn't respond 200?**
    - Service may bind to wrong port → ensure app reads `process.env.PORT`.
    - Health check path may be wrong → set `healthCheckPath` in `upuai.toml`.
    - Custom domain not propagated yet — try the `*.upuai.com.br` URL from the deployment object first.
+   - Service status `unhealthy` (dashboard "Down") → it was serving, then no instance answered its health check for 2 minutes (hung process, exhausted pool, or the app answering errors). With no response at all (timeout or connection refused) the platform restarts it on its own after 5 minutes, at most once every 30 minutes, and e-mails whoever receives deploy-failure notifications. An app answering errors is not restarted: read `upuai logs -n 100`, fix it, or `upuai restart --yes`.
 4. **Recent change broke it?** → `upuai rollback --list` to see deployments, then `upuai rollback --to <id> --yes` to revert.
 5. **Deeper inspection** → `upuai status -o json` exposes a full timeline (git clone / build / release / deploy stages) when the CLI is >= 0.4.0. Use it to pinpoint which stage failed before reaching for logs.
 
@@ -185,12 +193,13 @@ Decision tree for "it's not working":
 upuai status -o json                # full state
 upuai logs -n 200                   # last 200 log lines
 upuai logs -n 50 -o json            # JSON-parseable
-upuai redeploy --yes                # rerun last deploy (no code change)
+upuai redeploy --yes                # same commit, current config; reuses the image when build inputs are unchanged
+upuai redeploy --rebuild --yes      # same commit, built again (CLI v0.28.0+)
 upuai restart --yes                 # restart service (clears in-memory state)
 upuai rollback --list               # list deployments for rollback
 upuai rollback --to <deploy-id> --yes
 upuai config show                   # inspect builder/commands/health/root-dir
-upuai config set --root-dir apps/api  # set monorepo build Root Directory on an existing github/gitlab service
+upuai config set --root-dir apps/api  # set monorepo build Root Directory on an existing github/gitlab service (`.` = repo root)
 upuai service delete <name> --yes   # delete ONE service (deployments+volumes+buckets+domains) — NOT the whole project
 ```
 
@@ -202,7 +211,7 @@ For database investigation see [Database](#database).
 
 ### upuai.toml — config as code
 
-The canonical way to express build/release/deploy behaviour. Lives at the repo root. Cached server-side per SHA. Doc + schema: `https://upuai.com.br/docs/upuai-toml` and `https://upuai.com.br/schemas/upuai-toml-v1.json`.
+The canonical way to express build/release/deploy behaviour. Lives in the service's root directory (the repo root unless `--root-dir` is set). Cached server-side per SHA. Doc + schema: `https://upuai.com.br/docs/upuai-toml` and `https://upuai.com.br/schemas/upuai-toml-v1.json`.
 
 Minimal example — only set keys the user needs:
 
@@ -212,7 +221,8 @@ Minimal example — only set keys the user needs:
 [build]
 builder = "railpack"            # default; or "dockerfile"
 buildCommand = "pnpm build"
-dockerfilePath = "Dockerfile"   # only when builder = "dockerfile"
+dockerfilePath = "Dockerfile"   # only when builder = "dockerfile"; relative to the root directory
+dockerContext = "../.."          # optional build context, relative to the root directory (monorepo: repo root)
 
 [deploy]
 startCommand = "node dist/server.js"
@@ -243,8 +253,11 @@ upuai vars list -o json                              # current vars (linked serv
 upuai vars set DATABASE_URL=postgres://... --yes     # set one
 upuai vars set KEY1=val1 KEY2=val2 --yes             # set multiple atomically
 upuai vars set -s api API_KEY=xxx --yes              # target a specific service
+upuai vars set STRIPE_KEY=sk_live_... --secret --yes # secret: masked in listings, never returned by the API
 upuai vars delete SECRET_KEY --yes
 ```
+
+Use `--secret` for every credential (API keys, tokens, passwords). A variable that is already secret stays secret when you set a new value without the flag; `--secret=false` unmarks it.
 
 Shared variables (project/environment layers) are **opt-in per service** — pick which ones a service receives:
 
@@ -255,7 +268,7 @@ upuai vars shared disable DATABASE_URL -s site             # stop injecting
 upuai vars shared enable PUBLIC_ID --origin project -s api # key defined in both layers
 ```
 
-Vars take effect on the **next deploy** — trigger `upuai redeploy --yes` if the user expects them live immediately. Never write secrets to the user's chat / repo / logs.
+Vars take effect on the **next deploy** — trigger `upuai redeploy --yes` if the user expects them live immediately. A redeploy reuses the last image of that commit when nothing that goes into the build changed — build settings (builder, build and start commands, Dockerfile path and context) and build-time variables (scope `both` or `build`) — (multi-process Procfile services and `upuai up` deploys always build), so set variables the build never reads (ports, URLs the server reads at runtime, API keys of server code) with `--scope runtime`: changing them then redeploys in about a minute with no build. A variable with the default scope (`both`) or `build` is a build input — changing it builds again. Never write secrets to the user's chat / repo / logs.
 
 ### Custom domains
 
@@ -280,18 +293,102 @@ upuai scale 3 --yes        # set replica count to 3
 
 ## Database
 
-The CLI provides managed wrappers around `psql` / `pg_dump` / `pg_restore` that talk to Upuai's public DB endpoint (`<svc>.db.upuai.cloud:5432?sslmode=require`) without exposing raw credentials.
+The CLI provides managed wrappers that talk to Upuai's public DB endpoint with TLS identity verification, for PostgreSQL (`psql` / `pg_dump` / `pg_restore`, `<svc>.db.upuai.cloud:5432`) and MySQL (`mysql` / `mysqldump`, `<svc>.db.upuai.cloud:<own port>`). The engine is detected from the API — the same commands work on both.
 
 ```bash
 upuai db connect --print               # print connection string (script-friendly)
-upuai db connect --output json         # access info as JSON
+upuai db connect --output json         # access info as JSON {engine, host, port, username, password, database, ...}
 upuai db connect --enable              # auto-enable public access if disabled
-upuai db connect                       # interactive psql session (needs TTY — skip in agent flows)
-upuai db backup --out backup.dump      # pg_dump
-upuai db restore -f backup.dump --yes  # pg_restore
+upuai db connect                       # interactive psql / mysql session (needs TTY — skip in agent flows)
+upuai db backup --out backup.dump      # Postgres: pg_dump (--out required)
+upuai db backup                        # MySQL: mysqldump → <service>-<UTC timestamp>.sql
+upuai db restore backup.dump --yes     # Postgres: pg_restore (-f also works)
+upuai db restore backup.sql --yes      # MySQL: streams the file into mysql
+upuai db public                        # is it published? from which origins? (= db public status)
+upuai db public enable --allow 203.0.113.7 --allow 10.0.0.0/8
+upuai db public enable --any --yes     # open to any IP (no prompt)
+upuai db public disable                # unpublish (route + allowlist removed)
+upuai db extensions                    # managed Postgres extensions: enabled / available / unavailable
+upuai db extensions enable postgis     # CREATE EXTENSION (instant, no restart)
+upuai db extensions disable postgis --yes  # DROP EXTENSION ... RESTRICT (refused while in use)
+upuai db extensions update postgis     # update to the version shipped by the image
+upuai db version -o json               # {engine, version, updateAvailable}
+upuai db update --yes --wait           # apply the maintenance update (restarts the DB ~1–2 min); --wait-timeout defaults to 900 s
+upuai db credentials repair            # managed MySQL: check the login, re-apply the account if refused
+upuai db credentials rotate --yes      # managed MySQL: new password (old one stops working at once)
 ```
 
-For automated tasks, use `--print` / `--output json` to fetch the connection string, then run queries via your own `psql` invocation. Do not run `upuai db connect` without `--print` inside an agent — it opens an interactive subshell.
+**Extensions (PostGIS, pgvector, ...)**: the platform's current Postgres image ships them (PostGIS,
+pgvector, pg_trgm, unaccent, citext, uuid-ossp, pgcrypto, pgrouting and more); enabling is a
+`CREATE EXTENSION` in the `app` database and never restarts anything. Two equivalent ways — the
+dashboard shows both, it reads the live database:
+- `upuai db extensions enable <name>` (CLI v0.26.0+), or
+- the app's own migration: `CREATE EXTENSION IF NOT EXISTS postgis;` works because the
+  `DATABASE_URL` user owns the `app` database. Prefer this when the app depends on the
+  extension — new environments and clones start from an empty database.
+
+If `db extensions` shows the one you need as `unavailable`, the database runs an older image:
+tell the user it restarts for ~1–2 min, run `upuai db update --yes --wait` (same major version,
+data preserved), then enable it. Never build a custom Postgres image or run Postgres inside an
+app container to get an extension. Not offered: extensions that need `shared_preload_libraries`
+(pg_cron, pg_stat_statements, pgaudit). `disable` never cascades — when it is refused, the error
+lists what depends on the extension. An older CLI prints the `upuai db` help (exit 0) instead of
+running `db extensions` / `db version` / `db update` — run `upuai upgrade`.
+
+**Managed MySQL credentials**: the platform creates the application account (`MYSQL_USER` /
+`MYSQL_PASSWORD`, initial database `MYSQL_DATABASE`) and keeps the credential in use. The
+variables on the database service mirror it and are **read-only** — editing or deleting them is
+refused, and it would not change the database anyway. There is no root account. The rules:
+- Wire a service with a reference, never a pasted URL: `upuai variables set
+  'DATABASE_URL=${{<db-name>.DATABASE_URL}}' -s <service>`, then deploy. References resolve at
+  deploy time.
+- The account can create databases, users, tables, triggers and routines. For another database
+  name, create it over SQL and build the URL from references:
+  `mysql://${{db.MYSQL_USER}}:${{db.MYSQL_PASSWORD}}@${{db.HOST}}:3306/<your_database>`.
+- `Access denied` on a managed MySQL: run `upuai db credentials repair -s <db>` and redeploy the
+  services it lists. Do **not** delete and recreate the database, edit its variables, or replace it
+  with a `mysql` Docker image — none of those is the fix, and the last one loses managed backups.
+- New password: `upuai db credentials rotate -s <db> --yes` (owner/admin), then redeploy the
+  listed services. `upuai ssh` into a managed MySQL is refused by design; run SQL from one of
+  your app services with a client and `DATABASE_URL`. CLI v0.27.0+.
+
+### Volumes
+
+```bash
+upuai volume list                                  # disks and mount points
+upuai volume add --path /data --size 5 --yes       # create + mount (5 GB)
+upuai volume remove data --yes                     # detach + delete (files are lost)
+```
+
+A volume is ReadWriteOnce: the service runs a SINGLE replica (a `scale` above 1 is refused
+with `volumeSingleReplica`) and every deploy stops the old pod before starting the new one.
+Mount paths are absolute and outside system directories. Daily block backup, kept 7 days.
+CLI v0.24.0+.
+
+`db public enable` with no flag keeps the current allowlist — a restricted database is never
+opened by omission. With `--allow`, only those origins reach the database; anything else is
+refused at the edge, before the database. Needs owner or admin (CLI v0.23.0+). Reading the
+endpoint (`db public`, `db connect --print`) returns the password, so a machine token needs the
+**deploy** scope — a read-scoped `UPUAI_TOKEN` gets a 403.
+
+**MySQL public access** (CLI v0.29.0+): each MySQL gets its own port on
+`<slug>.db.upuai.cloud` (23306–23505, kept across disable/enable); TLS is verified against the
+server identity (`ssl-mode=VERIFY_IDENTITY`). Rules:
+- A MySQL created before the feature **restarts once (~1 min)** the first time it is enabled, to
+  load the certificate — tell the user first; pass `--yes` (non-interactive). The CLI waits up to
+  3 min for it (`serverTlsReady`); on timeout it exits non-zero: check `upuai db public status`
+  and retry. Never recreate the database to "fix" this.
+- `db connect` / `db backup` / `db restore` need the MySQL client locally (`mysql`, `mysqldump`;
+  macOS `brew install mysql-client`, Debian/Ubuntu `apt install default-mysql-client`). The
+  password goes in a 0600 temp option file, never on the command line. In agent flows prefer
+  `db backup` / `db restore` (non-interactive) or `db connect --print` for the details.
+- `db backup` runs mysqldump with `--single-transaction --routines --events --triggers
+  --set-gtid-purged=OFF --no-tablespaces`: a dump restorable into any MySQL. A pg_dump file is
+  refused on MySQL (and a mysqldump file on Postgres).
+- Redis and MongoDB have no public access (`PUBLIC_ACCESS_UNSUPPORTED_ENGINE`) — reach them from
+  a service in the same environment.
+
+For automated tasks, use `--print` / `--output json` to fetch the connection string, then run queries via your own `psql` / `mysql` invocation. Do not run `upuai db connect` without `--print` inside an agent — it opens an interactive subshell.
 
 ## Workspaces
 
@@ -301,7 +398,7 @@ This matters because the API is fail-closed: anything outside the active workspa
 
 ```bash
 upuai workspace list                 # all your workspaces; ● marks the active one
-upuai workspace current -o json      # {"workspaceId","workspaceName","role"}
+upuai workspace current -o json      # {"workspaceId","workspaceName","role"}; under UPUAI_TOKEN: the token's workspace + machineToken
 upuai workspace switch tai           # by slug, name or ID
 upuai workspace switch               # interactive picker (needs a TTY)
 ```
@@ -317,7 +414,7 @@ Cross-workspace by ID:
 
 Switching rotates the session tokens and is durable: the server pins the workspace to the refresh-token line, so it survives token rotation and later commands.
 
-**Machine tokens do not switch.** A token from `upuai token create` is bound to the workspace it was minted in; `UPUAI_TOKEN` pointing at the wrong workspace is a pipeline misconfiguration — mint a new token inside the target workspace. The CLI says so instead of failing with a generic 403.
+**Machine tokens do not list or switch workspaces.** A token from `upuai token create` is bound to the workspace it was minted in, and `workspace list` / `switch` are refused while `UPUAI_TOKEN` is set (`workspace current` and `whoami` describe the token); `UPUAI_TOKEN` pointing at the wrong workspace is a pipeline misconfiguration — mint a new token inside the target workspace. The CLI says so instead of failing with a generic 403.
 
 ## Environments
 
@@ -368,6 +465,6 @@ Pass one of these to `--framework`:
 - This skill makes you knowledgeable about the CLI; it does not give you cluster access. The CLI talks to Upuai's API on the user's behalf.
 - `upuai login` is interactive (browser OAuth or email OTP), same pattern as `railway login` / `vercel login` / `fly auth login`. On agent runners without a browser, ask the user to log in once on their own machine. Credentials persist in `~/.upuai/credentials.json` and refresh automatically. For headless/CI there **is** a sanctioned path — a scoped machine token in `UPUAI_TOKEN` (see the [Non-interactive contract](#non-interactive-contract)); it is opaque, long-lived, revocable, and bound to the workspace it was minted in.
 - `upuai add` (without `--type`/`--name`/`--repo`/`--image`), `upuai link` (without `--service`/`--env`), `upuai shell` (subshell), and `upuai db connect` (without `--print`) all need a TTY. Use the non-interactive flag variants noted in the relevant sections above.
-- `upuai run` / `upuai shell` run **locally** with the service env vars injected (like `railway run`). `upuai ssh [-s svc] [-- cmd]` opens a session **inside the running production container** (like `railway ssh` / `fly ssh console`) — generic and stack-agnostic (`upuai ssh -- bin/rails console`, `-- python manage.py shell`, `-- node`, or no command for a shell). It runs in the live pod, so destructive commands affect the serving container. **`ssh` works non-interactively too**: a PTY is allocated only when stdin/stdout are terminals, so pipes and redirects return byte-exact output with separate stdout/stderr (`echo "SELECT 1" | upuai ssh -s db -- psql`, `upuai ssh -- cat log.txt > out.txt`). Force with `-t/--tty` or disable with `-T/--no-tty` (parity with `ssh -t/-T`).
+- `upuai run` / `upuai shell` run **locally** with the service env vars injected (like `railway run`). `upuai ssh [-s svc] [-- cmd]` opens a session **inside the running production container** (like `railway ssh` / `fly ssh console`) — generic and stack-agnostic (`upuai ssh -- bin/rails console`, `-- python manage.py shell`, `-- node`, or no command for a shell). It runs in the live pod, so destructive commands affect the serving container. **`ssh` works non-interactively too**: a PTY is allocated only when stdin/stdout are terminals, so pipes and redirects return byte-exact output with separate stdout/stderr (`echo "SELECT 1" | upuai ssh -s db -- psql`, `upuai ssh -- cat log.txt > out.txt`). Force with `-t/--tty` or disable with `-T/--no-tty` (parity with `ssh -t/-T`). From an agent or CI shell, run commands that read no input with `-n`/`--no-stdin` (`upuai ssh -n -s api -- php artisan migrate --force`; it needs a command and never allocates a PTY): it never attaches stdin, so a stdin left open by the runner cannot keep the session waiting for input that never ends. For a task of up to 30 minutes (import, backfill) prefer a one-off job, which does not depend on your connection: `upuai scheduler create --name import-ibge --command "php artisan ibge:import" --once --timeout 1800 --yes` runs it once, now, in a fresh container of the deployed image, and never on its own (`upuai scheduler run <name>` repeats it with the image deployed at that moment, `upuai scheduler delete <name> --yes` removes it). A run is killed after `--timeout` seconds — default 300, maximum 1800 (30 min): pass `--timeout 1800` for anything slow, and split work that needs longer.
 - `upuai variables set KEY=val --scope runtime|build` scopes a var to a single phase: `runtime` keeps it out of the build (e.g. `DATABASE_URL`, secrets — avoids baking into a layer / breaking `assets:precompile`); `build` keeps it out of the running container (e.g. a private registry/npm token). Default `both` = build + runtime (Railway/Vercel parity).
 - Builds run on Upuai's cluster, not locally. Real-time progress isn't streamed by `upuai deploy --wait` itself; use `upuai logs --build` and `upuai logs --deploy` for live tail of those stages while a deploy is in flight.
