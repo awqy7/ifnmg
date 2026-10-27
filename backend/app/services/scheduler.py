@@ -190,12 +190,31 @@ async def _upsert_activity(
     # O HTML só informa a conclusão visual e não é confiável para reabrir uma
     # entrega já confirmada. Só reduzimos o status oficial quando o endpoint de
     # submissão realmente trouxe um valor explícito.
+    #
+    # Regra de prioridade: a API REST (WS) é a fonte autoritativa. Quando o
+    # scraper HTML é usado como fallback, NUNCA devemos degradar um status
+    # confirmado pelo WS (submitted/graded) para pending. O inverso também é
+    # verdade: um status confirmado pelo HTML NUNCA deve prevalecer sobre uma
+    # resposta explícita do WS de que a tarefa ainda não foi entregue.
+    is_html_fallback = act_data.get("_source") == "html"
+    is_ws_authoritative = act_data.get("_source") == "ws"
     if (
         activity
         and act_data.get("submission_status") is None
         and not act_data.get("is_completed")
         and activity.moodle_status in {"submitted", "graded"}
     ):
+        moodle_status = activity.moodle_status
+    elif (
+        activity
+        and is_html_fallback
+        and act_data.get("is_completed")
+        and activity.moodle_status not in {"submitted", "graded"}
+        and activity.moodle_status not in {"new", "draft", "reopened"}
+    ):
+        # O HTML não pode marcar como concluído algo que o WS diz estar em
+        # estado inicial (new/draft/reopened). A conclusão visual do HTML é
+        # apenas informativa; o status real vem do endpoint de submissão.
         moodle_status = activity.moodle_status
 
     created = False
@@ -249,7 +268,15 @@ async def _upsert_activity(
         activity.moodle_submission_at = (
             moodle_submission_at if moodle_status in {"submitted", "graded"} else None
         )
-        activity.is_group_activity = bool(act_data.get("is_group_activity") or activity.is_group_activity)
+        # is_group_activity: o WS já calcula corretamente via team_submission.
+        # O scraper HTML não tem essa informação, então só atualiza se
+        # vier explicitamente da WS (evita sobrescrever um valor correto).
+        if act_data.get("_source") == "ws":
+            activity.is_group_activity = bool(
+                act_data.get("is_group_activity") or activity.is_group_activity
+            )
+        elif act_data.get("is_group_activity"):
+            activity.is_group_activity = True
         activity.last_seen_at = utc_now_naive()
         activity.removed_at = None
         # Atividade existente: não é nova

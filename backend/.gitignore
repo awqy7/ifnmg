@@ -1,1 +1,5 @@
 .upuai/
+.neon
+node_modules/
+.vercel
+.env*

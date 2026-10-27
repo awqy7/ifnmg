@@ -429,7 +429,10 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 "status": status,
                 "individual_status": individual_status,
                 "team_status": team_status,
-                "is_group_activity": bool(team_submission),
+                # team_submission é um dict vazio {} quando a tarefa NÃO é em
+                # grupo. Usar bool() nesse caso marcaria is_group_activity=True
+                # para todas as tarefas, corrompendo o status de envio.
+                "is_group_activity": bool(team_submission.get("submissionid") or team_submission.get("teamid")),
                 "submission_time": submission_time,
                 "grading_status": last_attempt.get("gradingstatus"),
             }
@@ -514,6 +517,9 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
                 "files": assignment_files.get(cmid, []),
                 "availability": mod.get("availabilityinfo") or "",
                 "visible": mod.get("visible", 1),
+                # Marca a origem para que o scheduler priorize a API REST
+                # sobre o scraper HTML na hora de decidir o status real.
+                "_source": "ws",
             }
 
             # Conteúdos podem aparecer em vários campos dependendo do plugin.
@@ -545,16 +551,11 @@ async def collect_course_data(ws: MoodleWebService, moodle_course_id: int) -> Di
             ]
 
             if modname in ACTIVITY_MODNAMES:
-                # Ignora fóruns genéricos de avisos (não são atividades a entregar)
-                t_lower = title.lower().strip()
-                is_announcement = (
-                    modname == "forum"
-                    and any(
-                        k in t_lower
-                        for k in ("aviso", "news forum", "fórum de notícias", "announcements")
-                    )
-                )
-                if is_announcement:
+                # Fóruns NÃO são atividades a entregar: não têm prazo, nota ou
+                # status de submissão. A única exceção são os fóruns de
+                # avisos institucionais, que também não são atividades e devem
+                # ser ignorados. Fóruns normais de discussão são materials.
+                if modname == "forum":
                     continue
                 activities[str(cmid)] = item
             else:

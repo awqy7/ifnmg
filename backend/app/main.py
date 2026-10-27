@@ -218,6 +218,7 @@ from app.routers.chat import router as chat_router
 from app.routers.notifications import notifications_router
 from app.routers.websocket import router as ws_router
 from app.routers.dashboard import router as dashboard_router
+from app.routers.admin import router as admin_router
 
 app.include_router(auth_router)
 app.include_router(moodle_router)
@@ -228,6 +229,7 @@ app.include_router(chat_router)
 app.include_router(notifications_router)
 app.include_router(ws_router)
 app.include_router(dashboard_router)
+app.include_router(admin_router)
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────

@@ -462,8 +462,12 @@ class MoodleScraper:
                                 mod_type = t
                                 break
 
+                        # Fóruns NÃO são atividades a entregar: não têm prazo, nota ou status de
+                        # submissão. Eles são materiais de discussão. Incluir
+                        # "forum" aqui causava falsos alertas de prazos e
+                        # distorcia o resumo diário.
                         is_activity = mod_type in {
-                            "assign", "quiz", "forum", "workshop", "lesson",
+                            "assign", "quiz", "workshop", "lesson",
                             "choice", "feedback", "scorm", "h5pactivity",
                         }
 
@@ -520,7 +524,15 @@ class MoodleScraper:
                             else f"{MOODLE_BASE}/{href.lstrip('/')}" if href else ""
                         )
 
-                        # Conclusão: Moodle 4.x + legados
+                        # Conclusão: Moodle 4.x + legados.
+                        #
+                        # ATENÇÃO: .submitted e .submissionstatus-submitted são
+                        # classes CSS de SKINNING do tema, não de status real.
+                        # Incluí-las aqui causava falsos positivos em TODO
+                        # módulo que usasse essas classes no CSS. A conclusão
+                        # real é detectada apenas pelo badge de conclusão do
+                        # Moodle (.completionbadge) ou por classes de estado
+                        # específico de submissão.
                         is_completed = bool(mod.select_one(
                             ".completionbadge img[alt*='Concluído'], .completionbadge img[alt*='Feito'], "
                             ".completionbadge img[alt*='Completo'], "
@@ -529,8 +541,7 @@ class MoodleScraper:
                             "img[src*='completed'], i.icon[aria-label*='Concluído'], "
                             "[data-action='toggle-completion'][aria-checked='true'], "
                             ".btn-toggle-completion[aria-pressed='true'], "
-                            ".autocompletion-complete, .completion-state-completed, "
-                            ".badge-success, .submitted, .submissionstatus-submitted"
+                            ".autocompletion-complete, .completion-state-completed"
                         ))
 
                         item = {
@@ -545,6 +556,10 @@ class MoodleScraper:
                             "due_date": due_date,
                             "status": "submitted" if is_completed else "pending",
                             "is_completed": is_completed,
+                            # Marca a origem para que o scheduler priorize a
+                            # API REST sobre o scraper HTML na hora de decidir
+                            # o status real de uma atividade.
+                            "_source": "html",
                         }
 
                         if is_activity:
