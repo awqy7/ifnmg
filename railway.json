@@ -1,0 +1,35 @@
+{
+  "$schema": "https://railway.app/railway-schema.json",
+  "build": {
+    "builder": "dockerfile",
+    "dockerfilePath": "backend/Dockerfile",
+    "buildContext": "./",
+    "watch": false
+  },
+  "deploy": {
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+    "restartPolicy": "on-failure",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 30,
+    "numReplicas": 1
+  },
+  "environment": {
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PIP_NO_CACHE_DIR": "1",
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1"
+  },
+  "variables": {
+    "APP_ENV": "production",
+    "DEBUG": "false",
+    "DEFAULT_AI_PROVIDER": "groq",
+    "MOODLE_BASE_URL": "https://virtual2.ifnmg.edu.br",
+    "SCRAPER_INTERVAL_MINUTES": "30",
+    "ENABLE_PLAYWRIGHT_FALLBACK": "false",
+    "BCRYPT_ROUNDS": "12",
+    "RATE_LIMIT_LOGIN_PER_MINUTE": "5",
+    "RATE_LIMIT_SYNC_PER_HOUR": "10",
+    "AI_REQUESTS_PER_DAY": "200",
+    "ALLOWED_ORIGINS": "https://ifnmg.vercel.app,http://localhost:3000,http://127.0.0.1:3000"
+  }
+}
