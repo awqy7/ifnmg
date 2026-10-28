@@ -155,17 +155,17 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
   return (
     <header
-      className={`sticky top-0 z-30 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-2xl transition-all duration-300 ease-out ${
+      className={`sticky top-0 z-30 border-b border-white/[0.07] bg-ink-950/90 backdrop-blur-xl transition-all duration-300 ease-out ${
         isVisible
           ? "max-h-28 translate-y-0 opacity-100"
           : "max-h-0 -translate-y-full opacity-0 border-transparent"
       }`}
     >
-      <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-5 lg:px-7">
+      <div className="flex h-[60px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onMenuToggle}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-colors hover:border-accent/30 hover:text-accent lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-white lg:hidden"
             aria-label="Abrir menu"
           >
             <Menu className="h-[18px] w-[18px]" />
@@ -180,15 +180,15 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
           <div className="hidden min-w-0 sm:block">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">IFNMG</span>
+              <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-600">IFNMG</span>
               <span className="text-zinc-700">/</span>
-              <p className="truncate font-display text-sm font-semibold text-white">
+              <p className="truncate text-[13px] font-medium text-zinc-200">
                 {pageTitles[currentView]}
               </p>
             </div>
             <div className="mt-0.5 flex items-center gap-2">
               {user?.moodle_connected ? (
-                <span className="flex items-center gap-1.5 text-[10px] font-medium text-accent/90">
+                <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
                   <span className="accent-dot" /> Virtual2 conectado
                 </span>
               ) : (
@@ -205,40 +205,40 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleSync}
             disabled={syncing}
-            className="h-10 min-w-10 px-3 sm:h-9"
+            className="h-9 min-w-9 px-2.5"
             aria-label="Sincronizar dados"
             title="Sincronizar com o Virtual2"
           >
             {syncing ? (
-              <CogSpinner size={15} className="text-accent" />
+              <CogSpinner size={14} className="text-zinc-400" />
             ) : (
               <RefreshCw className="h-3.5 w-3.5" />
             )}
-            <span className="hidden sm:inline">{syncing ? "Sincronizando" : "Sincronizar"}</span>
+            <span className="hidden md:inline">{syncing ? "Sincronizando" : "Sincronizar"}</span>
           </Button>
 
           <Button
             type="button"
-            variant="default"
+            variant="outline"
             size="sm"
             onClick={() => onNavigate("chat")}
-            className={`${!user?.moodle_connected ? "hidden sm:flex" : "flex"} h-10 min-w-10 px-3 sm:h-9`}
+            className={`${!user?.moodle_connected ? "hidden sm:flex" : "flex"} h-9 min-w-9 px-2.5`}
             aria-label="Abrir Chat IA"
             title="Abrir Chat IA"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Tutor IA</span>
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <span className="hidden md:inline">Tutor IA</span>
           </Button>
 
           <div ref={notificationsRef} className="relative">
             <button
               ref={notificationsButtonRef}
               onClick={toggleNotifications}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-colors hover:border-accent/30 hover:text-white"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-white"
               aria-label="Notificações"
               aria-expanded={showNotifications}
               aria-controls="notifications-panel"
@@ -246,7 +246,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-ink-950 shadow-[0_0_16px_rgba(69,255,156,0.6)]">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold text-ink-950">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -256,12 +256,12 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
               <div
                 id="notifications-panel"
                 aria-label="Notificações"
-                className="absolute right-0 mt-2 w-[320px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-white/10 bg-ink-800/95 shadow-2xl shadow-black/70 backdrop-blur-2xl"
+                className="absolute right-0 mt-2 w-[320px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-white/10 bg-ink-800 shadow-xl shadow-black/50"
               >
                 <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Bell className="h-3.5 w-3.5 text-accent" />
-                    <span className="font-display text-xs font-semibold text-white">Notificações</span>
+                    <span className="text-xs font-medium text-zinc-200">Notificações</span>
                   </div>
                   {unreadCount > 0 && (
                     <button
@@ -284,7 +284,7 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
                         className={`flex w-full flex-col gap-1 border-l-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] ${
-                          !notif.is_read ? "border-l-accent bg-accent/[0.035]" : "border-l-transparent"
+                          !notif.is_read ? "border-l-accent bg-white/[0.025]" : "border-l-transparent"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">

@@ -101,7 +101,7 @@ def main():
                 page.get_by_role("button", name="Expandir menu").click()
                 page.wait_for_timeout(400)
                 expanded = aside.bounding_box()
-                assert expanded and expanded["width"] >= 260, (
+                assert expanded and expanded["width"] >= 240, (
                     f"menu expandido com largura inesperada: {expanded}"
                 )
 

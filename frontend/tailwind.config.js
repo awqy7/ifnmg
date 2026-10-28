@@ -10,15 +10,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        /* Preto profundo + verde claro forte (identidade IFNMG) */
+        /* Grafite neutro + verde IFNMG (identidade) */
         ink: {
-          950: "#040504",
-          900: "#070907",
-          850: "#0a0d0a",
-          800: "#0e110e",
-          750: "#121612",
-          700: "#171c17",
-          600: "#1f271f",
+          950: "#08090a",
+          900: "#0a0c0e",
+          850: "#0d0f11",
+          800: "#121417",
+          750: "#171a1e",
+          700: "#1b2026",
+          600: "#242a31",
         },
         accent: {
           DEFAULT: "#45ff9c",
@@ -28,11 +28,11 @@ module.exports = {
           deep: "#0a6c3a",
         },
         status: {
-          urgent: "#ff5f6d",
-          warning: "#ffc857",
+          urgent: "#f87171",
+          warning: "#fbbf24",
           info: "#7dd3fc",
           success: "#45ff9c",
-          neutral: "#8a978d",
+          neutral: "#9ca3af",
         },
       },
       fontFamily: {
@@ -59,14 +59,13 @@ module.exports = {
         "5xl": "2.5rem",
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(69, 255, 156, 0.16), 0 18px 60px -24px rgba(69, 255, 156, 0.35)",
-        "glow-sm": "0 0 24px -6px rgba(69, 255, 156, 0.35)",
-        panel: "0 40px 120px -60px rgba(0, 0, 0, 0.9)",
+        glow: "0 0 0 1px rgba(255, 255, 255, 0.08)",
+        "glow-sm": "0 0 0 1px rgba(255, 255, 255, 0.08)",
+        panel: "0 16px 40px -24px rgba(0, 0, 0, 0.8)",
       },
       backgroundImage: {
-        "accent-gradient": "linear-gradient(135deg, #c8ffe0 0%, #45ff9c 45%, #16d96a 100%)",
-        "panel-gradient":
-          "linear-gradient(155deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.012) 38%, rgba(255,255,255,0) 100%)",
+        "accent-gradient": "linear-gradient(180deg, #45ff9c 0%, #2ee884 100%)",
+        "panel-gradient": "none",
       },
       animation: {
         "pulse-accent": "pulse-accent 2.4s ease-in-out infinite",

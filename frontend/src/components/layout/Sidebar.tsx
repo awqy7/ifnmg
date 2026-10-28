@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ViewType } from "@/components/dashboard/Dashboard";
 import {
   Home,
@@ -13,7 +12,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -51,34 +49,37 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           aria-hidden="true"
         />
       )}
 
       <aside
         aria-label="Navegação principal"
-        className={`fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-white/[0.06] bg-ink-950/95 backdrop-blur-2xl transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-white/[0.07] bg-ink-950 transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:relative lg:translate-x-0 ${
           mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] -translate-x-full"
-        } ${isOpen ? "lg:w-[268px]" : "lg:w-[84px]"}`}
+        } ${isOpen ? "lg:w-[256px]" : "lg:w-[76px]"}`}
       >
-        {/* Marca */}
-        <div className={`flex h-[76px] shrink-0 items-center border-b border-white/[0.06] ${showFull ? "justify-between px-4" : "justify-center px-2"}`}>
+        <div
+          className={`flex h-16 shrink-0 items-center border-b border-white/[0.07] ${
+            showFull ? "justify-between px-4" : "justify-center px-2"
+          }`}
+        >
           <button
             type="button"
             onClick={() => onNavigate("home")}
-            className="flex min-w-0 items-center gap-3 text-left"
+            className="flex min-w-0 items-center gap-2.5 text-left"
             aria-label="IFNMG Assistente — início"
           >
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent-gradient shadow-glow-sm">
-              <GraduationCap className="h-5 w-5 text-ink-950" strokeWidth={2.4} />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-accent/20 bg-accent/10">
+              <GraduationCap className="h-4 w-4 text-accent" strokeWidth={2.2} />
             </span>
             {showFull && (
               <span className="min-w-0">
-                <span className="block font-display text-[15px] font-bold leading-tight tracking-tight text-white">
+                <span className="block font-display text-[13px] font-semibold leading-tight text-white">
                   IFNMG
                 </span>
-                <span className="block text-[10px] font-medium uppercase tracking-[0.18em] text-accent/80">
+                <span className="block text-[10px] font-medium leading-tight text-zinc-500">
                   Assistente
                 </span>
               </span>
@@ -88,7 +89,7 @@ export default function Sidebar({
           {showFull && (
             <button
               onClick={onToggleDesktop}
-              className="hidden h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-zinc-500 transition-colors hover:border-accent/30 hover:text-accent lg:flex"
+              className="hidden h-7 w-7 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-white/[0.05] hover:text-zinc-300 lg:flex"
               title={isOpen ? "Recolher menu" : "Expandir menu"}
               aria-label={isOpen ? "Recolher menu" : "Expandir menu"}
             >
@@ -99,7 +100,7 @@ export default function Sidebar({
           {!showFull && (
             <button
               onClick={onToggleDesktop}
-              className="absolute -right-3 top-[88px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-ink-800 text-zinc-500 shadow-md transition-colors hover:text-accent lg:flex"
+              className="absolute -right-3 top-[72px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-ink-800 text-zinc-500 transition-colors hover:text-white lg:flex"
               aria-label="Expandir menu"
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -107,14 +108,8 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Navegação */}
-        <nav className={`flex-1 overflow-y-auto py-5 ${showFull ? "px-3" : "px-2.5"}`}>
-          {showFull && (
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-600">
-              Painel
-            </p>
-          )}
-          <div className="space-y-1">
+        <nav className={`flex-1 overflow-y-auto py-4 ${showFull ? "px-2.5" : "px-2"}`}>
+          <div className="space-y-0.5">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
@@ -129,70 +124,45 @@ export default function Sidebar({
                   title={!showFull ? item.label : undefined}
                   aria-label={item.label}
                   aria-current={isActive ? "page" : undefined}
-                  className={`group relative flex w-full items-center rounded-2xl text-[13px] font-semibold transition-colors duration-200 ${
-                    showFull ? "gap-3 px-3 py-2.5" : "justify-center px-0 py-3"
-                  } ${isActive ? "text-ink-950" : "text-zinc-500 hover:text-white"}`}
+                  className={`group relative flex w-full items-center rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+                    showFull ? "gap-3 px-3 py-2.5" : "justify-center px-0 py-2.5"
+                  } ${
+                    isActive
+                      ? "bg-white/[0.06] text-white"
+                      : "text-zinc-500 hover:bg-white/[0.035] hover:text-zinc-200"
+                  }`}
                 >
                   {isActive && (
-                    <motion.span
-                      layoutId="sidebar-active-pill"
-                      className="absolute inset-0 rounded-2xl bg-accent shadow-[0_0_30px_-8px_rgba(69,255,156,0.6)]"
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                    />
-                  )}
-                  {!isActive && (
-                    <span className="absolute inset-0 rounded-2xl bg-white/[0.04] opacity-0 transition-opacity group-hover:opacity-100" />
+                    <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
                   )}
                   <Icon
-                    className={`relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                      isActive ? "text-ink-950" : "text-zinc-500 group-hover:text-accent"
+                    className={`relative z-10 h-[17px] w-[17px] shrink-0 ${
+                      isActive ? "text-accent" : "text-zinc-500 group-hover:text-zinc-300"
                     }`}
-                    strokeWidth={isActive ? 2.6 : 2}
+                    strokeWidth={isActive ? 2.2 : 1.9}
                   />
                   {showFull && <span className="relative z-10 truncate">{item.label}</span>}
-                  {showFull && isActive && (
-                    <span className="relative z-10 ml-auto h-1.5 w-1.5 rounded-full bg-ink-950/70" />
-                  )}
                 </button>
               );
             })}
           </div>
-
-          {showFull && (
-            <div className="mt-6">
-              <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-600">
-                Atalho
-              </p>
-              <button
-                onClick={() => {
-                  onNavigate("chat");
-                  if (mobileOpen) onCloseMobile();
-                }}
-                className="group relative w-full overflow-hidden rounded-2xl border border-accent/20 bg-accent/[0.06] p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-accent/[0.1]"
-              >
-                <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-accent/15 blur-2xl transition-opacity group-hover:opacity-100" />
-                <div className="relative flex items-center gap-2 text-[11px] font-semibold text-accent-light">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Tutor IA
-                  <ArrowUpRight className="ml-auto h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </div>
-                <p className="relative mt-1 text-[10px] leading-relaxed text-zinc-500">
-                  Respostas com base nos seus materiais e prazos.
-                </p>
-              </button>
-            </div>
-          )}
         </nav>
 
-        {/* Usuário */}
-        <div className={`shrink-0 border-t border-white/[0.06] pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 ${showFull ? "px-3" : "px-2.5"}`}>
-          <div className={`flex items-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-2 ${showFull ? "" : "justify-center"}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-accent/25 bg-accent/[0.1] text-xs font-bold text-accent">
+        <div
+          className={`shrink-0 border-t border-white/[0.07] py-3 ${
+            showFull ? "px-2.5" : "px-2"
+          }`}
+        >
+          <div className={`flex items-center gap-2.5 ${showFull ? "px-1" : "justify-center"}`}>
+            <div
+              title={!showFull ? user?.name || "Estudante" : undefined}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-[11px] font-semibold text-accent"
+            >
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
             {showFull && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-zinc-200">
+                <p className="truncate text-xs font-medium text-zinc-200">
                   {user?.name || "Estudante"}
                 </p>
                 <p className="truncate text-[10px] text-zinc-600">{user?.email}</p>
@@ -201,7 +171,7 @@ export default function Sidebar({
             {showFull && (
               <button
                 onClick={logout}
-                className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-status-urgent/10 hover:text-status-urgent"
+                className="rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-white/[0.05] hover:text-zinc-300"
                 title="Sair"
                 aria-label="Sair"
               >
