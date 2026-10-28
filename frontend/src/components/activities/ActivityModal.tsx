@@ -224,7 +224,7 @@ export default function ActivityModal({
             </div>
           ) : detailsError ? (
             <div role="alert" className="py-12 text-center">
-              <p className="text-sm text-rose-300">{detailsError}</p>
+              <p className="text-sm text-[var(--status-urgent)]">{detailsError}</p>
               <button type="button" onClick={() => loadDetails(activityId)} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-white hover:bg-white/5">
                 Tentar novamente
               </button>
@@ -287,17 +287,17 @@ export default function ActivityModal({
 
               {/* Description */}
               {isManualCompleted && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-sky-500/15 bg-sky-500/[0.05] p-3 text-sky-200/80">
+                <div className="flex items-start gap-2.5 rounded-xl border border-[var(--status-info)]/15 bg-[var(--status-info)]/[0.05] p-3 text-[var(--status-info)]/80">
                   <Users className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
                     <p className="text-[11px] font-semibold">Entrega do grupo informada por você</p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-sky-300/60">Ainda não é uma confirmação oficial do Virtual2.</p>
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-[var(--status-info)]/60">Ainda não é uma confirmação oficial do Virtual2.</p>
                     {details?.manual_completion_note && <p className="mt-1 text-[10px]">{details.manual_completion_note}</p>}
                   </div>
                 </div>
               )}
               {statusError && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/[0.05] p-3 text-[11px] text-red-300">{statusError}</div>
+                <div className="rounded-xl border border-[var(--status-urgent)]/20 bg-[var(--status-urgent)]/[0.05] p-3 text-[11px] text-[var(--status-urgent)]">{statusError}</div>
               )}
 
               <div className="space-y-1.5">
@@ -333,7 +333,7 @@ export default function ActivityModal({
               )}
 
               {aiError && (
-                <div role="alert" className="rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-[11px] text-red-300">
+                <div role="alert" className="rounded-xl border border-[var(--status-urgent)]/15 bg-[var(--status-urgent)]/[0.05] p-3 text-[11px] text-[var(--status-urgent)]">
                   {aiError}
                 </div>
               )}
@@ -359,7 +359,7 @@ export default function ActivityModal({
               <button
                 type="button"
                 onClick={() => setShowCompletionDialog(true)}
-                className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${isManualCompleted ? "border-sky-500/20 bg-sky-500/[0.06] text-sky-300" : "border-[var(--border)] bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]"}`}
+                className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${isManualCompleted ? "border-[var(--status-info)]/20 bg-[var(--status-info)]/[0.06] text-[var(--status-info)]" : "border-[var(--border)] bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06]"}`}
               >
                 <Users className="h-3.5 w-3.5" /> {isManualCompleted ? "Reabrir" : "Grupo já entregou"}
               </button>

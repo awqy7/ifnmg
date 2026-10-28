@@ -148,7 +148,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
       {/* Activities List - Timeline style */}
       <div className="space-y-3">
         {error && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-xs text-red-300/90">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--status-urgent)]/15 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]/90">
             <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4" />{error}</span>
             <button type="button" onClick={loadActivities} className="font-semibold text-red-200 hover:text-white">Tentar novamente</button>
           </div>
@@ -196,9 +196,9 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                           isSubmitted
                             ? "bg-status-success border-status-success text-black"
                             : isManualCompleted
-                            ? "bg-sky-500/20 border-sky-400/60 text-sky-300"
+                            ? "bg-[var(--status-info)]/20 border-[var(--status-info)]/60 text-[var(--status-info)]"
                             : isLate
-                            ? "border-status-urgent/50 hover:border-status-urgent bg-red-500/[0.04]"
+                            ? "border-[var(--status-urgent)]/50 hover:border-[var(--status-urgent)] bg-[var(--status-urgent)]/[0.04]"
                             : ""
                         }`}
                         title={
@@ -248,7 +248,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                             </span>
                           )}
                           {isManualCompleted && (
-                            <span className="flex items-center gap-1 font-medium text-sky-400/80">
+                            <span className="flex items-center gap-1 font-medium text-[var(--status-info)]/80">
                               <Users className="w-3 h-3" /> Grupo entregou
                             </span>
                           )}

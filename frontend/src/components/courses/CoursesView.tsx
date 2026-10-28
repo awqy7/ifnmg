@@ -139,7 +139,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
       </div>
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-xs text-red-300/90">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--status-urgent)]/15 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]/90">
           <span>{error}</span>
           <button type="button" onClick={loadCourses} className="font-semibold text-red-200 hover:text-white">Tentar novamente</button>
         </div>
@@ -315,7 +315,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
                               </div>
                             )}
                             {materialErrors[mat.id] && (
-                              <div className="mx-2.5 mb-2.5 flex items-start gap-1.5 rounded-lg bg-red-500/[0.05] border border-red-500/10 p-2 text-[10px] text-red-300">
+                              <div className="mx-2.5 mb-2.5 flex items-start gap-1.5 rounded-lg bg-[var(--status-urgent)]/[0.05] border border-[var(--status-urgent)]/10 p-2 text-[10px] text-[var(--status-urgent)]">
                                 <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" /> {materialErrors[mat.id]}
                               </div>
                             )}

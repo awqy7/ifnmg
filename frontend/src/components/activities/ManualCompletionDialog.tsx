@@ -86,7 +86,7 @@ export default function ManualCompletionDialog({
           </p>
         ) : (
           <div className="mt-4 space-y-3">
-            <p className="rounded-xl border border-sky-500/15 bg-sky-500/5 p-3 text-xs leading-relaxed text-sky-200/80">
+            <p className="rounded-xl border border-[var(--status-info)]/15 bg-[var(--status-info)]/5 p-3 text-xs leading-relaxed text-[var(--status-info)]/80">
               Esta ação organiza seu painel, mas não envia arquivos ao Virtual2 e não será apresentada como confirmação oficial.
             </p>
             <label className="block text-[11px] font-medium text-neutral-400">

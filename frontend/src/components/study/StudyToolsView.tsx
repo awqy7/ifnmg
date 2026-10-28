@@ -232,7 +232,7 @@ export default function StudyToolsView() {
                       if (isCorrect) {
                         btnStyle = "bg-[var(--ifnmblue)]/[0.08] border-[var(--var(--ifnmblue))]/20 text-[var(--text-primary)]";
                       } else if (isSelected && !isCorrect) {
-                        btnStyle = "bg-red-500/[0.08] border-red-500/20 text-red-300";
+                        btnStyle = "bg-[var(--status-urgent)]/[0.08] border-[var(--status-urgent)]/20 text-[var(--status-urgent)]";
                       }
                     } else if (isSelected) {
                       btnStyle = "bg-[var(--ifnmblue)]/[0.08] border-[var(--ifnmblue)]/20 text-white";
@@ -247,7 +247,7 @@ export default function StudyToolsView() {
                       >
                         <span>{opt}</span>
                         {showResults && isCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--ifnmblue)]" />}
-                        {showResults && isSelected && !isCorrect && <XCircle className="w-3.5 h-3.5 text-red-400" />}
+                        {showResults && isSelected && !isCorrect && <XCircle className="w-3.5 h-3.5 text-[var(--status-urgent)]" />}
                       </button>
                     );
                   })}

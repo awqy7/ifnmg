@@ -127,7 +127,7 @@ export default function SubmissionDialog({
                   <Paperclip className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
                   <span className="min-w-0 flex-1 truncate">{file.name}</span>
                   <span className="text-neutral-600">{formatFileSize(file.size)}</span>
-                  <button type="button" onClick={() => setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index))} disabled={loading} className="rounded px-1 text-neutral-500 hover:text-rose-300" aria-label={`Remover ${file.name}`}>×</button>
+                  <button type="button" onClick={() => setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index))} disabled={loading} className="rounded px-1 text-neutral-500 hover:text-[var(--status-urgent)]" aria-label={`Remover ${file.name}`}>×</button>
                 </li>
               ))}
               <li className="pt-1 text-right text-[10px] text-neutral-600">Total: {formatFileSize(totalSize)}</li>
@@ -139,7 +139,7 @@ export default function SubmissionDialog({
             <span>Revisei os arquivos e confirmo que desejo enviar esta atividade para avaliação no Virtual2.</span>
           </label>
 
-          {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/[0.05] p-3 text-xs text-red-300">{error}</p>}
+          {error && <p role="alert" className="rounded-xl border border-[var(--status-urgent)]/20 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]">{error}</p>}
         </div>
 
         <div className="mt-5 flex gap-2">

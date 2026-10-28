@@ -133,7 +133,7 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="rounded-xl bg-red-500/[0.06] border border-red-500/20 p-3 text-red-400/90 text-xs">
+                <div className="rounded-xl bg-[var(--status-urgent)]/[0.06] border border-[var(--status-urgent)]/20 p-3 text-[var(--status-urgent)]/90 text-xs">
                   {error}
                 </div>
               )}

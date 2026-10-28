@@ -185,7 +185,7 @@ export default function SettingsView() {
               className={`p-2.5 rounded-lg text-[11px] ${
                 moodleMessage.type === "success"
                   ? "bg-[var(--ifnmgreen)]/[0.06] border border-[var(--ifnmgreen)]/[0.1] text-[var(--ifnmgreen)]/80"
-                  : "bg-red-500/[0.06] border border-red-500/[0.1] text-red-400/80"
+                  : "bg-[var(--status-urgent)]/[0.06] border border-[var(--status-urgent)]/[0.1] text-[var(--status-urgent)]/80"
               }`}
             >
               {moodleMessage.text}

@@ -153,7 +153,7 @@ export default function Sidebar({
             {showFull && (
               <button
                 onClick={logout}
-                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
+                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--status-urgent)] hover:bg-[var(--status-urgent)]/[0.06] transition-colors"
                 title="Sair"
               >
                 <LogOut className="w-3.5 h-3.5" />

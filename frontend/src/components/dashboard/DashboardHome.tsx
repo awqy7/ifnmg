@@ -135,7 +135,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
       </div>
 
       {dataError && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.07] px-4 py-3 text-xs text-rose-200">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-[var(--status-urgent)]/20 bg-[var(--status-urgent)]/[0.07] px-4 py-3 text-xs text-[var(--status-urgent)]/80">
           <span>{dataError}</span>
           <Button type="button" variant="outline" size="sm" onClick={loadData} className="shrink-0">
             Tentar novamente
@@ -225,16 +225,16 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                     onClick={() => openActivity?.(briefing.top_priority.id)}
                     className={`w-full text-left rounded-2xl border p-4 sm:p-5 relative overflow-hidden group transition-all ${
                       briefing.top_priority.status === "late"
-                        ? "bg-gradient-to-br from-rose-500/[0.10] to-transparent border-rose-500/20 hover:border-rose-400/35"
+                        ? "bg-gradient-to-br from-[var(--status-urgent)]/[0.10] to-transparent border-[var(--status-urgent)]/20 hover:border-[var(--status-urgent)]/35"
                         : "bg-gradient-to-br from-[var(--ifnmgreen)]/[0.10] to-transparent border-[var(--ifnmgreen)]/[0.20] hover:border-[var(--ifnmgreen)]/35"
                     }`}
                   >
                     <div className="relative z-10 flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <Target className={`w-4 h-4 ${briefing.top_priority.status === "late" ? "text-rose-400" : "text-[var(--ifnmgreen)]"}`} />
+                          <Target className={`w-4 h-4 ${briefing.top_priority.status === "late" ? "text-[var(--status-urgent)]" : "text-[var(--ifnmgreen)]"}`} />
                           <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">Foco principal</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${briefing.top_priority.status === "late" ? "bg-rose-500/15 text-rose-300" : "bg-[var(--ifnmgreen)]/[0.15] text-[var(--ifnmgreen)]"}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${briefing.top_priority.status === "late" ? "bg-[var(--status-urgent)]/15 text-[var(--status-urgent)]" : "bg-[var(--ifnmgreen)]/[0.15] text-[var(--ifnmgreen)]"}`}>
                             {briefing.top_priority.status === "late" ? "Atrasada" : "Prioridade"}
                           </span>
                         </div>
