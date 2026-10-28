@@ -36,6 +36,9 @@ RUN groupadd --system app \
     && chown -R app:app /app
 USER app
 
+# Upuai precisa detectar a porta via EXPOSE (não lê $PORT no HEALTHCHECK do Dockerfile).
+EXPOSE 8080
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl --fail --silent http://127.0.0.1:${PORT:-8080}/api/health || exit 1
 
