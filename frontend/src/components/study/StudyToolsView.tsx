@@ -76,7 +76,7 @@ export default function StudyToolsView() {
         <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
           Estudo
         </h1>
-        <p className="text-xs text-neutral-500 mt-0.5">
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
           Flashcards e simulados gerados a partir das suas materias
         </p>
       </div>
@@ -88,7 +88,7 @@ export default function StudyToolsView() {
           className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
             activeTab === "flashcards"
               ? "bg-white/[0.06] text-white"
-              : "text-neutral-500 hover:text-neutral-300"
+              : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
           }`}
         >
           <Layers className="w-3.5 h-3.5" /> Flashcards
@@ -98,7 +98,7 @@ export default function StudyToolsView() {
           className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
             activeTab === "quiz"
               ? "bg-white/[0.06] text-white"
-              : "text-neutral-500 hover:text-neutral-300"
+              : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
           }`}
         >
           <HelpCircle className="w-3.5 h-3.5" /> Simulado
@@ -109,7 +109,7 @@ export default function StudyToolsView() {
       <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 space-y-3.5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
+            <label className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">
               Disciplina
             </label>
             <select
@@ -125,7 +125,7 @@ export default function StudyToolsView() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
+            <label className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">
               Conteudo personalizado
             </label>
             <input
@@ -133,7 +133,7 @@ export default function StudyToolsView() {
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
               placeholder="Ex: Derivadas, Krebs, TCP/IP..."
-              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
+              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
             />
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function StudyToolsView() {
       {/* Flashcards View */}
       {activeTab === "flashcards" && flashcards.length > 0 && (
         <div className="max-w-lg mx-auto space-y-3.5">
-          <div className="flex items-center justify-between text-[11px] text-neutral-500 px-1">
+          <div className="flex items-center justify-between text-[11px] text-[var(--text-tertiary)] px-1">
             <span>Card {cardIndex + 1} de {flashcards.length}</span>
             <span>Toque para virar</span>
           </div>
@@ -168,7 +168,7 @@ export default function StudyToolsView() {
             onClick={() => setIsFlipped(!isFlipped)}
             className="h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col items-center justify-center text-center cursor-pointer select-none hover:border-[var(--ifnmblue)]/15 transition-colors relative"
           >
-            <span className="absolute top-3 left-3 text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.04] text-neutral-500 border border-[var(--border)]">
+            <span className="absolute top-3 left-3 text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.04] text-[var(--text-tertiary)] border border-[var(--border)]">
               {isFlipped ? "Resposta" : "Pergunta"}
             </span>
 
@@ -188,7 +188,7 @@ export default function StudyToolsView() {
                 setCardIndex((prev) => Math.max(0, prev - 1));
               }}
               disabled={cardIndex === 0}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] disabled:opacity-30 text-[11px] font-medium text-neutral-300 transition-colors border border-[var(--border)]"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] disabled:opacity-30 text-[11px] font-medium text-[var(--text-secondary)] transition-colors border border-[var(--border)]"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Anterior
             </button>
@@ -214,8 +214,8 @@ export default function StudyToolsView() {
             const selected = selectedAnswers[idx];
             return (
               <div key={idx} className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 space-y-3">
-                <h3 className="text-xs font-medium text-neutral-200 flex items-start gap-2">
-                  <span className="w-5 h-5 rounded-md bg-white/[0.04] border border-[var(--border)] text-neutral-500 text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                <h3 className="text-xs font-medium text-[var(--text-primary)] flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-md bg-white/[0.04] border border-[var(--border)] text-[var(--text-tertiary)] text-[10px] flex items-center justify-center shrink-0 mt-0.5">
                     {idx + 1}
                   </span>
                   <span>{q.question}</span>
@@ -227,7 +227,7 @@ export default function StudyToolsView() {
                     const isSelected = selected === optLetter;
                     const isCorrect = q.correct === optLetter;
 
-                    let btnStyle = "bg-white/[0.02] border-[var(--border)] text-neutral-400 hover:bg-white/[0.04]";
+                    let btnStyle = "bg-white/[0.02] border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.04]";
                     if (showResults) {
                       if (isCorrect) {
                         btnStyle = "bg-[var(--ifnmblue)]/[0.08] border-[var(--var(--ifnmblue))]/20 text-[var(--text-primary)]";
