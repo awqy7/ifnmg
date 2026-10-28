@@ -58,7 +58,7 @@ export default function NotificationSocket() {
                 ...prev.slice(-2),
                 {
                   id,
-                  title: notif.title || "Notificacao",
+                  title: notif.title || "Notificação",
                   message: notif.message || "",
                 },
               ]);
@@ -98,19 +98,19 @@ export default function NotificationSocket() {
           key={toast.id}
           role="status"
           aria-live="polite"
-          className="toast-enter flex items-start gap-3 p-3 rounded-xl bg-[#1c1c20] border border-[var(--border-strong)] shadow-xl shadow-black/50"
+          className="toast-enter flex items-start gap-3 rounded-2xl border border-white/10 bg-ink-800/95 p-3.5 shadow-2xl shadow-black/60 backdrop-blur-xl"
         >
-          <div className="p-1.5 rounded-lg bg-[var(--ifnmgreen)]/0.08 text-[var(--ifnmgreen)]/70 shrink-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.08] text-accent">
             <Bell className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-[11px] font-semibold text-white truncate">{toast.title}</h4>
-            <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-2">{toast.message}</p>
+            <h4 className="truncate text-[11px] font-semibold text-white">{toast.title}</h4>
+            <p className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-zinc-500">{toast.message}</p>
           </div>
           <button
             type="button"
             onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-            className="text-neutral-600 hover:text-neutral-400 transition-colors shrink-0"
+            className="shrink-0 rounded-md p-1 text-zinc-600 transition-colors hover:bg-white/[0.05] hover:text-zinc-300"
             aria-label="Fechar notificação"
           >
             <X className="w-3 h-3" />

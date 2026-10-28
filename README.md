@@ -145,9 +145,21 @@ rm -f "$TEST_DB"
 cd frontend && npm run lint && npm run build
 ```
 
-O smoke test responsivo em `frontend/tests/mobile_viewport_smoke.py` valida as
-larguras 320, 375 e 430 px e um telefone em paisagem contra um `next start`
-local. O teste integrado `backend/tests/live_virtual2_smoke.py` usa somente as
+Os smoke tests em `frontend/tests/mobile_viewport_smoke.py` e
+`frontend/tests/desktop_viewport_smoke.py` validam, contra um `next start` local,
+as larguras 320, 375, 430 px e um telefone em paisagem, além de 1024, 1280 e
+1440 px no desktop, cobrindo navegação, modais, notificações e acessibilidade
+por teclado. Rode-os com o servidor de produção ativo:
+
+```bash
+cd frontend && npm run start
+# em outro terminal
+cd frontend
+python3 tests/mobile_viewport_smoke.py
+python3 tests/desktop_viewport_smoke.py
+```
+
+O teste integrado `backend/tests/live_virtual2_smoke.py` usa somente as
 credenciais já criptografadas no banco e imprime apenas contagens agregadas.
 
 ---

@@ -8,6 +8,11 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // Evita que o Turbopack suba até a raiz do monorepo por causa de lockfiles extras.
+  turbopack: {
+    root: __dirname,
+  },
+
   // Rewrites para proxy das chamadas de API para o backend
   async rewrites() {
     return [

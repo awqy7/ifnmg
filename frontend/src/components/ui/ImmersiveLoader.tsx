@@ -1,46 +1,15 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { GraduationCap } from "lucide-react";
 import { CogSpinner } from "./CogSpinner";
-
-export function LoginButton({
-  onLogin,
-  children,
-  onError,
-}: {
-  onLogin: () => Promise<void>;
-  children: ReactNode;
-  onError?: (msg: string) => void;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  const handleClick = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await onLogin();
-    } catch (error: any) {
-      onError?.(error.message || "Erro ao conectar. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={loading}
-      className="relative w-full min-h-11 px-5 py-2.5 rounded-xl bg-[var(--ifnmgreen)] hover:bg-[var(--ifnmgreen)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center font-semibold text-white text-sm tracking-wide"
-    >
-      {loading ? <CogSpinner size={22} className="text-white" /> : children}
-    </button>
-  );
-}
 
 export function InitialLoadingScreen() {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--background)]">
-      <CogSpinner size={40} className="text-[var(--ifnmgreen)]/60" />
+    <div className="app-backdrop fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4">
+      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-gradient shadow-glow-sm">
+        <GraduationCap className="h-6 w-6 text-ink-950" strokeWidth={2.4} />
+      </span>
+      <CogSpinner size={22} className="text-accent/70" />
     </div>
   );
 }

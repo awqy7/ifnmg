@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { BookOpen, CheckSquare, Home, Menu, MessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
+import { BookOpen, CheckSquare, Home, LayoutGrid, MessageSquare } from "lucide-react";
 import { ViewType } from "@/components/dashboard/Dashboard";
 
 interface MobileBottomNavProps {
@@ -10,17 +10,11 @@ interface MobileBottomNavProps {
   onOpenMenu: () => void;
 }
 
-const mainItems: Array<{
-  id: ViewType;
-  label: string;
-  icon: typeof Home;
-  badge?: string;
-  disabled?: boolean;
-}> = [
+const mainItems: Array<{ id: ViewType; label: string; icon: typeof Home }> = [
   { id: "home", label: "Início", icon: Home },
   { id: "atividades", label: "Tarefas", icon: CheckSquare },
-  { id: "cursos", label: "Materias", icon: BookOpen },
-  { id: "chat", label: "Chat IA", icon: MessageSquare },
+  { id: "cursos", label: "Matérias", icon: BookOpen },
+  { id: "chat", label: "Tutor IA", icon: MessageSquare },
 ];
 
 export default function MobileBottomNav({
@@ -28,122 +22,56 @@ export default function MobileBottomNav({
   onNavigate,
   onOpenMenu,
 }: MobileBottomNavProps) {
-  const navRef = useRef<HTMLDivElement>(null);
-  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const [tapIndex, setTapIndex] = useState<number | null>(null);
-
-  // Calculate pill position based on active tab
-  useEffect(() => {
-    if (!navRef.current) return;
-    const buttons = navRef.current.querySelectorAll("[data-nav-btn]");
-    const activeIdx = mainItems.findIndex((item) => item.id === currentView);
-
-    if (activeIdx >= 0 && buttons[activeIdx]) {
-      const btn = buttons[activeIdx] as HTMLElement;
-      const navRect = navRef.current.getBoundingClientRect();
-      const btnRect = btn.getBoundingClientRect();
-      setPillStyle({
-        left: btnRect.left - navRect.left + 4,
-        width: btnRect.width - 8,
-        opacity: 1,
-      });
-    } else {
-      setPillStyle((prev) => ({ ...prev, opacity: 0 }));
-    }
-  }, [currentView]);
-
-  // Tap feedback
-  const handleTap = (idx: number) => {
-    setTapIndex(idx);
-    setTimeout(() => setTapIndex(null), 150);
-  };
-
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 lg:hidden"
-      aria-label="Navegacao principal"
-      style={{
-        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
-      }}
+      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+      aria-label="Navegação principal"
     >
-      {/* Glass morphism container */}
-      <div className="relative mx-2 mb-2 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/[0.08] shadow-[0_-4px_30px_rgba(0,0,0,0.4)]">
-        <div ref={navRef} className="relative flex items-center justify-around px-1 pt-1.5 pb-2">
-          {/* Sliding pill indicator */}
-          <div
-            className="absolute top-1.5 bottom-1.5 rounded-xl bg-white/[0.08] border border-white/[0.06] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-            style={{
-              left: pillStyle.left,
-              width: pillStyle.width,
-              opacity: pillStyle.opacity,
-            }}
-          />
+      <div className="mx-auto flex max-w-md items-center gap-1 rounded-[1.4rem] border border-white/10 bg-ink-850/85 p-1.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.95)] backdrop-blur-2xl">
+        {mainItems.map((item) => {
+          const Icon = item.icon;
+          const active = currentView === item.id;
 
-          {mainItems.map((item, idx) => {
-            const Icon = item.icon;
-            const active = currentView === item.id;
-            const isDisabled = item.disabled;
-            const isTapped = tapIndex === idx;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onNavigate(item.id)}
+              aria-current={active ? "page" : undefined}
+              className={`group relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl transition-colors duration-200 ${
+                active ? "text-ink-950" : "text-zinc-500 active:text-zinc-300"
+              }`}
+              title={item.label}
+            >
+              {active && (
+                <motion.span
+                  layoutId="mobile-active-pill"
+                  className="absolute inset-1 rounded-[1rem] bg-accent shadow-[0_0_24px_-6px_rgba(69,255,156,0.6)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                />
+              )}
+              <Icon
+                className="relative z-10 h-[21px] w-[21px]"
+                strokeWidth={active ? 2.6 : 1.9}
+                aria-hidden="true"
+              />
+              <span className={`relative z-10 text-[9px] font-semibold ${active ? "opacity-100" : "opacity-70"}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                data-nav-btn
-                disabled={isDisabled}
-                onClick={() => {
-                  if (isDisabled) return;
-                  handleTap(idx);
-                  onNavigate(item.id);
-                }}
-                aria-current={active ? "page" : undefined}
-                className={`relative z-10 flex flex-col items-center justify-center gap-0.5 w-16 h-14 transition-all duration-300 ease-out ${
-                  isDisabled
-                    ? "text-neutral-500/50 cursor-not-allowed"
-                    : active
-                    ? "text-white"
-                    : "text-neutral-500 active:text-neutral-300"
-                } ${isTapped ? "scale-90" : "scale-100"}`}
-                title={isDisabled ? "Em breve" : item.label}
-              >
-                <div className="relative">
-                  <Icon
-                    className={`w-[22px] h-[22px] transition-all duration-300 ease-out ${
-                      active ? "stroke-[2.2px]" : "stroke-[1.5px]"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-2.5 text-[7px] font-bold px-1 py-px rounded-full bg-neutral-800 text-neutral-500 border border-neutral-700/60">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] font-medium transition-all duration-300 ${
-                    active ? "opacity-100 translate-y-0" : "opacity-60 -translate-y-px"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-
-          {/* "Mais" button */}
-          <button
-            type="button"
-            onClick={() => {
-              handleTap(mainItems.length);
-              onOpenMenu();
-            }}
-            className="relative z-10 flex flex-col items-center justify-center gap-0.5 w-16 h-14 text-neutral-500 active:text-neutral-300 transition-all duration-300"
-            aria-label="Abrir todas as opcoes"
-          >
-            <Menu className="w-[22px] h-[22px] stroke-[1.5px]" aria-hidden="true" />
-            <span className="text-[10px] font-medium opacity-60">Mais</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          className="flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-zinc-500 transition-colors active:text-zinc-300"
+          aria-label="Abrir todas as opções"
+          title="Mais"
+        >
+          <LayoutGrid className="h-[21px] w-[21px]" strokeWidth={1.9} aria-hidden="true" />
+          <span className="text-[9px] font-semibold opacity-70">Mais</span>
+        </button>
       </div>
     </nav>
   );

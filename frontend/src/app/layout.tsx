@@ -1,15 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SyncProvider } from "@/contexts/SyncContext";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 import PwaRegistrar from "@/components/PwaRegistrar";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
-  themeColor: "#08080c",
+  themeColor: "#040504",
   viewportFit: "cover",
 };
 
@@ -35,12 +37,26 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={`${inter.className} bg-[#08080c] text-white antialiased`}>
+      <body className={`${inter.className} bg-ink-950 text-white antialiased`}>
         <AuthProvider>
           <SyncProvider>
             {children}
           </SyncProvider>
         </AuthProvider>
+        <Toaster
+          theme="dark"
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              background: "#0e120e",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "#f2fff7",
+              borderRadius: "16px",
+            },
+          }}
+        />
         <PwaRegistrar />
         <Analytics />
       </body>

@@ -1,9 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, Eye, EyeOff, Lock, User, ExternalLink, BookOpen, Calendar, Sparkles } from "lucide-react";
+import {
+  GraduationCap,
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  ExternalLink,
+  BookOpen,
+  Calendar,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Clock3,
+} from "lucide-react";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+
+const features = [
+  { icon: Calendar, title: "Prazos sob controle", text: "Tudo do Virtual2 em uma linha do tempo clara." },
+  { icon: BookOpen, title: "Materiais organizados", text: "PDFs e conteúdos por disciplina, com busca." },
+  { icon: Sparkles, title: "Tutor com contexto", text: "IA que lê seus materiais e responde com base neles." },
+];
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -30,87 +51,171 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] overflow-hidden">
-      {/* Background gradient mesh */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[var(--ifnmgreen)]/[0.02] rounded-full blur-[120px]" />
-        <div className="absolute bottom-[15%] right-[10%] w-[400px] h-[300px] bg-blue-500/[0.015] rounded-full blur-[100px]" />
-      </div>
+    <div className="app-backdrop relative min-h-dvh overflow-hidden text-white">
+      <div className="pointer-events-none absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full bg-accent/[0.06] blur-[120px]" />
+      <div className="pointer-events-none absolute -right-32 top-0 h-[460px] w-[460px] rounded-full bg-accent/[0.07] blur-[130px]" />
 
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <div className="w-full max-w-md relative z-10">
-          {/* ── Brand / Hero ── */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--ifnmgreen)] to-[var(--ifnmgreen)] mb-4 shadow-lg shadow-[var(--ifnmgreen)]/40">
-              <GraduationCap className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
-              IFNMG Assistente
-            </h1>
-            <p className="text-sm text-[var(--text-tertiary)]">
-              Seu tutor acadêmico de elite — conecte-se ao Virtual2
-            </p>
-          </div>
-
-          {/* ── Feature highlights ── */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
-                <Calendar className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
-              </div>
-              <span className="text-[10px] text-[var(--text-tertiary)]">Prazos</span>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
-                <BookOpen className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
-              </div>
-              <span className="text-[10px] text-[var(--text-tertiary)]">Materias</span>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
-                <Sparkles className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
-              </div>
-              <span className="text-[10px] text-[var(--text-tertiary)]">IA Tutor</span>
-            </div>
-          </div>
-
-          {/* ── Login Card ── */}
-          <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 shadow-lg shadow-black/20">
-            <div className="space-y-1 mb-5">
-              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-                Entrar
-              </h2>
-              <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-                Use suas credenciais institucionais do IFNMG.
+      <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-[1240px] grid-cols-1 items-center gap-10 px-5 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-12">
+        {/* Hero */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="hidden flex-col lg:flex"
+        >
+          <div className="mb-10 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-gradient shadow-glow-sm">
+              <GraduationCap className="h-5 w-5 text-ink-950" strokeWidth={2.4} />
+            </span>
+            <div>
+              <p className="font-display text-base font-bold leading-none tracking-tight">IFNMG</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-accent/80">
+                Assistente acadêmico
               </p>
             </div>
+          </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+          <span className="chip chip-accent mb-5 w-fit">
+            <span className="accent-dot" /> Integrado ao Virtual2
+          </span>
+
+          <h1 className="font-display text-[clamp(2.6rem,4.6vw,4.2rem)] font-bold leading-[0.98] tracking-[-0.04em]">
+            Estude com clareza.
+            <br />
+            <span className="text-gradient-accent">Entregue com folga.</span>
+          </h1>
+
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-zinc-400">
+            Suas disciplinas, prazos e materiais em um só lugar — com um tutor de IA
+            que entende o seu semestre.
+          </p>
+
+          <div className="mt-8 grid max-w-lg grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {features.map(({ icon: Icon, title, text }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3.5 backdrop-blur-sm transition-colors hover:border-accent/25 hover:bg-accent/[0.04]"
+              >
+                <Icon className="h-4 w-4 text-accent" />
+                <p className="mt-2.5 text-[11px] font-semibold text-zinc-200">{title}</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-zinc-600">{text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Prévia do painel */}
+          <div className="relative mt-10 max-w-lg">
+            <div className="panel-accent panel p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-accent" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Seu dia
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-600">Hoje</span>
+              </div>
+              <div className="mt-4 flex items-end justify-between gap-4">
+                <div>
+                  <p className="font-display text-2xl font-bold leading-none text-white">
+                    3 entregas
+                  </p>
+                  <p className="mt-1.5 flex items-center gap-1 text-[10px] text-status-warning">
+                    <Clock3 className="h-3 w-3" /> 1 vence nas próximas 24h
+                  </p>
+                </div>
+                <div className="flex -space-x-2">
+                  {[BookOpen, Calendar, Sparkles].map((Icon, index) => (
+                    <span
+                      key={index}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink-850 bg-ink-750 text-accent"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                <CheckCircle2 className="h-4 w-4 text-accent" />
+                <p className="text-[10px] text-zinc-400">Briefing do dia pronto · plano de estudo sugerido</p>
+                <ArrowRight className="ml-auto h-3.5 w-3.5 text-zinc-600" />
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-8 text-[10px] text-zinc-600">
+            Plataforma acadêmica independente · Desenvolvido por{" "}
+            <a
+              href="https://instagram.com/vinicius.tsx"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-zinc-400 transition-colors hover:text-accent"
+            >
+              @vinicius.tsx
+            </a>
+          </p>
+        </motion.section>
+
+        {/* Login */}
+        <motion.section
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="mx-auto w-full max-w-md"
+        >
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-gradient shadow-glow-sm">
+              <GraduationCap className="h-5 w-5 text-ink-950" strokeWidth={2.4} />
+            </span>
+            <div>
+              <p className="font-display text-base font-bold leading-none tracking-tight text-white">IFNMG</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-accent/80">
+                Assistente acadêmico
+              </p>
+            </div>
+          </div>
+
+          <div className="panel overflow-hidden">
+            <div className="border-b border-white/[0.07] bg-white/[0.02] px-6 py-5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-accent/25 bg-accent/[0.09] text-accent">
+                  <Lock className="h-3.5 w-3.5" />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-semibold tracking-tight text-white">
+                    Entrar na sua conta
+                  </h2>
+                  <p className="text-[10px] text-zinc-600">Use suas credenciais do Virtual2</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4 p-6">
               <div>
-                <label htmlFor="moodle-username" className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1.5">
-                  Usuario / CPF / Matricula
+                <label htmlFor="moodle-username" className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Usuário / CPF / Matrícula
                 </label>
                 <div className="relative">
+                  <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
                   <input
                     id="moodle-username"
                     type="text"
                     autoComplete="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Seu usuario do Virtual2"
+                    placeholder="Seu usuário do Virtual2"
                     required
-                    className="w-full bg-[var(--surface-inset)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ifnmgreen)]/[0.40] focus:ring-1 focus:ring-[var(--ifnmgreen)]/20 transition-colors"
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-4 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20"
                   />
-                  <User className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3.5 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="moodle-password" className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1.5">
+                <label htmlFor="moodle-password" className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
                   Senha do Virtual2
                 </label>
                 <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
                   <input
                     id="moodle-password"
                     type={showPass ? "text" : "password"}
@@ -119,21 +224,21 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Sua senha"
                     required
-                    className="w-full bg-[var(--surface-inset)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ifnmgreen)]/[0.40] focus:ring-1 focus:ring-[var(--ifnmgreen)]/20 transition-colors pr-10"
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-12 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
                     aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600 transition-colors hover:text-zinc-300"
                   >
-                    {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-xl bg-[var(--status-urgent)]/[0.06] border border-[var(--status-urgent)]/20 p-3 text-[var(--status-urgent)]/90 text-xs">
+                <div className="rounded-xl border border-status-urgent/20 bg-status-urgent/[0.08] px-3.5 py-2.5 text-[11px] leading-relaxed text-status-urgent">
                   {error}
                 </div>
               )}
@@ -141,27 +246,38 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="relative w-full min-h-11 px-5 py-2.5 rounded-xl bg-gradient-to-br from-[var(--ifnmgreen)] to-[var(--ifnmgreen)] hover:from-[var(--ifnmgreen)] hover:to-[var(--ifnmgreen)] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center font-semibold text-white text-sm tracking-wide shadow-lg shadow-[var(--ifnmgreen)]/30"
+                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-gradient text-sm font-bold text-ink-950 shadow-glow-sm transition-all hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {loading ? <CogSpinner size={22} className="text-white" /> : "Entrar"}
+                {loading ? (
+                  <CogSpinner size={20} className="text-ink-950" />
+                ) : (
+                  <>
+                    Entrar
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </>
+                )}
               </button>
+
+              <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-600">
+                <ShieldCheck className="h-3 w-3 text-accent/70" />
+                Conexão segura e criptografada
+              </div>
             </form>
 
-            <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
-              <span>Conexão segura e criptografada</span>
+            <div className="flex items-center justify-between border-t border-white/[0.07] bg-white/[0.015] px-6 py-3 text-[10px] text-zinc-600">
+              <span>Não é o Virtual2 oficial</span>
               <a
                 href="https://virtual2.ifnmg.edu.br"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[var(--text-secondary)] transition-colors flex items-center gap-1"
+                className="flex items-center gap-1 font-medium text-zinc-400 transition-colors hover:text-accent"
               >
-                Virtual2 <ExternalLink className="w-2.5 h-2.5" />
+                Abrir Virtual2 <ExternalLink className="h-2.5 w-2.5" />
               </a>
             </div>
           </div>
 
-          {/* ── Footer ── */}
-          <p className="mt-5 text-center text-[10px] text-[var(--text-tertiary)] leading-relaxed">
+          <p className="mt-5 text-center text-[10px] leading-relaxed text-zinc-600 lg:hidden">
             Plataforma acadêmica independente.
             <br />
             Desenvolvido por{" "}
@@ -169,12 +285,12 @@ export default function LoginPage() {
               href="https://instagram.com/vinicius.tsx"
               target="_blank"
               rel="noreferrer"
-              className="text-[var(--ifnmgreen)]/70 hover:text-[var(--ifnmgreen)] transition-colors"
+              className="font-medium text-zinc-400 transition-colors hover:text-accent"
             >
               @vinicius.tsx
             </a>
           </p>
-        </div>
+        </motion.section>
       </div>
     </div>
   );

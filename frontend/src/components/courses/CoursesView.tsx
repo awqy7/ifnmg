@@ -11,6 +11,8 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  Search,
+  Layers,
 } from "lucide-react";
 import { coursesApi, saveDownloadedFile } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
@@ -33,6 +35,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [materialErrors, setMaterialErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const loadCourses = async () => {
     setLoading(true);
@@ -40,7 +43,6 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
     try {
       const crs = await coursesApi.list();
       setCourses(crs);
-      // Libera a tela assim que as disciplinas chegam. Materiais são lazy-load.
       setLoading(false);
       if (crs.length > 0) {
         const firstId = crs[0].id;
@@ -119,215 +121,355 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
     } catch (err) {
       setMaterialErrors((current) => ({
         ...current,
-        [material.id]: err instanceof Error ? err.message : "A IA não conseguiu explicar este material.",
+        [material.id]:
+          err instanceof Error ? err.message : "A IA não conseguiu explicar este material.",
       }));
     } finally {
       setExplainingMaterial(null);
     }
   };
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleCourses = courses.filter((course) => {
+    if (!normalizedQuery) return true;
+    return (
+      course.name.toLowerCase().includes(normalizedQuery) ||
+      (course.teacher || "").toLowerCase().includes(normalizedQuery)
+    );
+  });
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
-          <BookOpen className="w-5 h-5 text-[var(--ifnmblue)]/80" />
-          <span className="text-gradient-accent">Disciplinas</span>
-        </h1>
-        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-          Materiais, PDFs e conteúdo organizados por disciplina
-        </p>
-      </div>
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-accent/25 bg-accent/[0.08] text-accent">
+              <BookOpen className="h-[18px] w-[18px]" />
+            </span>
+            <div>
+              <p className="eyebrow text-[9px]">Biblioteca</p>
+              <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Disciplinas<span className="text-accent">.</span>
+              </h1>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {courses.length} {courses.length === 1 ? "disciplina" : "disciplinas"} · materiais,
+            PDFs e conteúdo organizados
+          </p>
+        </div>
+
+        <div className="relative w-full lg:w-72">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar disciplina ou docente"
+            aria-label="Buscar disciplinas"
+            className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-9 pr-3 text-xs text-white placeholder:text-zinc-600 transition-colors focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20"
+          />
+        </div>
+      </header>
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--status-urgent)]/15 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]/90">
-          <span>{error}</span>
-          <button type="button" onClick={loadCourses} className="font-semibold text-red-200 hover:text-white">Tentar novamente</button>
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-status-urgent/20 bg-status-urgent/[0.07] px-4 py-3 text-xs text-status-urgent"
+        >
+          <span className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={loadCourses} className="shrink-0">
+            Tentar novamente
+          </Button>
         </div>
       )}
 
       {loading ? (
-        <div className="p-12 flex items-center justify-center">
-          <CogSpinner size={32} className="text-neutral-600" />
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="panel p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 animate-pulse rounded-2xl bg-white/[0.05]" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-2/3 animate-pulse rounded bg-white/[0.05]" />
+                  <div className="h-2.5 w-1/3 animate-pulse rounded bg-white/[0.03]" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      ) : courses.length === 0 ? (
-        <div className="p-10 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-center text-neutral-500 text-sm">
-          Nenhuma disciplina encontrada. Conecte o Virtual2 nas Configuracoes.
+      ) : visibleCourses.length === 0 ? (
+        <div className="panel flex flex-col items-center gap-3 px-6 py-16 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/[0.08] text-accent">
+            <BookOpen className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="font-display text-sm font-semibold text-white">
+              {query ? "Nenhuma disciplina encontrada" : "Nenhuma disciplina conectada"}
+            </p>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              {query
+                ? "Tente outro termo ou limpe a busca."
+                : "Conecte o Virtual2 nas Configurações para importar suas matérias."}
+            </p>
+          </div>
+          {query ? (
+            <Button variant="outline" size="sm" onClick={() => setQuery("")}>
+              Limpar busca
+            </Button>
+          ) : (
+            <Button variant="accent" size="sm" onClick={() => openChat()}>
+              <Sparkles className="h-3.5 w-3.5" /> Falar com o tutor
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {courses.map((course, idx) => {
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {visibleCourses.map((course, idx) => {
             const isExpanded = expandedCourse === course.id;
             const materials = courseMaterials[course.id] || [];
             const isLoadingMats = loadingMaterials[course.id];
+            const materialCount = materials.length || course.total_materials || 0;
 
             return (
               <div
                 key={course.id}
-                className="card-enter rounded-2xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden transition-all duration-200 hover:border-[var(--ifnmblue)]/12 group"
-                style={{ animationDelay: `${idx * 50}ms` }}
+                className={`card-enter panel overflow-hidden transition-all duration-300 ${
+                  isExpanded
+                    ? "border-accent/20 shadow-[0_24px_80px_-48px_rgba(69,255,156,0.5)]"
+                    : "hover:border-white/15"
+                }`}
+                style={{ animationDelay: `${idx * 45}ms` }}
               >
-                {/* Card Header — always visible */}
-                <div
-                  onClick={() => toggleExpand(course.id)}
-                  className="p-4 cursor-pointer select-none"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm"
-                      style={{ backgroundColor: "#059669" }}
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(course.id)}
+                      className="group flex min-w-0 flex-1 items-start gap-3 text-left"
+                      aria-expanded={isExpanded}
                     >
-                      <BookOpen className="w-5 h-5 text-white/90" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-white group-hover:text-[var(--accent)] transition-colors truncate">
-                        {course.name}
-                      </h3>
-                      <p className="text-[11px] text-[var(--text-tertiary)] flex items-center gap-1 mt-0.5">
-                        <User className="w-3 h-3" />
-                        {course.teacher || "Docente IFNMG"}
-                      </p>
-                    </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openChat(course.id);
-                            }}
-                            className="shrink-0"
-                            aria-label={`Abrir tutor de ${course.name}`}
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Abrir tutor de {course.name}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <div className="shrink-0">
-                      <div className={`p-1 rounded-md transition-all duration-200 ${isExpanded ? "bg-white/[0.06] text-[var(--text-secondary)] rotate-180" : "bg-white/[0.03] text-[var(--text-tertiary)]"}`}>
-                        <ChevronDown className="w-4 h-4" />
-                      </div>
+                      <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-accent/20 bg-accent/[0.08] text-accent">
+                        <BookOpen className="h-[18px] w-[18px]" />
+                        <span className="absolute -right-1 -top-1 rounded-md border border-ink-850 bg-ink-750 px-1 font-mono text-[8px] font-bold text-zinc-500">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 font-display text-sm font-semibold leading-snug text-white transition-colors group-hover:text-accent-light">
+                          {course.name}
+                        </span>
+                        <span className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
+                          <User className="h-3 w-3" />
+                          <span className="truncate">{course.teacher || "Docente IFNMG"}</span>
+                        </span>
+                      </span>
+                    </button>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => openChat(course.id)}
+                              aria-label={`Abrir tutor de ${course.name}`}
+                              className="text-zinc-500 hover:text-accent"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Abrir tutor de {course.name}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(course.id)}
+                        aria-label={isExpanded ? "Recolher materiais" : "Ver materiais"}
+                        aria-expanded={isExpanded}
+                        className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                          isExpanded
+                            ? "border-accent/20 bg-accent/[0.07] text-accent"
+                            : "border-white/[0.07] bg-white/[0.02] text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-300 ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Material count preview */}
-                  <div className="mt-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-600">
-                      <FileText className="w-3 h-3" />
-                      <span>{materials.length || course.total_materials || "0"} materiais</span>
+                  <div className="mt-3.5 flex items-center justify-between border-t border-white/[0.05] pt-2.5">
+                    <div className="flex items-center gap-3 text-[9px] text-zinc-600">
+                      <span className="flex items-center gap-1">
+                        <Layers className="h-3 w-3" />
+                        {materialCount} {materialCount === 1 ? "material" : "materiais"}
+                      </span>
+                      {course.pending_activities > 0 && (
+                        <span className="flex items-center gap-1 font-semibold text-status-warning">
+                          <AlertCircle className="h-3 w-3" />
+                          {course.pending_activities} pendentes
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[10px] text-[var(--ifnmblue)]/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(course.id)}
+                      className="text-[9px] font-semibold text-accent/80 transition-colors hover:text-accent"
+                    >
                       {isExpanded ? "Recolher" : "Ver materiais"}
-                    </span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Expanded Materials Section */}
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  className={`overflow-hidden border-t border-white/[0.05] bg-ink-900/40 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isExpanded ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
                   }`}
                 >
-                  <div className="px-4 pb-4 pt-0 border-t border-[var(--border)]">
-                    <div className="pt-2.5 space-y-2">
-                      {isLoadingMats ? (
-                        <div className="py-5 flex items-center justify-center">
-                          <CogSpinner size={18} className="text-neutral-600" />
-                        </div>
-                      ) : materials.length === 0 ? (
-                        <div className="py-5 text-center text-[11px] text-neutral-600">
-                          Nenhum material disponivel.
-                        </div>
-                      ) : (
-                        materials.map((mat) => (
-                          <div key={mat.id} className="rounded-xl bg-white/[0.02] border border-[var(--border)] overflow-hidden">
-                            <div className="p-2.5 hover:bg-white/[0.025] flex items-center justify-between gap-2 transition-colors">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                                <div className="min-w-0">
-                                  <h4 className="text-[11px] font-medium text-neutral-300 truncate">
-                                    {mat.title}
-                                  </h4>
-                                  <div className="flex items-center gap-2 text-[9px] text-neutral-600">
-                                    <span className="truncate">{mat.topic_name || "Geral"}</span>
-                                    {mat.has_text && (
-                                      <span className="flex items-center gap-0.5 text-[var(--ifnmgreen)]/60 shrink-0">
-                                        <CheckCircle2 className="w-2.5 h-2.5" /> conteúdo lido
-                                      </span>
-                                    )}
-                                  </div>
+                  <div className="space-y-2 p-3">
+                    {isLoadingMats ? (
+                      <div className="flex items-center justify-center py-6">
+                        <CogSpinner size={18} className="text-accent" />
+                      </div>
+                    ) : materials.length === 0 ? (
+                      <div className="py-6 text-center text-[11px] text-zinc-600">
+                        Nenhum material disponível nesta disciplina.
+                      </div>
+                    ) : (
+                      materials.map((mat) => (
+                        <div
+                          key={mat.id}
+                          className="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-colors hover:border-white/10"
+                        >
+                          <div className="flex items-center justify-between gap-2 p-2.5">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-zinc-500">
+                                <FileText className="h-3.5 w-3.5" />
+                              </span>
+                              <div className="min-w-0">
+                                <h4 className="truncate text-[11px] font-semibold text-zinc-300">
+                                  {mat.title}
+                                </h4>
+                                <div className="mt-0.5 flex items-center gap-2 text-[9px] text-zinc-600">
+                                  <span className="truncate">{mat.topic_name || "Geral"}</span>
+                                  {mat.has_text && (
+                                    <span className="flex shrink-0 items-center gap-0.5 text-accent/70">
+                                      <CheckCircle2 className="h-2.5 w-2.5" /> conteúdo lido
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 shrink-0">
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-1">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      onClick={() => explainMaterial(course.id, mat)}
+                                      disabled={explainingMaterial === mat.id}
+                                      className="text-accent/80 hover:text-accent"
+                                      aria-label={explanations[mat.id] ? "Fechar explicação" : "Ler e explicar com IA"}
+                                    >
+                                      {explainingMaterial === mat.id ? (
+                                        <CogSpinner size={12} />
+                                      ) : (
+                                        <Sparkles className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {explanations[mat.id] ? "Fechar explicação" : "Ler e explicar com IA"}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              {mat.downloadable && (!mat.files || mat.files.length <= 1) && (
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
                                         size="icon-sm"
-                                        onClick={() => explainMaterial(course.id, mat)}
-                                        disabled={explainingMaterial === mat.id}
-                                        className="text-[var(--ifnmgreen)]/80"
+                                        onClick={() => downloadMaterial(course.id, mat)}
+                                        disabled={downloadingMaterial === `${mat.id}:0`}
+                                        aria-label={`Baixar ${mat.title}`}
+                                        className="text-zinc-500 hover:text-white"
                                       >
-                                        {explainingMaterial === mat.id ? <CogSpinner size={12} /> : <Sparkles className="w-3 h-3" />}
+                                        {downloadingMaterial === `${mat.id}:0` ? (
+                                          <CogSpinner size={12} />
+                                        ) : (
+                                          <Download className="h-3.5 w-3.5" />
+                                        )}
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>{explanations[mat.id] ? "Fechar explicação" : "Ler e explicar com IA"}</TooltipContent>
+                                    <TooltipContent>Baixar {mat.title}</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
-                                {mat.downloadable && (!mat.files || mat.files.length <= 1) && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon-sm"
-                                          onClick={() => downloadMaterial(course.id, mat)}
-                                          disabled={downloadingMaterial === `${mat.id}:0`}
-                                        >
-                                          {downloadingMaterial === `${mat.id}:0` ? <CogSpinner size={12} /> : <Download className="w-3.5 h-3.5" />}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Baixar {mat.title}</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                              </div>
+                              )}
                             </div>
-                            {mat.files?.length > 1 && (
-                              <div className="mx-2.5 mb-2.5 grid gap-1 sm:grid-cols-2">
-                                {mat.files.map((file: any, fileIndex: number) => (
-                                  <Button
-                                    key={`${file.name}-${fileIndex}`}
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => downloadMaterial(course.id, mat, fileIndex)}
-                                    disabled={downloadingMaterial === `${mat.id}:${fileIndex}`}
-                                    className="flex min-w-0 items-center justify-between gap-2"
-                                  >
-                                    <span className="truncate">{file.name}</span>
-                                    {downloadingMaterial === `${mat.id}:${fileIndex}` ? <CogSpinner size={11} /> : <Download className="h-3 w-3 shrink-0" />}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
-                            {materialErrors[mat.id] && (
-                              <div className="mx-2.5 mb-2.5 flex items-start gap-1.5 rounded-lg bg-[var(--status-urgent)]/[0.05] border border-[var(--status-urgent)]/10 p-2 text-[10px] text-[var(--status-urgent)]">
-                                <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" /> {materialErrors[mat.id]}
-                              </div>
-                            )}
-                            {explanations[mat.id] && (
-                              <div className="border-t border-[var(--border)] bg-[var(--surface-inset)] p-3">
-                                <Markdown content={explanations[mat.id]} />
-                              </div>
-                            )}
                           </div>
-                        ))
-                      )}
-                    </div>
+
+                          {mat.files?.length > 1 && (
+                            <div className="mx-2.5 mb-2.5 grid gap-1 sm:grid-cols-2">
+                              {mat.files.map((file: any, fileIndex: number) => (
+                                <Button
+                                  key={`${file.name}-${fileIndex}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => downloadMaterial(course.id, mat, fileIndex)}
+                                  disabled={downloadingMaterial === `${mat.id}:${fileIndex}`}
+                                  className="flex min-w-0 items-center justify-between gap-2"
+                                >
+                                  <span className="truncate">{file.name}</span>
+                                  {downloadingMaterial === `${mat.id}:${fileIndex}` ? (
+                                    <CogSpinner size={11} />
+                                  ) : (
+                                    <Download className="h-3 w-3 shrink-0" />
+                                  )}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+
+                          {materialErrors[mat.id] && (
+                            <div className="mx-2.5 mb-2.5 flex items-start gap-1.5 rounded-xl border border-status-urgent/15 bg-status-urgent/[0.05] p-2 text-[10px] text-status-urgent">
+                              <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                              {materialErrors[mat.id]}
+                            </div>
+                          )}
+
+                          {explanations[mat.id] && (
+                            <div className="animate-scale-in border-t border-accent/10 bg-accent/[0.03] p-3">
+                              <div className="mb-2 flex items-center justify-between">
+                                <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-accent">
+                                  <Sparkles className="h-3 w-3" /> Explicação da IA
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => explainMaterial(course.id, mat)}
+                                  className="text-[9px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                                >
+                                  Fechar
+                                </button>
+                              </div>
+                              <Markdown content={explanations[mat.id]} />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

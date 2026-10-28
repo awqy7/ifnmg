@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Paperclip, Send, X } from "lucide-react";
+import { CheckCircle2, Paperclip, Send, X, UploadCloud, ShieldCheck } from "lucide-react";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
@@ -33,6 +34,8 @@ export default function SubmissionDialog({
   const [files, setFiles] = useState<File[]>([]);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,6 +45,16 @@ export default function SubmissionDialog({
     setConfirmed(false);
     setError(null);
   }, [open]);
+
+  const handleClose = () => {
+    if (!loading) onClose();
+  };
+
+  useModalA11y(dialogRef, {
+    open,
+    onClose: handleClose,
+    initialFocusRef: textareaRef,
+  });
 
   if (!open) return null;
 
@@ -82,72 +95,177 @@ export default function SubmissionDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-labelledby="submission-title" className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-3">
+    <div
+      onMouseDown={(event) => event.target === event.currentTarget && !loading && onClose()}
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-ink-950/80 p-0 backdrop-blur-md sm:items-center sm:p-4"
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="submission-title"
+        tabIndex={-1}
+        className="animate-scale-in flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-ink-850 shadow-2xl shadow-black/60 sm:rounded-3xl"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-white/[0.07] p-5 sm:p-6">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-xl bg-[var(--ifnmgreen)]/10 p-2 text-[var(--ifnmgreen)]">
-              <Send className="h-5 w-5" />
+            <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-accent/25 bg-accent/[0.08] text-accent">
+              <Send className="h-4 w-4" />
             </div>
             <div>
-              <h2 id="submission-title" className="text-sm font-semibold text-white">Enviar ao Virtual2</h2>
-              <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{activityTitle}</p>
+              <h2 id="submission-title" className="font-display text-base font-semibold tracking-tight text-white">
+                Enviar ao Virtual2
+              </h2>
+              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-zinc-500">
+                {activityTitle}
+              </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} disabled={loading} aria-label="Fechar" className="rounded-lg p-2 text-neutral-500 hover:bg-white/5 hover:text-white disabled:opacity-50">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            aria-label="Fechar"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <label className="block text-[11px] font-medium text-neutral-400">
-            Resposta em texto <span className="font-normal text-neutral-600">(opcional se anexar arquivo)</span>
+        <div className="space-y-4 overflow-y-auto p-5 sm:p-6">
+          <div>
+            <label
+              htmlFor="submission-message"
+              className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Resposta em texto
+              <span className="font-medium normal-case tracking-normal text-zinc-600">
+                opcional se anexar arquivo
+              </span>
+            </label>
             <textarea
+              ref={textareaRef}
+              id="submission-message"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               maxLength={20_000}
-              rows={5}
-              placeholder="Digite sua resposta, se a atividade aceitar texto online."
-              className="mt-1.5 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2.5 text-xs text-white outline-none placeholder:text-neutral-600 focus:border-[var(--ifnmblue)]/40"
+              rows={4}
+              placeholder="Digite sua resposta, caso a atividade aceite texto online."
+              className="w-full resize-y rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3 text-xs leading-relaxed text-white placeholder:text-zinc-600 transition-colors focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20"
             />
-          </label>
+          </div>
 
           <div>
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => handleFiles(event.target.files)} />
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-strong)] px-3 py-3 text-xs text-neutral-400 hover:border-[var(--ifnmblue)]/35 hover:bg-[var(--ifnmblue)]/0.03 hover:text-[var(--ifnmblue)]/90 disabled:opacity-50">
-              <Paperclip className="h-4 w-4" /> Anexar arquivos
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => handleFiles(event.target.files)}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="group flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-5 text-zinc-500 transition-colors hover:border-accent/35 hover:bg-accent/[0.04] hover:text-accent disabled:opacity-40"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] transition-colors group-hover:border-accent/25 group-hover:bg-accent/[0.08]">
+                <UploadCloud className="h-4 w-4" />
+              </span>
+              <span className="text-[11px] font-semibold text-zinc-400 group-hover:text-accent">
+                Clique para anexar arquivos
+              </span>
+              <span className="text-[9px] text-zinc-600">
+                Até {MAX_FILES} arquivos · 10 MB cada · 20 MB no total
+              </span>
             </button>
-            <p className="mt-1.5 text-[10px] text-neutral-600">Até {MAX_FILES} arquivos, 10 MB por arquivo e 20 MB no total.</p>
           </div>
 
           {files.length > 0 && (
-            <ul className="space-y-1.5 rounded-xl border border-[var(--border)] bg-white/[0.02] p-2" aria-label="Arquivos selecionados">
+            <ul
+              className="space-y-1.5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-2.5"
+              aria-label="Arquivos selecionados"
+            >
               {files.map((file, index) => (
-                <li key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center gap-2 text-[11px] text-neutral-300">
-                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+                <li
+                  key={`${file.name}-${file.lastModified}-${index}`}
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-[11px] text-zinc-300 transition-colors hover:bg-white/[0.03]"
+                >
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-accent/70" />
                   <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                  <span className="text-neutral-600">{formatFileSize(file.size)}</span>
-                  <button type="button" onClick={() => setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index))} disabled={loading} className="rounded px-1 text-neutral-500 hover:text-[var(--status-urgent)]" aria-label={`Remover ${file.name}`}>×</button>
+                  <span className="shrink-0 text-[9px] text-zinc-600">{formatFileSize(file.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFiles((current) =>
+                        current.filter((_, currentIndex) => currentIndex !== index)
+                      )
+                    }
+                    disabled={loading}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-status-urgent/10 hover:text-status-urgent disabled:opacity-40"
+                    aria-label={`Remover ${file.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </li>
               ))}
-              <li className="pt-1 text-right text-[10px] text-neutral-600">Total: {formatFileSize(totalSize)}</li>
+              <li className="border-t border-white/[0.05] px-1.5 pt-1.5 text-right text-[9px] text-zinc-600">
+                Total: {formatFileSize(totalSize)} de 20 MB
+              </li>
             </ul>
           )}
 
-          <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--ifnmamber)]/15 bg-[var(--ifnmamber)]/[0.04] p-3 text-xs leading-relaxed text-[var(--ifnmamber)]/85">
-            <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} disabled={loading} className="mt-0.5 accent-[var(--ifnmblue)]" />
-            <span>Revisei os arquivos e confirmo que desejo enviar esta atividade para avaliação no Virtual2.</span>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-2xl border border-status-warning/20 bg-status-warning/[0.05] p-3.5 text-[11px] leading-relaxed text-status-warning/85">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+              disabled={loading}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent"
+            />
+            <span>
+              Revisei os arquivos e confirmo que desejo enviar esta atividade para avaliação no
+              Virtual2.
+            </span>
           </label>
 
-          {error && <p role="alert" className="rounded-xl border border-[var(--status-urgent)]/20 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]">{error}</p>}
+          {error && (
+            <p
+              role="alert"
+              className="rounded-2xl border border-status-urgent/20 bg-status-urgent/[0.06] p-3 text-[11px] text-status-urgent"
+            >
+              {error}
+            </p>
+          )}
         </div>
 
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} disabled={loading} className="flex-1 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-medium text-neutral-400 hover:bg-white/5 disabled:opacity-50">Cancelar</button>
-          <button type="button" onClick={handleSubmit} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--ifnmgreen)] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[var(--ifnmgreen)] disabled:opacity-50">
-            {loading ? <CogSpinner size={14} className="text-white" /> : <CheckCircle2 className="h-4 w-4" />}
+        <div className="flex gap-2 border-t border-white/[0.07] p-4 sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="h-11 flex-1 rounded-xl border border-white/10 text-xs font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-accent-gradient text-xs font-bold text-ink-950 shadow-glow-sm transition-all hover:shadow-glow disabled:opacity-40"
+          >
+            {loading ? (
+              <CogSpinner size={14} className="text-ink-950" />
+            ) : (
+              <ShieldCheck className="h-4 w-4" />
+            )}
             {loading ? "Enviando..." : "Enviar atividade"}
           </button>
+        </div>
+
+        <div className="flex items-center justify-center gap-1.5 border-t border-white/[0.05] bg-white/[0.01] px-6 py-2.5 text-[9px] text-zinc-600">
+          <CheckCircle2 className="h-3 w-3 text-accent/60" />
+          Envio autenticado direto ao Virtual2
         </div>
       </div>
     </div>

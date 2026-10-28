@@ -8,12 +8,12 @@ import {
   Bell,
   Menu,
   GraduationCap,
-  CheckCircle2,
   AlertCircle,
   Sparkles,
   Check,
   FileText,
   RefreshCw,
+  ArrowUpRight,
 } from "lucide-react";
 import { moodleApi, notificationsApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
@@ -24,15 +24,26 @@ interface TopBarProps {
   onNavigate: (view: ViewType) => void;
   onOpenActivity?: (activityId: string) => void;
   isVisible?: boolean;
+  currentView?: ViewType;
 }
 
-export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true }: TopBarProps) {
+const pageTitles: Record<ViewType, string> = {
+  home: "Visão geral",
+  atividades: "Atividades",
+  cursos: "Disciplinas",
+  chat: "Chat IA",
+  estudo: "Central de estudos",
+  configuracoes: "Configurações",
+};
+
+export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVisible = true, currentView = "home" }: TopBarProps) {
   const { user } = useAuth();
   const { syncing, syncProgress, triggerSync, setSyncing, setSyncProgress } = useSync();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const hasAutoSynced = useRef(false);
 
   const fetchUnread = useCallback(async () => {
@@ -66,6 +77,17 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
   }, [showNotifications]);
 
   useEffect(() => {
+    if (!showNotifications) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShowNotifications(false);
+      notificationsButtonRef.current?.focus();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showNotifications]);
+
+  useEffect(() => {
     fetchUnread();
     const interval = setInterval(fetchUnread, 60000);
     window.addEventListener("notif-refresh", fetchUnread);
@@ -92,8 +114,6 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
           return;
         }
         const lastSync = user.moodle_last_sync ? new Date(user.moodle_last_sync).getTime() : 0;
-        // O scheduler já atualiza a cada 30 minutos. Evita iniciar uma nova
-        // coleta em toda entrada recente; o botão manual continua sempre visível.
         const isStale = !lastSync || Date.now() - lastSync > 30 * 60 * 1000;
         if (isStale) await triggerSync();
       } catch {
@@ -135,40 +155,48 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
 
   return (
     <header
-      className={`sticky top-0 z-30 bg-[var(--background)]/80 backdrop-blur-xl border-b border-[var(--border)] pt-[env(safe-area-inset-top)] transition-all duration-300 ease-out ${
+      className={`sticky top-0 z-30 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-2xl transition-all duration-300 ease-out ${
         isVisible
-          ? "max-h-24 translate-y-0 opacity-100"
+          ? "max-h-28 translate-y-0 opacity-100"
           : "max-h-0 -translate-y-full opacity-0 border-transparent"
       }`}
     >
-      <div className="px-3 sm:px-4 lg:px-6 h-14 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-5 lg:px-7">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onMenuToggle}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 transition-colors lg:hidden shrink-0"
-            aria-label="Menu"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-colors hover:border-accent/30 hover:text-accent lg:hidden"
+            aria-label="Abrir menu"
           >
-            <Menu className="w-4.5 h-4.5" />
+            <Menu className="h-[18px] w-[18px]" />
           </button>
-          <div className="mobile-brand sm:hidden flex items-center gap-2 min-w-0">
-            <GraduationCap className="w-4 h-4 text-[var(--ifnmgreen)]/80 shrink-0" />
-            <span className="text-sm font-semibold text-white truncate">
-              IFNMG <span className="text-[var(--ifnmgreen)]/80 font-normal">Assistente</span>
+
+          <div className="mobile-brand flex min-w-0 items-center gap-2 sm:hidden">
+            <GraduationCap className="h-4 w-4 shrink-0 text-accent" />
+            <span className="truncate font-display text-sm font-semibold text-white">
+              IFNMG <span className="font-normal text-accent/80">Assistente</span>
             </span>
           </div>
-          <div className="hidden sm:block min-w-0">
-            <p className="text-[11px] text-neutral-500">Virtual2 IFNMG</p>
+
+          <div className="hidden min-w-0 sm:block">
             <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">IFNMG</span>
+              <span className="text-zinc-700">/</span>
+              <p className="truncate font-display text-sm font-semibold text-white">
+                {pageTitles[currentView]}
+              </p>
+            </div>
+            <div className="mt-0.5 flex items-center gap-2">
               {user?.moodle_connected ? (
-                <span className="flex items-center gap-1 text-[10px] font-medium text-[var(--ifnmgreen)]/80 bg-white/[0.06] px-2 py-0.5 rounded-full border border-white/[0.1] shrink-0">
-                  <CheckCircle2 className="w-3 h-3" /> Conectado
+                <span className="flex items-center gap-1.5 text-[10px] font-medium text-accent/90">
+                  <span className="accent-dot" /> Virtual2 conectado
                 </span>
               ) : (
                 <button
                   onClick={() => onNavigate("configuracoes")}
-                  className="flex items-center gap-1 text-[10px] font-medium text-[var(--ifnmamber)]/80 bg-[var(--ifnmamber)]/[0.06] px-2 py-0.5 rounded-full border border-[var(--ifnmamber)]/[0.1] hover:bg-[var(--ifnmamber)]/[0.1] transition-colors shrink-0"
+                  className="flex items-center gap-1 text-[10px] font-medium text-status-warning transition-colors hover:text-white"
                 >
-                  <AlertCircle className="w-3 h-3" /> Conectar Virtual2
+                  <AlertCircle className="h-3 w-3" /> Conectar Virtual2
                 </button>
               )}
             </div>
@@ -176,112 +204,127 @@ export default function TopBar({ onMenuToggle, onNavigate, onOpenActivity, isVis
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Sync Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleSync}
             disabled={syncing}
-            className="min-w-10 h-10 sm:h-9"
+            className="h-10 min-w-10 px-3 sm:h-9"
             aria-label="Sincronizar dados"
             title="Sincronizar com o Virtual2"
           >
             {syncing ? (
-              <CogSpinner size={16} className="text-[var(--ifnmgreen)]" />
+              <CogSpinner size={15} className="text-accent" />
             ) : (
-              <RefreshCw className="w-3.5 h-3.5 text-neutral-500" />
+              <RefreshCw className="h-3.5 w-3.5" />
             )}
             <span className="hidden sm:inline">{syncing ? "Sincronizando" : "Sincronizar"}</span>
           </Button>
-          {syncProgress && (
-            <span className="hidden xl:inline max-w-56 truncate text-[10px] text-neutral-500" title={syncProgress}>
-              {syncProgress}
-            </span>
-          )}
 
-          {/* AI Tutor Quick Access */}
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={() => onNavigate("chat")}
-            className={`${!user?.moodle_connected ? "hidden sm:flex" : "flex"} min-w-10 h-10 sm:h-9`}
+            className={`${!user?.moodle_connected ? "hidden sm:flex" : "flex"} h-10 min-w-10 px-3 sm:h-9`}
             aria-label="Abrir Chat IA"
             title="Abrir Chat IA"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">IA</span>
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Tutor IA</span>
           </Button>
 
-          {/* Notifications */}
           <div ref={notificationsRef} className="relative">
             <button
+              ref={notificationsButtonRef}
               onClick={toggleNotifications}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-[var(--border)] text-neutral-400 relative transition-colors"
-              aria-label="Notificacoes"
-              title="Notificacoes"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-zinc-400 transition-colors hover:border-accent/30 hover:text-white"
+              aria-label="Notificações"
+              aria-expanded={showNotifications}
+              aria-controls="notifications-panel"
+              title="Notificações"
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[var(--ifnmgreen)] text-[9px] font-bold flex items-center justify-center text-black border-[1.5px] border-[var(--background)]">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-ink-950 shadow-[0_0_16px_rgba(69,255,156,0.6)]">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-[var(--surface)] border border-[var(--border-strong)] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden z-50">
-                <div className="p-3 border-b border-[var(--border)] flex items-center justify-between">
+              <div
+                id="notifications-panel"
+                aria-label="Notificações"
+                className="absolute right-0 mt-2 w-[320px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-white/10 bg-ink-800/95 shadow-2xl shadow-black/70 backdrop-blur-2xl"
+              >
+                <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-3.5 h-3.5 text-[var(--ifnmgreen)]/80" />
-                    <span className="font-semibold text-xs text-white">Notificações</span>
+                    <Bell className="h-3.5 w-3.5 text-accent" />
+                    <span className="font-display text-xs font-semibold text-white">Notificações</span>
                   </div>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-[10px] text-[var(--ifnmgreen)]/80 hover:text-[var(--ifnmgreen)]/70 flex items-center gap-1 font-medium transition-colors"
+                      className="flex items-center gap-1 text-[10px] font-semibold text-accent/80 transition-colors hover:text-accent"
                     >
-                      <Check className="w-3 h-3" /> Marcar todas
+                      <Check className="h-3 w-3" /> Marcar todas
                     </button>
                   )}
                 </div>
 
-                <div className="max-h-72 overflow-y-auto">
+                <div className="max-h-80 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="p-5 text-center text-neutral-500 text-xs">
-                      Nenhuma notificacao nova.
+                    <div className="p-8 text-center text-xs text-zinc-600">
+                      Nenhuma notificação por aqui.
                     </div>
                   ) : (
                     notifications.slice(0, 10).map((notif) => (
-                      <div
+                      <button
                         key={notif.id}
                         onClick={() => handleNotificationClick(notif)}
-                        className={`px-3.5 py-2.5 hover:bg-white/[0.03] transition-colors flex flex-col gap-0.5 cursor-pointer border-l-2 ${
-                          !notif.is_read ? "border-l-[var(--ifnmgreen)]/40 bg-[var(--ifnmgreen)]/[0.02]" : "border-l-transparent"
+                        className={`flex w-full flex-col gap-1 border-l-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] ${
+                          !notif.is_read ? "border-l-accent bg-accent/[0.035]" : "border-l-transparent"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="text-[11px] font-medium text-neutral-200 line-clamp-1 flex items-center gap-1.5">
-                            <FileText className="w-3 h-3 text-neutral-500 shrink-0" />
+                          <h4 className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-200 line-clamp-1">
+                            <FileText className="h-3 w-3 shrink-0 text-zinc-500" />
                             <span>{notif.title}</span>
                           </h4>
-                          <span className="text-[9px] text-neutral-600 shrink-0">
+                          <span className="shrink-0 text-[9px] text-zinc-600">
                             {new Date(notif.created_at).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <p className="text-[11px] text-neutral-500 line-clamp-1 pl-4">{notif.message}</p>
-                      </div>
+                        <p className="line-clamp-1 pl-4 text-[10px] text-zinc-500">{notif.message}</p>
+                      </button>
                     ))
                   )}
                 </div>
+
+                <button
+                  onClick={() => {
+                    setShowNotifications(false);
+                    onNavigate("atividades");
+                  }}
+                  className="flex w-full items-center justify-center gap-1 border-t border-white/[0.07] py-2.5 text-[10px] font-semibold text-zinc-500 transition-colors hover:text-accent"
+                >
+                  Ver atividades <ArrowUpRight className="h-3 w-3" />
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
       <div aria-live="polite" className="sr-only">{syncProgress || ""}</div>
+      {syncing && (
+        <div className="h-px w-full overflow-hidden bg-white/[0.04]">
+          <div className="h-full w-1/3 animate-[shimmer_1.6s_linear_infinite] bg-accent-gradient" />
+        </div>
+      )}
       {syncProgress && (
-        <div className="sm:hidden truncate border-t border-[var(--border)] px-3 py-1.5 text-center text-[10px] text-neutral-400">
+        <div className="truncate border-t border-white/[0.05] px-4 py-1.5 text-center text-[9px] text-zinc-600 sm:hidden">
           {syncProgress}
         </div>
       )}

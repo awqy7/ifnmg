@@ -10,7 +10,11 @@ import NotificationSocket from "@/components/NotificationSocket";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
-const LazyLoading = () => <div className="flex min-h-52 items-center justify-center"><CogSpinner size={26} className="text-[var(--ifnmgreen)]" /></div>;
+const LazyLoading = () => (
+  <div className="flex min-h-64 items-center justify-center">
+    <CogSpinner size={26} className="text-accent" />
+  </div>
+);
 const ActivitiesView = dynamic(() => import("@/components/activities/ActivitiesView"), { loading: LazyLoading });
 const CoursesView = dynamic(() => import("@/components/courses/CoursesView"), { loading: LazyLoading });
 const ChatView = dynamic(() => import("@/components/chat/ChatView"), { loading: LazyLoading });
@@ -35,18 +39,25 @@ export default function Dashboard() {
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const fromHash = window.location.hash.replace("#", "") as ViewType;
     const valid: ViewType[] = ["home", "atividades", "cursos", "chat", "estudo", "configuracoes"];
-    if (valid.includes(fromHash)) setCurrentView(fromHash);
-    const handleHistory = () => {
+    const syncFromHistory = () => {
       const value = window.location.hash.replace("#", "") as ViewType;
-      if (valid.includes(value)) setCurrentView(value);
+      setCurrentView(valid.includes(value) ? value : "home");
     };
-    window.addEventListener("hashchange", handleHistory);
-    return () => window.removeEventListener("hashchange", handleHistory);
+    syncFromHistory();
+    window.addEventListener("hashchange", syncFromHistory);
+    window.addEventListener("popstate", syncFromHistory);
+    return () => {
+      window.removeEventListener("hashchange", syncFromHistory);
+      window.removeEventListener("popstate", syncFromHistory);
+    };
   }, []);
 
   const handleNavigate = (view: ViewType) => {
+    if (view === "chat") {
+      setChatInitialPrompt(undefined);
+      setChatInitialCourseId(undefined);
+    }
     setCurrentView(view);
     window.history.pushState(null, "", view === "home" ? window.location.pathname : `#${view}`);
     setMobileMenuOpen(false);
@@ -81,7 +92,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-dvh bg-[var(--background)] overflow-hidden">
+    <div className="app-backdrop flex h-dvh overflow-hidden">
       <Sidebar
         currentView={currentView}
         onNavigate={handleNavigate}
@@ -91,19 +102,19 @@ export default function Dashboard() {
         onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           onNavigate={handleNavigate}
           onOpenActivity={openActivityModal}
           isVisible
+          currentView={currentView}
         />
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto overscroll-contain pb-24 lg:pb-0"
+          className="flex-1 overflow-y-auto overscroll-contain pb-28 lg:pb-0"
         >
-          <div className="max-w-6xl mx-auto p-4 sm:p-5 lg:p-6">
-            {/* Key forces remount → triggers view-enter animation */}
+          <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6">
             <div key={currentView} className="view-enter">
               {viewMap[currentView]}
             </div>

@@ -65,7 +65,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     } else if (match[4] !== undefined) {
       // Italic (*texto*)
       nodes.push(
-        <em key={`${keyPrefix}-i${i++}`} className="italic text-neutral-200">
+        <em key={`${keyPrefix}-i${i++}`} className="italic text-zinc-200">
           {match[4]}
         </em>
       );
@@ -74,7 +74,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       nodes.push(
         <code
           key={`${keyPrefix}-c${i++}`}
-          className="px-1.5 py-0.5 rounded-md bg-white/10 text-[var(--ifnmblue)] text-[0.85em] font-mono"
+          className="rounded-md border border-accent/10 bg-accent/[0.08] px-1.5 py-0.5 font-mono text-[0.85em] text-accent"
         >
           {match[5]}
         </code>
@@ -101,7 +101,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           href={safeHref}
           target="_blank"
           rel="noreferrer"
-          className="text-[var(--ifnmblue)] hover:text-[var(--ifnmblue)]/90 underline underline-offset-2"
+          className="font-medium text-accent underline decoration-accent/30 underline-offset-2 transition-colors hover:text-accent-light"
         >
           {match[6]}
         </a>
@@ -180,9 +180,9 @@ export default function Markdown({ content }: { content: string }) {
       blocks.push(
         <pre
           key={key++}
-          className="my-2.5 p-3 rounded-xl bg-black/40 border border-white/10 overflow-x-auto"
+          className="my-3 overflow-x-auto rounded-2xl border border-white/10 bg-ink-950/70 p-3.5"
         >
-          <code className="text-xs text-[var(--ifnmblue)] font-mono whitespace-pre">
+          <code className="whitespace-pre font-mono text-[11px] text-accent-soft">
             {codeLines.join("\n")}
           </code>
         </pre>
@@ -206,7 +206,7 @@ export default function Markdown({ content }: { content: string }) {
       if (rows.length > 0) {
         const [header, ...body] = rows;
         blocks.push(
-          <div key={key++} className="my-3 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.01]">
+          <div key={key++} className="my-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.01]">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.04]">
@@ -222,7 +222,7 @@ export default function Markdown({ content }: { content: string }) {
                   {body.map((row, ri) => (
                     <tr key={ri} className="hover:bg-white/[0.02] transition-colors">
                       {row.map((cell, ci) => (
-                        <td key={ci} className="px-3.5 py-2 text-neutral-300">
+                        <td key={ci} className="px-3.5 py-2 text-zinc-300">
                           {renderInline(cell, `td${key}-${ri}-${ci}`)}
                         </td>
                       ))}
@@ -247,10 +247,10 @@ export default function Markdown({ content }: { content: string }) {
     const hMatch = line.match(/^(#{1,4})\s+(.*)$/);
     if (hMatch) {
       const level = hMatch[1].length;
-      const sizes = ["text-lg", "text-[15px]", "text-sm", "text-xs"];
+      const sizes = ["text-lg", "text-base", "text-sm", "text-xs"];
       blocks.push(
-        <div key={key++} className={`mt-4 mb-1.5 flex items-center gap-2 font-semibold text-white ${sizes[level - 1]} first:mt-0`}>
-          {level <= 2 && <span className="h-4 w-0.5 rounded-full bg-[var(--ifnmblue)]/70" />}
+        <div key={key++} className={`mb-1.5 mt-4 flex items-center gap-2 font-display font-semibold text-white ${sizes[level - 1]} first:mt-0`}>
+          {level <= 2 && <span className="h-4 w-0.5 rounded-full bg-accent" />}
           {renderInline(hMatch[2], `h${key}`)}
         </div>
       );
@@ -275,7 +275,7 @@ export default function Markdown({ content }: { content: string }) {
       blocks.push(
         <blockquote
           key={key++}
-          className="my-2.5 rounded-r-lg border-l-2 border-[var(--ifnmblue)]/50 bg-[var(--ifnmblue)]/0.03 px-3 py-2 text-neutral-300"
+          className="my-3 rounded-r-xl border-l-2 border-accent/50 bg-accent/[0.03] px-3.5 py-2.5 text-zinc-300"
         >
           {renderWithBreaks(quoteLines.join("\n"), `q${key}`)}
         </blockquote>
@@ -299,15 +299,15 @@ export default function Markdown({ content }: { content: string }) {
         }
       }
       blocks.push(
-        <ul key={key++} className="my-2.5 ml-4 list-outside list-disc space-y-1.5 marker:text-[var(--ifnmblue)]/70">
+        <ul key={key++} className="my-2.5 ml-4 list-outside list-disc space-y-1.5 marker:text-accent/70">
           {items.map((item, j) => {
             const taskMatch = item.match(/^\[([ xX])\]\s+(.*)$/);
             if (taskMatch) {
               const checked = taskMatch[1].toLowerCase() === "x";
               return (
-                <li key={j} className="flex items-start gap-2 -ml-4 pl-0.5 leading-relaxed list-none text-neutral-300">
+                <li key={j} className="-ml-4 flex list-none items-start gap-2 pl-0.5 leading-relaxed text-zinc-300">
                   <span className={`inline-flex items-center justify-center w-3.5 h-3.5 mt-0.5 rounded border text-[10px] ${
-                    checked ? "bg-[var(--ifnmgreen)]/[0.20] border-[var(--ifnmgreen)]/[0.40] text-[var(--ifnmgreen)]" : "border-white/20 bg-white/5 text-transparent"
+                    checked ? "border-accent/40 bg-accent/20 text-accent" : "border-white/20 bg-white/5 text-transparent"
                   }`}>
                     ✓
                   </span>
@@ -318,7 +318,7 @@ export default function Markdown({ content }: { content: string }) {
               );
             }
             return (
-              <li key={j} className="pl-0.5 leading-relaxed text-neutral-300">
+              <li key={j} className="pl-0.5 leading-relaxed text-zinc-300">
                 {renderWithBreaks(item, `ul${key}-${j}`)}
               </li>
             );
@@ -344,9 +344,9 @@ export default function Markdown({ content }: { content: string }) {
         }
       }
       blocks.push(
-        <ol key={key++} className="my-2.5 ml-4 list-outside list-decimal space-y-1.5 marker:font-semibold marker:text-[var(--ifnmgreen)]/70">
+        <ol key={key++} className="my-2.5 ml-4 list-outside list-decimal space-y-1.5 marker:font-semibold marker:text-accent/70">
           {items.map((item, j) => (
-            <li key={j} className="pl-0.5 leading-relaxed text-neutral-300">
+            <li key={j} className="pl-0.5 leading-relaxed text-zinc-300">
               {renderWithBreaks(item, `ol${key}-${j}`)}
             </li>
           ))}
@@ -381,7 +381,7 @@ export default function Markdown({ content }: { content: string }) {
       i++;
     }
     blocks.push(
-      <p key={key++} className="leading-6 text-neutral-300">
+      <p key={key++} className="leading-6 text-zinc-300">
         {paraLines.map((pLine, idx) => (
           <Fragment key={idx}>
             {idx > 0 && <br />}

@@ -6,22 +6,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-[var(--duration-normal)] ease-[var(--ease-in-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold tracking-tight transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-[var(--accent)] text-[var(--background)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] shadow-sm shadow-[var(--shadow-accent)]",
-        destructive: "bg-[var(--status-urgent)] text-white hover:bg-[var(--status-urgent)]",
-        outline: "border border-[var(--border-strong)] bg-[var(--surface-inset)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]",
-        secondary: "bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]",
-        ghost: "hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]",
-        link: "text-[var(--accent)] underline-offset-4 hover:underline",
-        accent: "bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--background)] shadow-lg shadow-[var(--shadow-accent)] hover:from-[var(--accent-hover)] hover:to-[var(--accent)]",
+        default:
+          "bg-accent text-ink-950 shadow-glow-sm hover:bg-accent-soft hover:shadow-glow",
+        accent:
+          "bg-accent-gradient text-ink-950 shadow-glow-sm hover:brightness-110 hover:shadow-glow",
+        destructive:
+          "bg-status-urgent/90 text-white hover:bg-status-urgent shadow-[0_12px_32px_-16px_rgba(255,95,109,0.7)]",
+        outline:
+          "border border-white/10 bg-white/[0.035] text-zinc-200 hover:border-accent/35 hover:bg-accent/[0.07] hover:text-white",
+        secondary:
+          "bg-white/[0.06] text-zinc-200 hover:bg-white/[0.1] hover:text-white",
+        ghost:
+          "text-zinc-400 hover:bg-white/[0.06] hover:text-white",
+        link: "text-accent underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        default: "h-11 px-5 py-2",
+        sm: "h-9 px-4 text-xs",
+        lg: "h-12 px-7 text-sm",
         icon: "h-10 w-10",
         "icon-sm": "h-8 w-8",
       },
