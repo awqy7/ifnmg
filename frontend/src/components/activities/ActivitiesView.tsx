@@ -150,7 +150,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--status-urgent)]/15 bg-[var(--status-urgent)]/[0.05] p-3 text-xs text-[var(--status-urgent)]/90">
             <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4" />{error}</span>
-            <button type="button" onClick={loadActivities} className="font-semibold text-red-200 hover:text-white">Tentar novamente</button>
+            <button type="button" onClick={loadActivities} className="font-semibold text-[var(--status-urgent)] hover:text-white">Tentar novamente</button>
           </div>
         )}
         {loading ? (
@@ -179,9 +179,9 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                   <div
                     className={`card-elevated overflow-hidden ${
                       isLate
-                        ? "border-status-urgent/30"
+                        ? "border-[var(--status-urgent)]/30"
                         : isSubmitted
-                        ? "border-status-success/20"
+                        ? "border-[var(--status-success)]/20"
                         : "border-[var(--border)]"
                     }`}
                   >
@@ -194,7 +194,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                         size="icon"
                         className={`mt-0.5 w-5 h-5 rounded-md p-0 flex items-center justify-center shrink-0 ${
                           isSubmitted
-                            ? "bg-status-success border-status-success text-black"
+                            ? "bg-[var(--status-success)] border-[var(--status-success)] text-black"
                             : isManualCompleted
                             ? "bg-[var(--status-info)]/20 border-[var(--status-info)]/60 text-[var(--status-info)]"
                             : isLate
@@ -232,8 +232,8 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                             <button
                               type="button"
                               onClick={() => openActivity?.(act.id)}
-                              className={`text-left text-sm font-medium text-neutral-200 hover:text-[var(--ifnmblue)]/90 transition-colors ${
-                                isSubmitted || isManualCompleted ? "line-through text-neutral-600" : ""
+                              className={`text-left text-sm font-medium text-[var(--text-primary)] hover:text-[var(--ifnmblue)]/90 transition-colors ${
+                                isSubmitted || isManualCompleted ? "line-through text-[var(--text-muted)]" : ""
                               }`}
                             >
                               {act.title}
@@ -243,7 +243,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
 
                         <div className="flex items-center gap-3 text-[11px] text-[var(--text-tertiary)] flex-wrap">
                           {isLate && !isSubmitted && (
-                            <span className="flex items-center gap-1 font-medium text-status-urgent">
+                            <span className="flex items-center gap-1 font-medium text-[var(--status-urgent)]">
                               <AlertCircle className="w-3 h-3" /> Vencida
                             </span>
                           )}
@@ -253,7 +253,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                             </span>
                           )}
                           {isSubmitted && (
-                            <span className="flex items-center gap-1 font-medium text-status-success">
+                            <span className="flex items-center gap-1 font-medium text-[var(--status-success)]">
                               <CheckCircle2 className="w-3 h-3" /> Confirmado pelo Virtual2
                             </span>
                           )}
@@ -261,10 +261,10 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                             <span
                               className={`flex items-center gap-1 font-medium ${
                                 isLate && !isSubmitted
-                                  ? "text-status-urgent"
+                                  ? "text-[var(--status-urgent)]"
                                   : isSubmitted
-                                  ? "text-neutral-600"
-                                  : "text-status-warning"
+                                  ? "text-[var(--text-muted)]"
+                                  : "text-[var(--status-warning)]"
                               }`}
                             >
                               <Clock className="w-3 h-3" />
