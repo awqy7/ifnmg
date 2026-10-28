@@ -8,13 +8,13 @@ import {
   FileText,
   HelpCircle,
   MessageCircle,
-  Sparkles,
   ChevronRight,
   Users,
   AlertCircle,
 } from "lucide-react";
 import { activitiesApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import { Button } from "@/components/ui/button";
 import ManualCompletionDialog, { ManualCompletionReason } from "./ManualCompletionDialog";
 
 interface ActivitiesViewProps {
@@ -124,11 +124,11 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "quiz":
-        return <HelpCircle className="w-3.5 h-3.5 text-emerald-400/80" />;
+        return <HelpCircle className="w-3.5 h-3.5 text-[var(--ifnmblue)]/80" />;
       case "forum":
-        return <MessageCircle className="w-3.5 h-3.5 text-emerald-400/80" />;
+        return <MessageCircle className="w-3.5 h-3.5 text-[var(--ifnmblue)]/80" />;
       default:
-        return <FileText className="w-3.5 h-3.5 text-emerald-400/80" />;
+        return <FileText className="w-3.5 h-3.5 text-[var(--ifnmblue)]/80" />;
     }
   };
 
@@ -136,17 +136,17 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
-          <CheckSquare className="w-5 h-5 text-emerald-400/80" />
-          Atividades
+        <h1 className="text-xl font-bold text-white flex items-center gap-2 tracking-tight">
+          <CheckSquare className="w-5 h-5 text-[var(--ifnmblue)]/80" />
+          <span className="text-gradient-accent">Atividades</span>
         </h1>
-        <p className="text-xs text-neutral-500 mt-0.5">
-          Acompanhe suas entregas e prazos
+        <p className="text-sm text-[var(--text-tertiary)] mt-0.5">
+          {sortedActivities.filter((a) => effectiveStatus(a) === "late").length} vencidas · {sortedActivities.filter((a) => effectiveStatus(a) === "pending").length} pendentes
         </p>
       </div>
 
-      {/* Activities List */}
-      <div className="space-y-2">
+      {/* Activities List - Timeline style */}
+      <div className="space-y-3">
         {error && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-red-500/15 bg-red-500/[0.05] p-3 text-xs text-red-300/90">
             <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4" />{error}</span>
@@ -155,105 +155,149 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
         )}
         {loading ? (
           <div className="p-12 flex items-center justify-center">
-            <CogSpinner size={32} className="text-neutral-600" />
+            <CogSpinner size={32} className="text-[var(--text-muted)]" />
           </div>
         ) : sortedActivities.length === 0 ? (
-          <div className="p-10 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-center text-neutral-500 text-sm">
+          <div className="p-10 rounded-2xl bg-[var(--surface)] border border-[var(--border)] text-center text-[var(--text-secondary)] text-sm">
             Nenhuma atividade encontrada.
           </div>
         ) : (
-          sortedActivities.map((act) => {
-            const isLate = effectiveStatus(act) === "late";
-            const isSubmitted = act.status === "submitted";
-            const isManualCompleted = act.status === "manual_completed";
+          <div className="timeline-divider pl-6 space-y-3">
+            {sortedActivities.map((act) => {
+              const isLate = effectiveStatus(act) === "late";
+              const isSubmitted = act.status === "submitted";
+              const isManualCompleted = act.status === "manual_completed";
 
-            return (
-              <div
-                key={act.id}
-                className="bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500/[0.12] p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors group"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <button
-                    type="button"
-                    disabled={isSubmitted}
-                    onClick={(e) => handleToggleStatus(e, act)}
-                    className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
-                      isSubmitted
-                        ? "bg-emerald-500 border-emerald-500 text-black"
-                        : isManualCompleted
-                        ? "bg-sky-500/20 border-sky-400/60 text-sky-300"
-                        : "border-neutral-700 hover:border-emerald-500/50 bg-white/[0.02]"
+              return (
+                <div
+                  key={act.id}
+                  className="relative group"
+                >
+                  {/* Timeline node */}
+                  <div className="absolute left-[-22px] top-5 w-3 h-3 rounded-full border-2 border-[var(--surface-hover)] bg-[var(--surface-elevated)] z-10" />
+
+                  <div
+                    className={`card-elevated overflow-hidden ${
+                      isLate
+                        ? "border-status-urgent/30"
+                        : isSubmitted
+                        ? "border-status-success/20"
+                        : "border-[var(--border)]"
                     }`}
-                    title={isSubmitted ? "Entrega confirmada pelo Virtual2" : isManualCompleted ? "Remover confirmação manual" : "Informar que o grupo entregou"}
-                    aria-label={isSubmitted ? "Entrega confirmada pelo Virtual2" : isManualCompleted ? "Remover confirmação manual" : "Informar que o grupo entregou"}
                   >
-                    {(isSubmitted || isManualCompleted) && <CheckCircle2 className="w-3 h-3" />}
-                  </button>
+                    <div className="p-4 flex items-start gap-3">
+                      <Button
+                        type="button"
+                        disabled={isSubmitted}
+                        onClick={(e) => handleToggleStatus(e, act)}
+                        variant={isSubmitted ? "default" : isManualCompleted ? "secondary" : "outline"}
+                        size="icon"
+                        className={`mt-0.5 w-5 h-5 rounded-md p-0 flex items-center justify-center shrink-0 ${
+                          isSubmitted
+                            ? "bg-status-success border-status-success text-black"
+                            : isManualCompleted
+                            ? "bg-sky-500/20 border-sky-400/60 text-sky-300"
+                            : isLate
+                            ? "border-status-urgent/50 hover:border-status-urgent bg-red-500/[0.04]"
+                            : ""
+                        }`}
+                        title={
+                          isSubmitted
+                            ? "Entrega confirmada pelo Virtual2"
+                            : isManualCompleted
+                            ? "Remover confirmação manual"
+                            : "Marcar como entregue"
+                        }
+                        aria-label={
+                          isSubmitted
+                            ? "Entrega confirmada pelo Virtual2"
+                            : isManualCompleted
+                            ? "Remover confirmação manual"
+                            : "Marcar como entregue"
+                        }
+                      >
+                        {(isSubmitted || isManualCompleted) && <CheckCircle2 className="w-3 h-3" />}
+                      </Button>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1">
-                      <span className="inline-flex max-w-full items-center rounded-md border border-emerald-500/[0.12] bg-emerald-500/[0.05] px-2 py-0.5 text-[10px] font-medium text-emerald-400/80">
-                        <span className="truncate">{act.course_name || "Disciplina"}</span>
-                      </span>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5">
+                          <span className="inline-flex max-w-full items-center rounded-md border border-[var(--ifnmblue)]/[0.12] bg-[var(--ifnmblue)]/[0.04] px-2 py-0.5 text-[10px] font-medium text-[var(--ifnmblue)]/80">
+                            <span className="truncate">{act.course_name || "Disciplina"}</span>
+                          </span>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="p-0.5 rounded bg-white/[0.02]">{getTypeIcon(act.type)}</span>
-                      <h3 className="min-w-0">
-                        <button
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="p-0.5 rounded bg-[var(--surface-inset)]">{getTypeIcon(act.type)}</span>
+                          <h3 className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => openActivity?.(act.id)}
+                              className={`text-left text-sm font-medium text-neutral-200 hover:text-[var(--ifnmblue)]/90 transition-colors ${
+                                isSubmitted || isManualCompleted ? "line-through text-neutral-600" : ""
+                              }`}
+                            >
+                              {act.title}
+                            </button>
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-[11px] text-[var(--text-tertiary)] flex-wrap">
+                          {isLate && !isSubmitted && (
+                            <span className="flex items-center gap-1 font-medium text-status-urgent">
+                              <AlertCircle className="w-3 h-3" /> Vencida
+                            </span>
+                          )}
+                          {isManualCompleted && (
+                            <span className="flex items-center gap-1 font-medium text-sky-400/80">
+                              <Users className="w-3 h-3" /> Grupo entregou
+                            </span>
+                          )}
+                          {isSubmitted && (
+                            <span className="flex items-center gap-1 font-medium text-status-success">
+                              <CheckCircle2 className="w-3 h-3" /> Confirmado pelo Virtual2
+                            </span>
+                          )}
+                          {act.due_date ? (
+                            <span
+                              className={`flex items-center gap-1 font-medium ${
+                                isLate && !isSubmitted
+                                  ? "text-status-urgent"
+                                  : isSubmitted
+                                  ? "text-neutral-600"
+                                  : "text-status-warning"
+                              }`}
+                            >
+                              <Clock className="w-3 h-3" />
+                              {new Date(act.due_date).toLocaleDateString("pt-BR", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--text-muted)]">Sem prazo</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center shrink-0 self-start ml-2">
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon"
                           onClick={() => openActivity?.(act.id)}
-                          className={`text-left text-xs font-medium text-neutral-200 hover:text-emerald-300/90 transition-colors ${
-                            isSubmitted || isManualCompleted ? "line-through text-neutral-600" : ""
-                          }`}
+                          title="Detalhes"
                         >
-                          {act.title}
-                        </button>
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-neutral-500 flex-wrap">
-                      {isManualCompleted && (
-                        <span className="flex items-center gap-1 font-medium text-sky-400/80">
-                          <Users className="w-3 h-3" /> Grupo entregou · informado por você
-                        </span>
-                      )}
-                      {isSubmitted && (
-                        <span className="flex items-center gap-1 font-medium text-emerald-400/80">
-                          <CheckCircle2 className="w-3 h-3" /> Confirmado pelo Virtual2
-                        </span>
-                      )}
-                      {act.due_date ? (
-                        <span
-                          className={`flex items-center gap-1 font-medium ${
-                            isLate ? "text-red-400/80" : isSubmitted ? "text-neutral-600" : "text-amber-400/80"
-                          }`}
-                        >
-                          <Clock className="w-3 h-3" />
-                          {new Date(act.due_date).toLocaleDateString("pt-BR", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-600">Sem prazo</span>
-                      )}
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
-                  <button type="button" onClick={() => openActivity?.(act.id)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] group-hover:bg-white/[0.06] border border-[var(--border)] text-[10px] font-medium text-neutral-400 transition-colors">
-                    <Sparkles className="w-3 h-3 text-emerald-400/60" />
-                    <span>Detalhes</span>
-                    <ChevronRight className="w-3 h-3 text-neutral-600 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
       <ManualCompletionDialog

@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { moodleApi, chatApi, notificationsApi } from "@/lib/api";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 export default function SettingsView() {
   const { user, refreshUser } = useAuth();
@@ -120,11 +122,11 @@ export default function SettingsView() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
-          <Settings className="w-5 h-5 text-emerald-400/80" />
-          Configuracoes
+          <Settings className="w-5 h-5 text-[var(--ifnmblue)]/80" />
+          <span className="text-gradient-accent">Configurações</span>
         </h1>
-        <p className="text-xs text-neutral-500 mt-0.5">
-          Credenciais, provedores de IA e preferencias
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+          Credenciais, provedores de IA e preferências
         </p>
       </div>
 
@@ -132,21 +134,21 @@ export default function SettingsView() {
       <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 sm:p-5 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.1]">
-              <Lock className="w-3.5 h-3.5 text-emerald-400/80" />
+            <div className="p-1.5 rounded-lg bg-[var(--ifnmblue)]/0.06 border border-[var(--ifnmblue)]/0.1">
+              <Lock className="w-3.5 h-3.5 text-[var(--ifnmblue)]/80" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-white">Virtual2 IFNMG</h2>
-              <p className="text-[10px] text-neutral-500">Credenciais de sincronizacao</p>
+              <p className="text-[10px] text-[var(--text-tertiary)]">Credenciais de sincronização</p>
             </div>
           </div>
 
           {user?.moodle_connected ? (
-            <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400/80 bg-emerald-500/[0.06] px-2 py-0.5 rounded-full border border-emerald-500/[0.1]">
+            <span className="flex items-center gap-1 text-[10px] font-medium text-[var(--ifnmblue)]/80 bg-white/[0.06] px-2 py-0.5 rounded-full border border-white/[0.1]">
               <CheckCircle2 className="w-3 h-3" /> Conectado
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400/80 bg-amber-500/[0.06] px-2 py-0.5 rounded-full border border-amber-500/[0.1]">
+            <span className="flex items-center gap-1 text-[10px] font-medium text-[var(--ifnmamber)]/80 bg-[var(--ifnmamber)]/[0.06] px-2 py-0.5 rounded-full border border-[var(--ifnmamber)]/[0.1]">
               <AlertCircle className="w-3 h-3" /> Desconectado
             </span>
           )}
@@ -155,14 +157,14 @@ export default function SettingsView() {
         <form onSubmit={handleSaveMoodle} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Usuario / CPF</label>
+              <label className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Usuário / CPF</label>
               <input
                 type="text"
                 value={moodleUser}
                 onChange={(e) => setMoodleUser(e.target.value)}
                 placeholder="Seu login no Virtual2"
                 required
-                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
               />
             </div>
             <div>
@@ -173,7 +175,7 @@ export default function SettingsView() {
                 onChange={(e) => setMoodlePass(e.target.value)}
                 placeholder="Sua senha"
                 required
-                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
               />
             </div>
           </div>
@@ -182,7 +184,7 @@ export default function SettingsView() {
             <div
               className={`p-2.5 rounded-lg text-[11px] ${
                 moodleMessage.type === "success"
-                  ? "bg-emerald-500/[0.06] border border-emerald-500/[0.1] text-emerald-400/80"
+                  ? "bg-[var(--ifnmgreen)]/[0.06] border border-[var(--ifnmgreen)]/[0.1] text-[var(--ifnmgreen)]/80"
                   : "bg-red-500/[0.06] border border-red-500/[0.1] text-red-400/80"
               }`}
             >
@@ -194,13 +196,15 @@ export default function SettingsView() {
             <p className="text-[10px] text-neutral-600 flex items-center gap-1">
               <Shield className="w-3 h-3" /> Credenciais criptografadas
             </p>
-            <button
+            <Button
               type="submit"
               disabled={savingMoodle}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+              variant="default"
+              size="sm"
+              className="flex items-center gap-1.5"
             >
               {savingMoodle ? <CogSpinner size={14} className="text-white" /> : "Conectar"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -224,9 +228,9 @@ export default function SettingsView() {
               <select
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30 transition-colors"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[var(--ifnmgreen)]/30 transition-colors"
               >
-                <option value="groq">Groq (Padrao)</option>
+                <option value="groq">Groq (Padrão)</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
@@ -240,25 +244,27 @@ export default function SettingsView() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Sua chave"
-                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
               />
             </div>
           </div>
 
           {aiMessage && (
-            <div className="p-2.5 rounded-lg text-[11px] bg-emerald-500/[0.06] border border-emerald-500/[0.1] text-emerald-400/80">
+            <div className="p-2.5 rounded-lg text-[11px] bg-[var(--ifnmgreen)]/[0.06] border border-[var(--ifnmgreen)]/[0.1] text-[var(--ifnmgreen)]/80">
               {aiMessage}
             </div>
           )}
 
           <div className="flex justify-end pt-1">
-            <button
+            <Button
               type="submit"
               disabled={savingAI || !apiKey}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+              variant="default"
+              size="sm"
+              className="flex items-center gap-1.5"
             >
               {savingAI ? <CogSpinner size={14} className="text-white" /> : "Salvar"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -266,8 +272,8 @@ export default function SettingsView() {
       {/* Notification Preferences */}
       <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4 sm:p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-3 border-b border-[var(--border)]">
-          <div className="p-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/[0.1]">
-            <Bell className="w-3.5 h-3.5 text-amber-400/80" />
+          <div className="p-1.5 rounded-lg bg-[var(--ifnmamber)]/[0.06] border border-[var(--ifnmamber)]/[0.1]">
+            <Bell className="w-3.5 h-3.5 text-[var(--ifnmamber)]/80" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-white">Notificacoes</h2>
@@ -275,46 +281,55 @@ export default function SettingsView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-3">
           {[
             { key: "new_activity", label: "Novas tarefas publicadas" },
             { key: "deadline_7d", label: "Prazo em 7 dias" },
             { key: "deadline_3d", label: "Prazo em 3 dias" },
             { key: "deadline_1d", label: "Prazo em 1 dia" },
             { key: "deadline_6h", label: "Prazo em 6 horas" },
-            { key: "daily_briefing", label: "Briefing diario" },
+            { key: "daily_briefing", label: "Briefing diário" },
           ].map((item) => {
-            const active = notifSettings[item.key as keyof typeof notifSettings];
+            const active = notifSettings[item.key as keyof typeof notifSettings] as boolean;
             return (
               <div
                 key={item.key}
                 onClick={() => handleToggleNotif(item.key)}
-                className="p-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-emerald-500/[0.12] flex items-center justify-between gap-2 cursor-pointer transition-colors select-none"
+                className="p-3 rounded-xl bg-white/[0.02] border border-[var(--border)] hover:border-[var(--accent)] flex items-center justify-between gap-2 cursor-pointer transition-colors select-none"
               >
-                <span className="text-[11px] text-neutral-400">{item.label}</span>
-                <div className={`w-8 h-4.5 rounded-full p-0.5 transition-colors ${active ? "bg-emerald-500/80" : "bg-neutral-700"}`}>
-                  <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${active ? "translate-x-3.5" : "translate-x-0"}`} />
-                </div>
+                <span className="text-xs text-[var(--text-secondary)]">{item.label}</span>
+                <Switch
+                  checked={active}
+                  onCheckedChange={() => handleToggleNotif(item.key)}
+                  className="pointer-events-none"
+                />
               </div>
             );
           })}
         </div>
-        <div className="grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-2">
-          <label className="text-[11px] font-medium text-neutral-400">
+        <div className="grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-2">
+          <label className="text-xs font-medium text-[var(--text-tertiary)]">
             Silenciar a partir de
             <input type="time" value={notifSettings.quiet_start} onChange={(event) => setNotifSettings((current) => ({ ...current, quiet_start: event.target.value }))} onBlur={() => notificationsApi.updateSettings({ quiet_start: notifSettings.quiet_start }).catch(() => {})} className="mt-1.5 w-full rounded-lg border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2 text-xs text-white" />
           </label>
-          <label className="text-[11px] font-medium text-neutral-400">
+          <label className="text-xs font-medium text-[var(--text-tertiary)]">
             Retomar às
             <input type="time" value={notifSettings.quiet_end} onChange={(event) => setNotifSettings((current) => ({ ...current, quiet_end: event.target.value }))} onBlur={() => notificationsApi.updateSettings({ quiet_end: notifSettings.quiet_end }).catch(() => {})} className="mt-1.5 w-full rounded-lg border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2 text-xs text-white" />
           </label>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[10px] text-neutral-500">Receba alertas mesmo com o sistema fechado.</p>
-          <button type="button" onClick={enablePush} disabled={enablingPush} className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-[11px] font-semibold text-emerald-300 disabled:opacity-50">
-            {enablingPush && <CogSpinner size={13} className="text-emerald-300" />}
+          <p className="text-[10px] text-[var(--text-tertiary)]">Receba alertas mesmo com o sistema fechado.</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={enablePush}
+            disabled={enablingPush}
+            className="text-[11px]"
+          >
+            {enablingPush && <CogSpinner size={13} />}
             Ativar neste dispositivo
-          </button>
+          </Button>
         </div>
         {pushMessage && <p className="rounded-lg bg-white/[0.03] p-2.5 text-[10px] text-neutral-300">{pushMessage}</p>}
       </div>

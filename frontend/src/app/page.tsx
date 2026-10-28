@@ -10,7 +10,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-[var(--background)] flex flex-col items-center justify-center z-[100]">
-        <CogSpinner size={40} className="text-emerald-400/60" />
+        <CogSpinner size={40} className="text-[var(--ifnmgreen)]/60" />
       </div>
     );
   }

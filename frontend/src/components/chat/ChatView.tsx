@@ -17,6 +17,8 @@ import {
 import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 import { CogSpinner } from "@/components/ui/CogSpinner";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const LOADING_MESSAGES = [
   "Buscando nos seus materiais do Virtual2...",
@@ -197,27 +199,34 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
   ];
 
   return (
-    <div className="flex flex-col md:flex-row rounded-2xl bg-[#131316] border border-[var(--border)] overflow-hidden h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-6.5rem)]">
+    <div className="flex flex-col md:flex-row card-elevated overflow-hidden h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-6.5rem)]">
       {/* Sidebar: Session history */}
-      <div className="w-full md:w-64 md:flex-none bg-[#0f0f12] border-b md:border-b-0 md:border-r border-[var(--border)] flex flex-col shrink-0 h-auto md:h-full">
+      <div className="w-full md:w-64 md:flex-none bg-[var(--surface-elevated)] border-b md:border-b-0 md:border-r border-[var(--border)] flex flex-col shrink-0 h-auto md:h-full">
         <div className="flex items-center justify-between p-3 border-b border-[var(--border)] shrink-0">
           <h2 className="text-xs font-semibold text-white flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400/70" /> Chat IA
+            <Sparkles className="w-3.5 h-3.5 text-[var(--ifnmblue)]/70" /> Chat IA
           </h2>
-          <button
-            onClick={handleNewSession}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 transition-colors shrink-0"
-            title="Nova conversa"
-            aria-label="Nova conversa"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNewSession}
+                  aria-label="Nova conversa"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Nova conversa</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         <div className="flex flex-col gap-2.5 p-3 overflow-y-auto max-h-44 md:max-h-none md:flex-1">
           {/* Connected data badge */}
-          <div className="rounded-lg border border-emerald-500/[0.08] bg-emerald-500/[0.03] p-2.5 space-y-1.5 shrink-0">
-            <p className="text-[10px] font-medium text-emerald-400/70 flex items-center gap-1">
+          <div className="rounded-lg border border-[var(--ifnmblue)]/0.08 bg-[var(--ifnmblue)]/0.03 p-2.5 space-y-1.5 shrink-0">
+            <p className="text-[10px] font-medium text-[var(--ifnmblue)]/70 flex items-center gap-1">
               <Database className="w-2.5 h-2.5" /> Virtual2 conectado
             </p>
             <div className="grid grid-cols-2 gap-1">
@@ -227,7 +236,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                 { icon: Clock, label: "Prazos" },
                 { icon: Sparkles, label: "PDFs" },
               ].map(({ icon: Icon, label }) => (
-                <span key={label} className="flex items-center gap-1 text-[9px] text-emerald-400/60 bg-emerald-500/[0.04] rounded px-1.5 py-0.5">
+                <span key={label} className="flex items-center gap-1 text-[9px] text-[var(--ifnmblue)]/60 bg-[var(--ifnmblue)]/0.04 rounded px-1.5 py-0.5">
                   <Icon className="w-2 h-2" /> {label}
                 </span>
               ))}
@@ -269,15 +278,15 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
       </div>
 
       {/* Main chat panel */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#131316]">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[var(--surface)]">
         <div
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5 space-y-3 min-h-0"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto p-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/[0.12] flex items-center justify-center mb-3">
-                <Bot className="w-6 h-6 text-emerald-400/70" />
+              <div className="w-12 h-12 rounded-2xl bg-[var(--ifnmblue)]/0.08 border border-[var(--ifnmblue)]/0.12 flex items-center justify-center mb-3">
+                <Bot className="w-6 h-6 text-[var(--ifnmgreen)]/70" />
               </div>
               <h3 className="text-sm font-semibold text-white">Tutor IA</h3>
               <p className="text-[11px] text-neutral-500 mt-1 mb-4 leading-relaxed">
@@ -291,7 +300,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                   { icon: Clock, label: "Prazos" },
                   { icon: Sparkles, label: "Atividades" },
                 ].map(({ icon: Icon, label }) => (
-                  <span key={label} className="flex items-center gap-1 text-[9px] text-emerald-400/60 bg-emerald-500/[0.04] border border-emerald-500/[0.08] rounded-full px-2 py-0.5">
+                  <span key={label} className="flex items-center gap-1 text-[9px] text-[var(--ifnmgreen)]/60 bg-[var(--ifnmgreen)]/[0.04] border border-[var(--ifnmgreen)]/[0.08] rounded-full px-2 py-0.5">
                     <Icon className="w-2 h-2" /> {label}
                   </span>
                 ))}
@@ -305,7 +314,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                       setInput(prompt);
                       inputRef.current?.focus();
                     }}
-                    className="p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-[var(--border)] hover:border-emerald-500/[0.12] text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors text-left"
+                    className="p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-[var(--border)] hover:border-[var(--ifnmgreen)]/[0.12] text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors text-left"
                   >
                     {prompt}
                   </button>
@@ -322,7 +331,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                   className={`flex items-end gap-2 sm:gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
                 >
                   {!isUser && (
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.1] flex items-center justify-center text-emerald-400/60 shrink-0 mb-0.5">
+                    <div className="w-7 h-7 rounded-lg bg-[var(--ifnmgreen)]/[0.06] border border-[var(--ifnmgreen)]/[0.1] flex items-center justify-center text-[var(--ifnmgreen)]/60 shrink-0 mb-0.5">
                       <Bot className="w-3.5 h-3.5" />
                     </div>
                   )}
@@ -330,20 +339,20 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                   <div
                     className={`relative max-w-[90%] sm:max-w-[84%] md:max-w-3xl rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       isUser
-                        ? "bg-emerald-600/90 text-white rounded-br-md p-3"
-                        : "bg-[#0f0f12] border border-[var(--border)] text-neutral-300 rounded-bl-md px-4 py-3.5 sm:px-5 sm:py-4 shadow-sm shadow-black/20"
+                        ? "bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--background)] rounded-br-md p-3"
+                        : "bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-secondary)] rounded-bl-md px-4 py-3.5 sm:px-5 sm:py-4 shadow-sm shadow-black/20"
                     }`}
                   >
                     {!isUser && (
                       <div className="mb-2 flex items-center justify-between border-b border-white/[0.05] pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/60">Tutor IA</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ifnmgreen)]/60">Tutor IA</span>
                         <button
                           type="button"
                           onClick={() => copyResponse(m.content, idx)}
-                          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[9px] text-neutral-600 transition-colors hover:bg-white/[0.04] hover:text-neutral-300"
+                          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[9px] text-[var(--text-tertiary)] transition-colors hover:bg-white/[0.04] hover:text-[var(--text-secondary)]"
                           aria-label="Copiar resposta"
                         >
-                          {copiedMessage === idx ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                          {copiedMessage === idx ? <Check className="h-3 w-3 text-[var(--ifnmgreen)]" /> : <Copy className="h-3 w-3" />}
                           {copiedMessage === idx ? "Copiado" : "Copiar"}
                         </button>
                       </div>
@@ -363,19 +372,19 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
 
           {loading && !streamStarted && (
             <div className="flex items-end gap-2 sm:gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/[0.1] flex items-center justify-center text-emerald-400/60 mb-0.5">
+              <div className="w-7 h-7 rounded-lg bg-[var(--ifnmgreen)]/[0.06] border border-[var(--ifnmgreen)]/[0.1] flex items-center justify-center text-[var(--ifnmgreen)]/60 mb-0.5">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="p-3 rounded-2xl rounded-bl-md bg-[#0f0f12] border border-[var(--border)] flex flex-col gap-1.5 max-w-[75%]">
-                <div className="flex items-center gap-2 text-[11px] text-emerald-400/70">
-                  <CogSpinner size={14} className="text-emerald-400/60 shrink-0" />
+              <div className="p-3 rounded-2xl rounded-bl-md bg-[var(--surface-elevated)] border border-[var(--border)] flex flex-col gap-1.5 max-w-[75%]">
+                <div className="flex items-center gap-2 text-[11px] text-[var(--ifnmgreen)]/70">
+                  <CogSpinner size={14} className="text-[var(--ifnmgreen)]/60 shrink-0" />
                   <span>{LOADING_MESSAGES[loadingMsgIdx]}</span>
                 </div>
                 <div className="flex gap-1 pl-0.5">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-1 h-1 rounded-full bg-emerald-400/40 animate-bounce"
+                      className="w-1.5 h-1.5 rounded-full bg-[var(--ifnmgreen)]/40 animate-bounce"
                       style={{ animationDelay: `${i * 150}ms` }}
                     />
                   ))}
@@ -402,13 +411,15 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
               enterKeyHint="send"
               autoCorrect="on"
               spellCheck
-              className="flex-1 bg-white/[0.03] border border-[var(--border-strong)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors resize-none overflow-hidden leading-relaxed min-h-[48px]"
+              className="flex-1 bg-white/[0.03] border border-[var(--border-strong)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmgreen)]/30 transition-colors resize-none overflow-hidden leading-relaxed min-h-[48px]"
               style={{ height: "48px" }}
             />
-            <button
+            <Button
               type="submit"
               disabled={loading || !input.trim()}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors shrink-0"
+              variant="default"
+              size="icon"
+              className="w-10 h-10"
               aria-label="Enviar mensagem"
             >
               {loading ? (
@@ -416,7 +427,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
               ) : (
                 <Send className="w-4 h-4" />
               )}
-            </button>
+            </Button>
           </form>
           <p className="text-[9px] text-neutral-600 mt-1.5 text-center">
             Enter para enviar · Shift+Enter para nova linha

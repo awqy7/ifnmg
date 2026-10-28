@@ -10,7 +10,7 @@ import NotificationSocket from "@/components/NotificationSocket";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
-const LazyLoading = () => <div className="flex min-h-52 items-center justify-center"><CogSpinner size={26} className="text-emerald-400" /></div>;
+const LazyLoading = () => <div className="flex min-h-52 items-center justify-center"><CogSpinner size={26} className="text-[var(--ifnmgreen)]" /></div>;
 const ActivitiesView = dynamic(() => import("@/components/activities/ActivitiesView"), { loading: LazyLoading });
 const CoursesView = dynamic(() => import("@/components/courses/CoursesView"), { loading: LazyLoading });
 const ChatView = dynamic(() => import("@/components/chat/ChatView"), { loading: LazyLoading });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, Eye, EyeOff, Lock, User, ExternalLink } from "lucide-react";
+import { GraduationCap, Eye, EyeOff, Lock, User, ExternalLink, BookOpen, Calendar, Sparkles } from "lucide-react";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 
 export default function LoginPage() {
@@ -30,124 +30,151 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center p-4">
-      {/* Subtle ambient light */}
+    <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] overflow-hidden">
+      {/* Background gradient mesh */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-emerald-500/[0.03] rounded-full blur-[100px]" />
+        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[var(--ifnmgreen)]/[0.02] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[15%] right-[10%] w-[400px] h-[300px] bg-blue-500/[0.015] rounded-full blur-[100px]" />
       </div>
 
-      <div className="w-full max-w-sm relative z-10">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-4 shadow-lg shadow-emerald-950/30">
-            <GraduationCap className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">IFNMG Assistente</h1>
-          <p className="text-neutral-500 text-xs mt-1">
-            Conecte-se ao Virtual2
-          </p>
-        </div>
-
-        {/* Login Card */}
-        <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 space-y-5">
-          <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5 text-neutral-500" />
-              Entrar
-            </h2>
-            <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Use suas credenciais institucionais do IFNMG.
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="w-full max-w-md relative z-10">
+          {/* ── Brand / Hero ── */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--ifnmgreen)] to-[var(--ifnmgreen)] mb-4 shadow-lg shadow-[var(--ifnmgreen)]/40">
+              <GraduationCap className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
+              IFNMG Assistente
+            </h1>
+            <p className="text-sm text-[var(--text-tertiary)]">
+              Seu tutor acadêmico de elite — conecte-se ao Virtual2
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-3.5">
-            <div>
-              <label htmlFor="moodle-username" className="block text-[11px] font-medium text-neutral-400 mb-1.5">
-                Usuario / CPF / Matricula
-              </label>
-              <div className="relative">
-                <input
-                  id="moodle-username"
-                  type="text"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Seu usuario do Virtual2"
-                  required
-                  className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-colors"
-                />
-                <User className="w-3.5 h-3.5 text-neutral-600 absolute right-3.5 top-1/2 -translate-y-1/2" />
+          {/* ── Feature highlights ── */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
+                <Calendar className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
               </div>
+              <span className="text-[10px] text-[var(--text-tertiary)]">Prazos</span>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
+                <BookOpen className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
+              </div>
+              <span className="text-[10px] text-[var(--text-tertiary)]">Materias</span>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center mx-auto mb-1">
+                <Sparkles className="w-4 h-4 text-[var(--ifnmgreen)]/70" />
+              </div>
+              <span className="text-[10px] text-[var(--text-tertiary)]">IA Tutor</span>
+            </div>
+          </div>
+
+          {/* ── Login Card ── */}
+          <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 shadow-lg shadow-black/20">
+            <div className="space-y-1 mb-5">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                Entrar
+              </h2>
+              <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
+                Use suas credenciais institucionais do IFNMG.
+              </p>
             </div>
 
-            <div>
-              <label htmlFor="moodle-password" className="block text-[11px] font-medium text-neutral-400 mb-1.5">
-                Senha do Virtual2
-              </label>
-              <div className="relative">
-                <input
-                  id="moodle-password"
-                  type={showPass ? "text" : "password"}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Sua senha"
-                  required
-                  className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-colors pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-400 transition-colors"
-                >
-                  {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="moodle-username" className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1.5">
+                  Usuario / CPF / Matricula
+                </label>
+                <div className="relative">
+                  <input
+                    id="moodle-username"
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Seu usuario do Virtual2"
+                    required
+                    className="w-full bg-[var(--surface-inset)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ifnmgreen)]/[0.40] focus:ring-1 focus:ring-[var(--ifnmgreen)]/20 transition-colors"
+                  />
+                  <User className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3.5 top-1/2 -translate-y-1/2" />
+                </div>
               </div>
+
+              <div>
+                <label htmlFor="moodle-password" className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1.5">
+                  Senha do Virtual2
+                </label>
+                <div className="relative">
+                  <input
+                    id="moodle-password"
+                    type={showPass ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Sua senha"
+                    required
+                    className="w-full bg-[var(--surface-inset)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ifnmgreen)]/[0.40] focus:ring-1 focus:ring-[var(--ifnmgreen)]/20 transition-colors pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                  >
+                    {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="rounded-xl bg-red-500/[0.06] border border-red-500/20 p-3 text-red-400/90 text-xs">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="relative w-full min-h-11 px-5 py-2.5 rounded-xl bg-gradient-to-br from-[var(--ifnmgreen)] to-[var(--ifnmgreen)] hover:from-[var(--ifnmgreen)] hover:to-[var(--ifnmgreen)] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center font-semibold text-white text-sm tracking-wide shadow-lg shadow-[var(--ifnmgreen)]/30"
+              >
+                {loading ? <CogSpinner size={22} className="text-white" /> : "Entrar"}
+              </button>
+            </form>
+
+            <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+              <span>Conexão segura e criptografada</span>
+              <a
+                href="https://virtual2.ifnmg.edu.br"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[var(--text-secondary)] transition-colors flex items-center gap-1"
+              >
+                Virtual2 <ExternalLink className="w-2.5 h-2.5" />
+              </a>
             </div>
+          </div>
 
-            {error && (
-              <div className="rounded-xl bg-red-500/[0.06] border border-red-500/20 p-3 text-red-400/90 text-xs">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="relative w-full min-h-11 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center font-semibold text-white text-sm tracking-wide"
-            >
-              {loading ? <CogSpinner size={22} className="text-white" /> : "Entrar"}
-            </button>
-          </form>
-
-          <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-neutral-600">
-            <span>Conexao segura</span>
+          {/* ── Footer ── */}
+          <p className="mt-5 text-center text-[10px] text-[var(--text-tertiary)] leading-relaxed">
+            Plataforma acadêmica independente.
+            <br />
+            Desenvolvido por{" "}
             <a
-              href="https://virtual2.ifnmg.edu.br"
+              href="https://instagram.com/vinicius.tsx"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-neutral-400 transition-colors flex items-center gap-1"
+              className="text-[var(--ifnmgreen)]/70 hover:text-[var(--ifnmgreen)] transition-colors"
             >
-              Virtual2 <ExternalLink className="w-2.5 h-2.5" />
+              @vinicius.tsx
             </a>
-          </div>
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="mt-5 text-center text-[10px] text-neutral-600 leading-relaxed">
-          Plataforma academica independente.
-          <br />
-          Desenvolvido por{" "}
-          <a
-            href="https://instagram.com/vinicius.tsx"
-            target="_blank"
-            rel="noreferrer"
-            className="text-emerald-500/70 hover:text-emerald-400 transition-colors"
-          >
-            @vinicius.tsx
-          </a>
-        </p>
       </div>
     </div>
   );

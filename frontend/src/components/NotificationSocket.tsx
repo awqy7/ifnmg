@@ -100,7 +100,7 @@ export default function NotificationSocket() {
           aria-live="polite"
           className="toast-enter flex items-start gap-3 p-3 rounded-xl bg-[#1c1c20] border border-[var(--border-strong)] shadow-xl shadow-black/50"
         >
-          <div className="p-1.5 rounded-lg bg-emerald-500/[0.08] text-emerald-400/70 shrink-0">
+          <div className="p-1.5 rounded-lg bg-[var(--ifnmgreen)]/0.08 text-[var(--ifnmgreen)]/70 shrink-0">
             <Bell className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">

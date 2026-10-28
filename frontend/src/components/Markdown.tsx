@@ -74,7 +74,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       nodes.push(
         <code
           key={`${keyPrefix}-c${i++}`}
-          className="px-1.5 py-0.5 rounded-md bg-white/10 text-emerald-300 text-[0.85em] font-mono"
+          className="px-1.5 py-0.5 rounded-md bg-white/10 text-[var(--ifnmblue)] text-[0.85em] font-mono"
         >
           {match[5]}
         </code>
@@ -101,7 +101,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           href={safeHref}
           target="_blank"
           rel="noreferrer"
-          className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+          className="text-[var(--ifnmblue)] hover:text-[var(--ifnmblue)]/90 underline underline-offset-2"
         >
           {match[6]}
         </a>
@@ -182,7 +182,7 @@ export default function Markdown({ content }: { content: string }) {
           key={key++}
           className="my-2.5 p-3 rounded-xl bg-black/40 border border-white/10 overflow-x-auto"
         >
-          <code className="text-xs text-emerald-300 font-mono whitespace-pre">
+          <code className="text-xs text-[var(--ifnmblue)] font-mono whitespace-pre">
             {codeLines.join("\n")}
           </code>
         </pre>
@@ -250,7 +250,7 @@ export default function Markdown({ content }: { content: string }) {
       const sizes = ["text-lg", "text-[15px]", "text-sm", "text-xs"];
       blocks.push(
         <div key={key++} className={`mt-4 mb-1.5 flex items-center gap-2 font-semibold text-white ${sizes[level - 1]} first:mt-0`}>
-          {level <= 2 && <span className="h-4 w-0.5 rounded-full bg-emerald-400/70" />}
+          {level <= 2 && <span className="h-4 w-0.5 rounded-full bg-[var(--ifnmblue)]/70" />}
           {renderInline(hMatch[2], `h${key}`)}
         </div>
       );
@@ -275,7 +275,7 @@ export default function Markdown({ content }: { content: string }) {
       blocks.push(
         <blockquote
           key={key++}
-          className="my-2.5 rounded-r-lg border-l-2 border-emerald-500/50 bg-emerald-500/[0.03] px-3 py-2 text-neutral-300"
+          className="my-2.5 rounded-r-lg border-l-2 border-[var(--ifnmblue)]/50 bg-[var(--ifnmblue)]/0.03 px-3 py-2 text-neutral-300"
         >
           {renderWithBreaks(quoteLines.join("\n"), `q${key}`)}
         </blockquote>
@@ -299,7 +299,7 @@ export default function Markdown({ content }: { content: string }) {
         }
       }
       blocks.push(
-        <ul key={key++} className="my-2.5 ml-4 list-outside list-disc space-y-1.5 marker:text-emerald-400/70">
+        <ul key={key++} className="my-2.5 ml-4 list-outside list-disc space-y-1.5 marker:text-[var(--ifnmblue)]/70">
           {items.map((item, j) => {
             const taskMatch = item.match(/^\[([ xX])\]\s+(.*)$/);
             if (taskMatch) {
@@ -307,7 +307,7 @@ export default function Markdown({ content }: { content: string }) {
               return (
                 <li key={j} className="flex items-start gap-2 -ml-4 pl-0.5 leading-relaxed list-none text-neutral-300">
                   <span className={`inline-flex items-center justify-center w-3.5 h-3.5 mt-0.5 rounded border text-[10px] ${
-                    checked ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" : "border-white/20 bg-white/5 text-transparent"
+                    checked ? "bg-[var(--ifnmgreen)]/[0.20] border-[var(--ifnmgreen)]/[0.40] text-[var(--ifnmgreen)]" : "border-white/20 bg-white/5 text-transparent"
                   }`}>
                     ✓
                   </span>
@@ -344,7 +344,7 @@ export default function Markdown({ content }: { content: string }) {
         }
       }
       blocks.push(
-        <ol key={key++} className="my-2.5 ml-4 list-outside list-decimal space-y-1.5 marker:font-semibold marker:text-emerald-400/70">
+        <ol key={key++} className="my-2.5 ml-4 list-outside list-decimal space-y-1.5 marker:font-semibold marker:text-[var(--ifnmgreen)]/70">
           {items.map((item, j) => (
             <li key={j} className="pl-0.5 leading-relaxed text-neutral-300">
               {renderWithBreaks(item, `ol${key}-${j}`)}

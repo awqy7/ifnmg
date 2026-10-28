@@ -86,7 +86,7 @@ export default function SubmissionDialog({
       <div role="dialog" aria-modal="true" aria-labelledby="submission-title" className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-xl bg-emerald-500/10 p-2 text-emerald-400">
+            <div className="mt-0.5 rounded-xl bg-[var(--ifnmgreen)]/10 p-2 text-[var(--ifnmgreen)]">
               <Send className="h-5 w-5" />
             </div>
             <div>
@@ -108,13 +108,13 @@ export default function SubmissionDialog({
               maxLength={20_000}
               rows={5}
               placeholder="Digite sua resposta, se a atividade aceitar texto online."
-              className="mt-1.5 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2.5 text-xs text-white outline-none placeholder:text-neutral-600 focus:border-emerald-500/40"
+              className="mt-1.5 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-white/[0.03] px-3 py-2.5 text-xs text-white outline-none placeholder:text-neutral-600 focus:border-[var(--ifnmblue)]/40"
             />
           </label>
 
           <div>
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(event) => handleFiles(event.target.files)} />
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-strong)] px-3 py-3 text-xs text-neutral-400 hover:border-emerald-500/35 hover:bg-emerald-500/[0.03] hover:text-emerald-300 disabled:opacity-50">
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-strong)] px-3 py-3 text-xs text-neutral-400 hover:border-[var(--ifnmblue)]/35 hover:bg-[var(--ifnmblue)]/0.03 hover:text-[var(--ifnmblue)]/90 disabled:opacity-50">
               <Paperclip className="h-4 w-4" /> Anexar arquivos
             </button>
             <p className="mt-1.5 text-[10px] text-neutral-600">Até {MAX_FILES} arquivos, 10 MB por arquivo e 20 MB no total.</p>
@@ -134,8 +134,8 @@ export default function SubmissionDialog({
             </ul>
           )}
 
-          <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-amber-500/15 bg-amber-500/[0.04] p-3 text-xs leading-relaxed text-amber-100/85">
-            <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} disabled={loading} className="mt-0.5 accent-emerald-500" />
+          <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--ifnmamber)]/15 bg-[var(--ifnmamber)]/[0.04] p-3 text-xs leading-relaxed text-[var(--ifnmamber)]/85">
+            <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} disabled={loading} className="mt-0.5 accent-[var(--ifnmblue)]" />
             <span>Revisei os arquivos e confirmo que desejo enviar esta atividade para avaliação no Virtual2.</span>
           </label>
 
@@ -144,7 +144,7 @@ export default function SubmissionDialog({
 
         <div className="mt-5 flex gap-2">
           <button type="button" onClick={onClose} disabled={loading} className="flex-1 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-medium text-neutral-400 hover:bg-white/5 disabled:opacity-50">Cancelar</button>
-          <button type="button" onClick={handleSubmit} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
+          <button type="button" onClick={handleSubmit} disabled={loading} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--ifnmgreen)] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[var(--ifnmgreen)] disabled:opacity-50">
             {loading ? <CogSpinner size={14} className="text-white" /> : <CheckCircle2 className="h-4 w-4" />}
             {loading ? "Enviando..." : "Enviar atividade"}
           </button>

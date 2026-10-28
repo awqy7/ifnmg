@@ -17,7 +17,7 @@ const mainItems: Array<{
   badge?: string;
   disabled?: boolean;
 }> = [
-  { id: "home", label: "Inicio", icon: Home },
+  { id: "home", label: "Início", icon: Home },
   { id: "atividades", label: "Tarefas", icon: CheckSquare },
   { id: "cursos", label: "Materias", icon: BookOpen },
   { id: "chat", label: "Chat IA", icon: MessageSquare },

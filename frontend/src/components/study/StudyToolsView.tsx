@@ -115,7 +115,7 @@ export default function StudyToolsView() {
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30 transition-colors"
+              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
             >
               <option value="">Ou digitar conteudo abaixo...</option>
               {courses.map((c) => (
@@ -133,7 +133,7 @@ export default function StudyToolsView() {
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
               placeholder="Ex: Derivadas, Krebs, TCP/IP..."
-              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/30 transition-colors"
+              className="w-full bg-white/[0.03] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[var(--ifnmblue)]/30 transition-colors"
             />
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function StudyToolsView() {
           <button
             onClick={activeTab === "flashcards" ? handleGenerateFlashcards : handleGenerateQuiz}
             disabled={loading || (!selectedCourse && !customText)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--ifnmamber)] hover:bg-[var(--ifnmblue)] disabled:opacity-30 text-white text-xs font-medium transition-colors"
           >
             {loading ? (
               <>
@@ -166,7 +166,7 @@ export default function StudyToolsView() {
 
           <div
             onClick={() => setIsFlipped(!isFlipped)}
-            className="h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col items-center justify-center text-center cursor-pointer select-none hover:border-emerald-500/[0.15] transition-colors relative"
+            className="h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col items-center justify-center text-center cursor-pointer select-none hover:border-[var(--ifnmblue)]/15 transition-colors relative"
           >
             <span className="absolute top-3 left-3 text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.04] text-neutral-500 border border-[var(--border)]">
               {isFlipped ? "Resposta" : "Pergunta"}
@@ -199,7 +199,7 @@ export default function StudyToolsView() {
                 setCardIndex((prev) => Math.min(flashcards.length - 1, prev + 1));
               }}
               disabled={cardIndex === flashcards.length - 1}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-[11px] font-medium text-white transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--ifnmamber)] hover:bg-[var(--ifnmblue)] disabled:opacity-30 text-[11px] font-medium text-white transition-colors"
             >
               Proximo <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -230,12 +230,12 @@ export default function StudyToolsView() {
                     let btnStyle = "bg-white/[0.02] border-[var(--border)] text-neutral-400 hover:bg-white/[0.04]";
                     if (showResults) {
                       if (isCorrect) {
-                        btnStyle = "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-300";
+                        btnStyle = "bg-[var(--ifnmblue)]/[0.08] border-[var(--var(--ifnmblue))]/20 text-[var(--text-primary)]";
                       } else if (isSelected && !isCorrect) {
                         btnStyle = "bg-red-500/[0.08] border-red-500/20 text-red-300";
                       }
                     } else if (isSelected) {
-                      btnStyle = "bg-emerald-500/[0.08] border-emerald-500/20 text-white";
+                      btnStyle = "bg-[var(--ifnmblue)]/[0.08] border-[var(--ifnmblue)]/20 text-white";
                     }
 
                     return (
@@ -246,7 +246,7 @@ export default function StudyToolsView() {
                         className={`w-full p-2.5 rounded-xl border text-left text-[11px] transition-colors flex items-center justify-between gap-2 ${btnStyle}`}
                       >
                         <span>{opt}</span>
-                        {showResults && isCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                        {showResults && isCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--ifnmblue)]" />}
                         {showResults && isSelected && !isCorrect && <XCircle className="w-3.5 h-3.5 text-red-400" />}
                       </button>
                     );
@@ -255,7 +255,7 @@ export default function StudyToolsView() {
 
                 {showResults && q.explanation && (
                   <div className="pl-7 p-2.5 rounded-xl bg-white/[0.02] border border-[var(--border)] text-[11px] text-neutral-400">
-                    <strong className="text-emerald-400/80">Explicacao:</strong> {q.explanation}
+                    <strong className="text-[var(--ifnmgreen)]/80">Explicacao:</strong> {q.explanation}
                   </div>
                 )}
               </div>
@@ -275,7 +275,7 @@ export default function StudyToolsView() {
 
             <button
               onClick={() => setShowResults(!showResults)}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors"
+              className="px-4 py-2 rounded-lg bg-[var(--ifnmamber)] hover:bg-[var(--ifnmblue)] text-white text-xs font-medium transition-colors"
             >
               {showResults ? "Refazer" : "Finalizar"}
             </button>
