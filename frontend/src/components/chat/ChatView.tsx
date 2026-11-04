@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Glass } from "glisse";
 import {
   Sparkles,
   Send,
@@ -16,19 +17,18 @@ import {
   PanelLeft,
   X,
   ArrowUp,
+  MessageSquare,
 } from "lucide-react";
 import { chatApi } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const LOADING_MESSAGES = [
   "Buscando nos seus materiais do Virtual2...",
   "Lendo suas atividades e prazos...",
-  "Analisando o conteúdo das matérias...",
-  "Organizando suas disciplinas...",
-  "Consultando seus materiais...",
+  "Analisando o conteúdo das disciplinas...",
+  "Consultando anotações e PDFs das aulas...",
   "Formulando resposta com base nos seus dados...",
 ];
 
@@ -70,7 +70,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
     if (!container) return;
     const distanceFromBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight;
-    if (distanceFromBottom < 200) {
+    if (distanceFromBottom < 250) {
       container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
     }
   }, []);
@@ -105,25 +105,13 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
     loadSessions();
   }, [loadSessions]);
 
-  useEffect(() => {
-    if (initialPrompt) setInput(initialPrompt);
-  }, [initialPrompt]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading, scrollToBottom]);
-
   const handleNewSession = async () => {
     try {
-      const res = await chatApi.createSession(initialCourseId, "Nova conversa");
-      setSessions((prev) => [
-        { id: res.id, title: res.title, created_at: new Date().toISOString() },
-        ...prev,
-      ]);
-      setCurrentSessionId(res.id);
+      const newSession = await chatApi.createSession(initialCourseId, "Nova conversa");
+      setSessions((prev) => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
       setMessages([]);
       setHistoryOpen(false);
-      inputRef.current?.focus();
     } catch {}
   };
 
@@ -131,410 +119,293 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
     if (e) e.preventDefault();
     if (!input.trim() || loading) return;
 
-    const userText = input.trim();
-    setInput("");
-    if (inputRef.current) {
-      inputRef.current.style.height = "48px";
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      try {
+        const newSession = await chatApi.createSession(
+          initialCourseId,
+          input.trim().slice(0, 30) + (input.trim().length > 30 ? "..." : "")
+        );
+        setSessions((prev) => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        activeSessionId = newSession.id;
+      } catch {
+        return;
+      }
     }
 
-    const newMsgs = [...messages, { role: "user", content: userText }];
-    setMessages(newMsgs);
+    if (!activeSessionId) return;
+
+    const userMessage = { role: "user", content: input.trim() };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setLoading(true);
     setStreamStarted(false);
 
-    setTimeout(() => {
-      const c = messagesContainerRef.current;
-      if (c) c.scrollTop = c.scrollHeight;
-    }, 30);
+    // Placeholder para a resposta da IA
+    const assistantIndex = messages.length + 1;
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
-      let activeSessionId = currentSessionId;
-      if (!activeSessionId) {
-        const created = await chatApi.createSession(
-          initialCourseId,
-          userText.length > 50 ? `${userText.slice(0, 50)}...` : userText
-        );
-        activeSessionId = created.id;
-        setCurrentSessionId(created.id);
-      }
-      if (!activeSessionId) throw new Error("Não foi possível criar a conversa.");
+      const stream = chatApi.streamMessage(
+        userMessage.content,
+        activeSessionId,
+        initialCourseId
+      );
 
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-      for await (const chunk of chatApi.streamMessage(userText, activeSessionId, initialCourseId)) {
+      for await (const token of stream) {
         setStreamStarted(true);
         setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last?.role === "assistant") {
-            updated[updated.length - 1] = { ...last, content: `${last.content}${chunk}` };
+          const next = [...prev];
+          if (next[assistantIndex]) {
+            next[assistantIndex] = {
+              ...next[assistantIndex],
+              content: next[assistantIndex].content + token,
+            };
           }
-          return updated;
+          return next;
         });
+        scrollToBottom();
       }
-      loadSessions();
-    } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `Erro ao consultar IA: ${err instanceof Error ? err.message : "Tente novamente."}`,
-        },
-      ]);
+    } catch {
+      setMessages((prev) => {
+        const next = [...prev];
+        if (next[assistantIndex]) {
+          next[assistantIndex] = {
+            ...next[assistantIndex],
+            content: "Desculpe, ocorreu uma instabilidade ao consultar o tutor. Tente novamente.",
+          };
+        }
+        return next;
+      });
     } finally {
       setLoading(false);
-      setStreamStarted(false);
     }
   };
 
-  const copyResponse = async (content: string, index: number) => {
-    await navigator.clipboard.writeText(stripThinking(content));
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
     setCopiedMessage(index);
-    window.setTimeout(() => setCopiedMessage(null), 1600);
+    setTimeout(() => setCopiedMessage(null), 2000);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && window.innerWidth >= 768) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const quickPrompts = [
-    "Quais são minhas atividades pendentes e os prazos?",
-    "Explique o PDF mais recente da minha matéria",
-    "Monte um plano de estudo para esta semana",
-    "Gere questões de treino baseadas nos meus PDFs",
-    "Faça um resumo dos materiais que meu professor postou",
-    "Qual atividade eu devo priorizar agora?",
-  ];
-
-  const currentSession = sessions.find((session) => session.id === currentSessionId);
 
   return (
-    <div className="panel relative flex h-[calc(100dvh-12rem)] min-h-[420px] overflow-hidden md:h-[calc(100dvh-7rem)] md:min-h-[520px]">
-      {historyOpen && (
-        <div
-          className="absolute inset-0 z-20 bg-ink-950/70 backdrop-blur-sm md:hidden"
-          onClick={() => setHistoryOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar de conversas */}
-      <aside
-        className={`absolute inset-y-0 left-0 z-30 flex w-72 max-w-[82vw] shrink-0 flex-col border-r border-white/[0.07] bg-ink-900 transition-transform duration-300 md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 ${
+    <div className="relative flex h-[calc(100dvh-120px)] w-full overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] backdrop-blur-2xl shadow-2xl">
+      {/* Drawer de Sessões (Histórico) */}
+      <div
+        className={`absolute inset-y-0 left-0 z-20 flex w-72 flex-col border-r border-white/10 bg-ink-950/95 backdrop-blur-2xl transition-transform duration-300 lg:static lg:translate-x-0 ${
           historyOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-white/[0.07] p-3.5">
+        <div className="flex h-14 items-center justify-between border-b border-white/[0.08] px-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-accent/20 bg-accent/[0.08] text-accent">
-              <Sparkles className="h-3.5 w-3.5" />
+            <MessageSquare className="h-4 w-4 text-emerald-400" />
+            <span className="font-display text-xs font-bold uppercase tracking-wider text-white">
+              Histórico de Conversas
             </span>
-            <div>
-              <h2 className="font-display text-xs font-semibold text-white">Tutor IA</h2>
-              <p className="text-[9px] text-zinc-600">Seu contexto acadêmico</p>
-            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleNewSession}
-                    aria-label="Nova conversa"
-                    className="text-zinc-500 hover:text-accent"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Nova conversa</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/[0.06] hover:text-white md:hidden"
-              aria-label="Fechar histórico"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button
+            onClick={() => setHistoryOpen(false)}
+            className="rounded-lg p-1 text-zinc-400 hover:text-white lg:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
-          <div className="shrink-0 rounded-2xl border border-accent/15 bg-accent/[0.04] p-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold text-accent">
-              <Database className="h-3 w-3" /> Virtual2 conectado
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-1">
-              {[
-                { icon: BookOpen, label: "Materiais" },
-                { icon: FileText, label: "Atividades" },
-                { icon: Clock, label: "Prazos" },
-                { icon: Sparkles, label: "PDFs" },
-              ].map(({ icon: Icon, label }) => (
-                <span
-                  key={label}
-                  className="flex items-center gap-1 rounded-md bg-white/[0.03] px-1.5 py-1 text-[9px] text-zinc-500"
+        <div className="p-3">
+          <Button
+            onClick={handleNewSession}
+            variant="glass"
+            size="sm"
+            className="w-full gap-2 border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/10"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nova Conversa</span>
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-2 space-y-1">
+          {sessions.length === 0 ? (
+            <p className="p-4 text-center text-xs text-zinc-500">Nenhuma conversa anterior.</p>
+          ) : (
+            sessions.map((s) => {
+              const isActive = currentSessionId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => selectSession(s.id)}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
+                    isActive
+                      ? "border border-emerald-400/30 bg-emerald-500/15 font-semibold text-white"
+                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                  }`}
                 >
-                  <Icon className="h-2.5 w-2.5 text-accent/70" /> {label}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1">
-            <p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-600">
-              Histórico
-            </p>
-            <div className="space-y-0.5">
-              {sessions.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-white/[0.06] p-3 text-[10px] leading-relaxed text-zinc-600">
-                  Nenhuma conversa salva ainda.
-                </p>
-              ) : (
-                sessions.map((session) => {
-                  const active = currentSessionId === session.id;
-                  return (
-                    <button
-                      key={session.id}
-                      onClick={() => selectSession(session.id)}
-                      className={`group flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[11px] transition-colors ${
-                        active
-                          ? "bg-accent/[0.08] font-semibold text-white"
-                          : "text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                          active ? "bg-accent" : "bg-zinc-700"
-                        }`}
-                      />
-                      <span className="truncate">{session.title || "Conversa"}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-[9px] leading-relaxed text-zinc-600">
-            A IA lê automaticamente seus PDFs e materiais do Virtual2.
-          </div>
+                  <MessageSquare className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-emerald-400" : "text-zinc-500"}`} />
+                  <span className="truncate flex-1">{s.title || "Conversa acadêmica"}</span>
+                </button>
+              );
+            })
+          )}
         </div>
-      </aside>
+      </div>
 
-      {/* Painel principal */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-ink-850/40">
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2.5 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
+      {/* Área Principal de Chat */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top bar do chat */}
+        <div className="flex h-14 items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4">
+          <div className="flex items-center gap-2">
             <button
-              type="button"
-              onClick={() => setHistoryOpen(true)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.02] text-zinc-500 transition-colors hover:text-white md:hidden"
-              aria-label="Abrir histórico de conversas"
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-zinc-400 hover:text-white lg:hidden"
             >
               <PanelLeft className="h-4 w-4" />
             </button>
-            <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.08] text-accent">
-              <Bot className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-ink-850 bg-accent" />
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate font-display text-xs font-semibold text-white">
-                {currentSession?.title || "Tutor IA"}
-              </h1>
-              <p className="flex items-center gap-1 text-[9px] text-accent/80">
-                <span className="h-1 w-1 rounded-full bg-accent" /> online · com seus dados
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+              <div>
+                <p className="font-display text-xs font-bold text-white">Tutor IA IFNMG</p>
+                <p className="text-[10px] text-zinc-400">Contextualizado com disciplinas e materiais</p>
+              </div>
             </div>
           </div>
+        </div>
 
-          <button
-            type="button"
-            onClick={handleNewSession}
-            className="flex h-8 items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-2.5 text-[10px] font-semibold text-zinc-400 transition-colors hover:border-accent/25 hover:text-accent"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Nova conversa</span>
-          </button>
-        </header>
-
+        {/* Mensagens */}
         <div
           ref={messagesContainerRef}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
         >
           {messages.length === 0 ? (
-            <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center px-2 py-6 text-center">
-              <div className="relative mb-4">
-                <div className="absolute inset-0 rounded-3xl bg-accent/20 blur-2xl" />
-                <span className="relative flex h-14 w-14 items-center justify-center rounded-3xl border border-accent/25 bg-accent-gradient text-ink-950 shadow-glow">
-                  <Sparkles className="h-6 w-6" />
-                </span>
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 text-emerald-400 shadow-[0_0_30px_rgba(69,255,156,0.25)]">
+                <Bot className="h-7 w-7" />
+              </span>
+              <div>
+                <h3 className="font-display text-lg font-bold text-white">Como posso ajudar nos seus estudos?</h3>
+                <p className="mt-1 max-w-sm text-xs leading-relaxed text-zinc-400">
+                  Pergunte sobre matérias, tire dúvidas sobre exercícios, resuma materiais ou organize seus prazos.
+                </p>
               </div>
-              <h2 className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl">
-                Pergunte ao seu <span className="text-gradient-accent">semestre</span>
-              </h2>
-              <p className="mt-2 max-w-md text-[11px] leading-relaxed text-zinc-500">
-                Prazos, PDFs, resumos e planos de estudo — tudo respondido com base nos seus
-                materiais do Virtual2.
-              </p>
 
-              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 max-w-md w-full pt-2">
                 {[
-                  { icon: FileText, label: "PDFs" },
-                  { icon: BookOpen, label: "Materiais" },
-                  { icon: Clock, label: "Prazos" },
-                  { icon: Sparkles, label: "Atividades" },
-                ].map(({ icon: Icon, label }) => (
-                  <span
-                    key={label}
-                    className="flex items-center gap-1 rounded-full border border-accent/15 bg-accent/[0.04] px-2 py-1 text-[9px] font-medium text-accent/80"
-                  >
-                    <Icon className="h-2.5 w-2.5" /> {label}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-5 grid w-full grid-cols-1 gap-1.5 text-left sm:grid-cols-2">
-                {quickPrompts.map((prompt, idx) => (
+                  "Quais são minhas próximas entregas?",
+                  "Me explique o último conteúdo de aula",
+                  "Crie um roteiro de estudos para esta semana",
+                  "Gere 5 perguntas sobre minha disciplina",
+                ].map((sug) => (
                   <button
-                    key={idx}
+                    key={sug}
                     onClick={() => {
-                      setInput(prompt);
+                      setInput(sug);
                       inputRef.current?.focus();
                     }}
-                    className="group flex items-start gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-2.5 text-[11px] leading-relaxed text-zinc-400 transition-all hover:border-accent/25 hover:bg-accent/[0.04] hover:text-zinc-200"
+                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-left text-xs text-zinc-300 transition-colors hover:border-emerald-400/30 hover:bg-emerald-500/[0.06] hover:text-white"
                   >
-                    <ArrowUp className="mt-0.5 h-3 w-3 shrink-0 text-accent/60 transition-transform group-hover:-translate-y-0.5" />
-                    {prompt}
+                    {sug}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            messages.map((m, idx) => {
-              const isUser = m.role === "user";
-              if (!isUser && !m.content) return null;
+            messages.map((msg, i) => {
+              const isUser = msg.role === "user";
+              const cleanedContent = isUser ? msg.content : stripThinking(msg.content);
+
               return (
                 <div
-                  key={idx}
-                  className={`flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}
+                  key={i}
+                  className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
                 >
-                  {!isUser && (
-                    <span className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.08] text-accent">
-                      <Bot className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-
-                  <div
-                    className={`relative max-w-[90%] rounded-2xl text-xs leading-relaxed sm:max-w-[84%] sm:text-[13px] md:max-w-3xl ${
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${
                       isUser
-                        ? "rounded-br-md bg-accent-gradient p-3 font-medium text-ink-950"
-                        : "rounded-bl-md border border-white/[0.07] bg-white/[0.03] px-4 py-3.5 text-zinc-300 shadow-sm shadow-black/20"
+                        ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-300"
+                        : "border-white/15 bg-white/[0.08] text-emerald-400 shadow-[0_0_12px_rgba(69,255,156,0.2)]"
                     }`}
                   >
-                    {!isUser && (
-                      <div className="mb-2 flex items-center justify-between gap-4 border-b border-white/[0.05] pb-2">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-accent/70">
-                          Tutor IA
-                        </span>
+                    {isUser ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  </span>
+
+                  <Glass
+                    className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
+                      isUser
+                        ? "border-emerald-400/30 bg-emerald-500/10 text-white"
+                        : "border-white/12 bg-white/[0.05] text-zinc-100 shadow-md"
+                    }`}
+                  >
+                    {!isUser && !cleanedContent && loading && (
+                      <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
+                        <CogSpinner size={14} className="text-emerald-400" />
+                        <span>{LOADING_MESSAGES[loadingMsgIdx]}</span>
+                      </div>
+                    )}
+
+                    {cleanedContent && (
+                      <div className="prose prose-invert prose-sm max-w-none">
+                        <Markdown content={cleanedContent} />
+                      </div>
+                    )}
+
+                    {!isUser && cleanedContent && (
+                      <div className="mt-3 flex items-center justify-end border-t border-white/[0.08] pt-2">
                         <button
-                          type="button"
-                          onClick={() => copyResponse(m.content, idx)}
-                          className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] text-zinc-600 transition-colors hover:bg-white/[0.04] hover:text-zinc-300"
-                          aria-label="Copiar resposta"
+                          onClick={() => copyToClipboard(cleanedContent, i)}
+                          className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-emerald-400 transition-colors"
                         >
-                          {copiedMessage === idx ? (
-                            <Check className="h-3 w-3 text-accent" />
+                          {copiedMessage === i ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-400" /> Copiado!
+                            </>
                           ) : (
-                            <Copy className="h-3 w-3" />
+                            <>
+                              <Copy className="h-3 w-3" /> Copiar resposta
+                            </>
                           )}
-                          {copiedMessage === idx ? "Copiado" : "Copiar"}
                         </button>
                       </div>
                     )}
-                    {isUser ? m.content : <Markdown content={stripThinking(m.content)} />}
-                  </div>
-
-                  {isUser && (
-                    <span className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.05] text-zinc-400">
-                      <UserIcon className="h-3.5 w-3.5" />
-                    </span>
-                  )}
+                  </Glass>
                 </div>
               );
             })
           )}
-
-          {loading && !streamStarted && (
-            <div className="flex items-end gap-2">
-              <span className="mb-0.5 flex h-7 w-7 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.08] text-accent">
-                <Bot className="h-3.5 w-3.5" />
-              </span>
-              <div className="flex max-w-[80%] flex-col gap-2 rounded-2xl rounded-bl-md border border-white/[0.07] bg-white/[0.03] p-3.5">
-                <div className="flex items-center gap-2 text-[11px] text-accent/80">
-                  <CogSpinner size={14} className="shrink-0 text-accent/70" />
-                  <span>{LOADING_MESSAGES[loadingMsgIdx]}</span>
-                </div>
-                <div className="flex gap-1 pl-0.5">
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent/50"
-                      style={{ animationDelay: `${i * 150}ms` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Composer */}
-        <div className="shrink-0 border-t border-white/[0.07] bg-ink-900/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-4">
-          <form
-            onSubmit={handleSend}
-            className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 transition-colors focus-within:border-accent/30 focus-within:ring-1 focus-within:ring-accent/15"
-          >
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Pergunte sobre prazos, PDFs ou matérias..."
-              enterKeyHint="send"
-              autoCorrect="on"
-              spellCheck
-              className="h-10 min-h-[40px] flex-1 resize-none overflow-hidden bg-transparent px-2.5 py-2.5 text-sm leading-relaxed text-white outline-none placeholder:text-zinc-600"
-              style={{ height: "40px" }}
-            />
-            <Button
+        {/* Input Composer Flutuante em Glass */}
+        <div className="border-t border-white/[0.08] bg-white/[0.02] p-4">
+          <form onSubmit={handleSend} className="relative flex items-end gap-2">
+            <Glass className="relative flex-1 rounded-2xl border border-white/12 bg-white/[0.04] p-1.5 focus-within:border-emerald-400/50">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Pergunte ao tutor com base no seu semestre..."
+                rows={1}
+                className="w-full resize-none bg-transparent px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+            </Glass>
+
+            <button
               type="submit"
               disabled={loading || !input.trim()}
-              variant="accent"
-              size="icon"
-              className="h-9 w-9 shrink-0 rounded-xl"
-              aria-label="Enviar mensagem"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-bold shadow-[0_0_15px_rgba(69,255,156,0.35)] transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >
               {loading ? (
                 <CogSpinner size={16} className="text-ink-950" />
               ) : (
-                <Send className="h-4 w-4" />
+                <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
               )}
-            </Button>
+            </button>
           </form>
-          <p className="mx-auto mt-1.5 max-w-3xl text-center text-[9px] text-zinc-600">
-            Enter para enviar · Shift+Enter para nova linha · A IA pode cometer erros
-          </p>
         </div>
       </div>
     </div>

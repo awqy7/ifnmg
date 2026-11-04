@@ -25,7 +25,7 @@ Este guia cobre a migração completa do IFNMG Assistente para **Neon.tech** (Po
 ### Opção A: Script Automático (Recomendado)
 
 ```bash
-cd /home/awqy/ifnmg-assistente/backend
+cd /home/awqy/Projetos/01-ifnmg-academico/ifnmg-assistente/backend
 ./setup_neon.sh
 ```
 
@@ -125,7 +125,7 @@ railway login
 ### Deploy
 
 ```bash
-cd /home/awqy/ifnmg-assistente
+cd /home/awqy/Projetos/01-ifnmg-academico/ifnmg-assistente
 
 # Inicializar projeto
 railway init

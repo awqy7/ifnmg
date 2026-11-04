@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Glass } from "glisse";
 import { CheckCircle2, Users, X, RotateCcw, Info } from "lucide-react";
 import { CogSpinner } from "@/components/ui/CogSpinner";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Button } from "@/components/ui/button";
 
 export type ManualCompletionReason =
   | "group_member_submitted"
@@ -22,18 +24,18 @@ interface ManualCompletionDialogProps {
 const reasons: Array<{ value: ManualCompletionReason; label: string; description: string }> = [
   {
     value: "group_member_submitted",
-    label: "Outro integrante enviou",
-    description: "Alguém do grupo fez a entrega no Virtual2.",
+    label: "Outro integrante do grupo enviou",
+    description: "Um colega submeteu o trabalho em equipe no Virtual2.",
   },
   {
     value: "submitted_elsewhere",
-    label: "Entreguei por outro meio",
-    description: "Enviei presencialmente, por e-mail ou outro canal.",
+    label: "Entregue por outro canal",
+    description: "Envio presencial, por e-mail ou sala de aula física.",
   },
   {
     value: "other",
-    label: "Outro motivo",
-    description: "Uma situação diferente das opções acima.",
+    label: "Outro motivo acadêmico",
+    description: "Situação particular com o docente.",
   },
 ];
 
@@ -60,42 +62,45 @@ export default function ManualCompletionDialog({
     if (!loading) onClose();
   };
 
-  useModalA11y(dialogRef, { open, onClose: handleClose });
+  useModalA11y(dialogRef, {
+    open,
+    onClose: handleClose,
+  });
 
   if (!open) return null;
 
   return (
     <div
       onMouseDown={(event) => event.target === event.currentTarget && !loading && onClose()}
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-ink-950/80 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
     >
-      <div
+      <Glass
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="manual-completion-title"
         tabIndex={-1}
-        className="animate-scale-in max-h-[92dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-850 p-5 shadow-2xl shadow-black/60 sm:rounded-3xl sm:p-6"
+        className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-white/15 bg-ink-950/90 p-6 shadow-2xl backdrop-blur-2xl sm:rounded-3xl"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div
-              className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
                 alreadyCompleted
-                  ? "border-status-warning/25 bg-status-warning/[0.08] text-status-warning"
-                  : "border-accent/25 bg-accent/[0.08] text-accent"
+                  ? "border-amber-400/30 bg-amber-500/15 text-amber-300"
+                  : "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
               }`}
             >
-              {alreadyCompleted ? <RotateCcw className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+              {alreadyCompleted ? <RotateCcw className="h-5 w-5" /> : <Users className="h-5 w-5" />}
             </div>
             <div>
               <h2
                 id="manual-completion-title"
-                className="font-display text-base font-semibold tracking-tight text-white"
+                className="font-display text-base font-bold text-white"
               >
-                {alreadyCompleted ? "Reabrir atividade" : "Confirmar entrega do grupo"}
+                {alreadyCompleted ? "Reabrir atividade" : "Informar entrega pelo grupo"}
               </h2>
-              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-zinc-500">
+              <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
                 {activityTitle}
               </p>
             </div>
@@ -105,44 +110,43 @@ export default function ManualCompletionDialog({
             onClick={onClose}
             disabled={loading}
             aria-label="Fechar"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-zinc-400 hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {alreadyCompleted ? (
-          <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-status-warning/20 bg-status-warning/[0.06] p-3.5">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
-            <p className="text-[11px] leading-relaxed text-status-warning/80">
-              A confirmação feita por você será removida. Se o Virtual2 já confirmou a entrega
-              oficialmente, ela continuará concluída.
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <p className="text-xs leading-relaxed text-amber-200">
+              A marcação local será removida. Caso o professor já tenha lançado a nota no Virtual2,
+              ela continuará como concluída pelo Moodle.
             </p>
           </div>
         ) : (
           <div className="mt-5 space-y-4">
-            <div className="flex items-start gap-2.5 rounded-2xl border border-status-info/20 bg-status-info/[0.06] p-3.5">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-status-info" />
-              <p className="text-[11px] leading-relaxed text-status-info/80">
-                Esta ação organiza seu painel, mas não envia arquivos ao Virtual2 e não será
-                apresentada como confirmação oficial.
+            <div className="flex items-start gap-3 rounded-2xl border border-sky-400/30 bg-sky-500/10 p-4">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
+              <p className="text-xs leading-relaxed text-sky-200">
+                Esta ação remove o alerta de atraso no seu painel local sem submeter arquivos no Moodle.
               </p>
             </div>
 
             <fieldset>
-              <legend className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
-                Motivo
+              <legend className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                Motivo da Conclusão
               </legend>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {reasons.map((option) => {
                   const selected = reason === option.value;
                   return (
                     <label
                       key={option.value}
-                      className={`flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3 transition-colors focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-accent/20 ${
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-all ${
                         selected
-                          ? "border-accent/30 bg-accent/[0.06]"
-                          : "border-white/[0.07] bg-white/[0.02] hover:border-white/15"
+                          ? "border-emerald-400/40 bg-emerald-500/15"
+                          : "border-white/10 bg-white/[0.03] hover:border-white/20"
                       }`}
                     >
                       <input
@@ -155,16 +159,16 @@ export default function ManualCompletionDialog({
                       />
                       <span
                         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                          selected ? "border-accent bg-accent" : "border-white/20"
+                          selected ? "border-emerald-400 bg-emerald-400" : "border-white/30"
                         }`}
                       >
-                        {selected && <CheckCircle2 className="h-3 w-3 text-ink-950" />}
+                        {selected && <CheckCircle2 className="h-3.5 w-3.5 text-ink-950 font-bold" />}
                       </span>
                       <span>
-                        <span className={`block text-[11px] font-semibold ${selected ? "text-white" : "text-zinc-300"}`}>
+                        <span className={`block text-xs font-semibold ${selected ? "text-white" : "text-zinc-300"}`}>
                           {option.label}
                         </span>
-                        <span className="mt-0.5 block text-[10px] leading-relaxed text-zinc-600">
+                        <span className="mt-0.5 block text-[11px] leading-relaxed text-zinc-400">
                           {option.description}
                         </span>
                       </span>
@@ -177,46 +181,44 @@ export default function ManualCompletionDialog({
             <div>
               <label
                 htmlFor="manual-completion-note"
-                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-zinc-300"
               >
-                Observação <span className="font-medium normal-case tracking-normal text-zinc-600">(opcional)</span>
+                Observação <span className="font-normal text-zinc-500">(opcional)</span>
               </label>
               <input
                 id="manual-completion-note"
                 value={note}
                 maxLength={500}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Ex.: João enviou pelo grupo"
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs text-white placeholder:text-zinc-600 transition-colors focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20"
+                placeholder="Ex.: Enviado pelo colega Pedro no grupo"
+                className="h-11 w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 text-xs text-white placeholder:text-zinc-500 focus:border-emerald-400/50 focus:outline-none"
               />
             </div>
           </div>
         )}
 
-        <div className="mt-5 flex gap-2">
-          <button
+        <div className="mt-6 flex gap-3">
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="h-11 flex-1 rounded-xl border border-white/10 text-xs font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
+            className="flex-1"
           >
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={loading}
             onClick={() => onConfirm(!alreadyCompleted, reason, note.trim() || undefined)}
-            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold transition-all disabled:opacity-40 ${
-              alreadyCompleted
-                ? "bg-status-warning text-ink-950 hover:brightness-110"
-                : "bg-accent-gradient text-ink-950 shadow-glow-sm hover:shadow-glow"
-            }`}
+            variant={alreadyCompleted ? "outline" : "default"}
+            className="flex-1"
           >
             {loading && <CogSpinner size={14} className="text-ink-950" />}
-            {alreadyCompleted ? "Remover confirmação" : "Confirmar entrega"}
-          </button>
+            {alreadyCompleted ? "Remover" : "Confirmar"}
+          </Button>
         </div>
-      </div>
+      </Glass>
     </div>
   );
 }

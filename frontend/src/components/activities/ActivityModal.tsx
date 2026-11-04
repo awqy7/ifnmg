@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Glass } from "glisse";
 import {
   X,
   Clock,
@@ -23,6 +24,7 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 import Markdown from "@/components/Markdown";
 import ManualCompletionDialog, { ManualCompletionReason } from "./ManualCompletionDialog";
 import SubmissionDialog from "./SubmissionDialog";
+import { Button } from "@/components/ui/button";
 
 interface ActivityModalProps {
   activityId: string | null;
@@ -65,11 +67,12 @@ export default function ActivityModal({
   }, []);
 
   useEffect(() => {
-    if (!activityId) return;
-    setDetails(null);
-    setExplanation("");
-    setAiError(null);
-
+    if (!activityId) {
+      setDetails(null);
+      setExplanation("");
+      setAiError(null);
+      return;
+    }
     loadDetails(activityId);
   }, [activityId, loadDetails]);
 
@@ -81,12 +84,12 @@ export default function ActivityModal({
 
   if (!activityId) return null;
 
-  const handleDownloadFile = async (file: any, fileIndex: number) => {
-    setDownloadingFile(fileIndex);
-    setAiError(null);
+  const handleDownloadFile = async (file: any, index: number) => {
+    if (!activityId) return;
+    setDownloadingFile(index);
     try {
-      const download = await activitiesApi.downloadAttachment(activityId, fileIndex);
-      saveDownloadedFile(download, file.name || "anexo");
+      const download = await activitiesApi.downloadAttachment(activityId, index);
+      saveDownloadedFile(download, file.name || "arquivo");
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
     } finally {
@@ -95,6 +98,7 @@ export default function ActivityModal({
   };
 
   const handleExplain = async () => {
+    if (!activityId) return;
     if (explanation) {
       setExplanation("");
       return;
@@ -179,90 +183,69 @@ export default function ActivityModal({
       submission.append("confirm", "true");
       if (message) submission.append("message", message);
       files.forEach((file) => submission.append("files", file));
+
       const result = await activitiesApi.submitToMoodle(activityId, submission);
       setDetails((current: any) => ({
         ...current,
         ...result,
+        status: "submitted",
         status_text: "Enviado para avaliação",
       }));
       setShowSubmissionDialog(false);
       window.dispatchEvent(new CustomEvent("activity-status-changed"));
       window.dispatchEvent(new CustomEvent("data-refresh"));
     } catch (err) {
-      setStatusError(
-        err instanceof Error
-          ? err.message
-          : "Não foi possível enviar a atividade ao Virtual2."
-      );
+      setStatusError(err instanceof Error ? err.message : "Falha ao enviar atividade ao Virtual2.");
     } finally {
       setSubmittingActivity(false);
     }
   };
 
-  const statusTone = isSubmitted || isManualCompleted
-    ? isManualCompleted
-      ? {
-          iconClass: "border-status-info/25 bg-status-info/[0.08] text-status-info",
-          label: isManualCompleted ? "Entrega do grupo" : "Entregue",
-        }
-      : {
-          iconClass: "border-accent/25 bg-accent/[0.08] text-accent",
-          label: "Entregue",
-        }
-    : isLate
-    ? {
-        iconClass: "border-status-urgent/25 bg-status-urgent/[0.08] text-status-urgent",
-        label: "Atrasada",
-      }
-    : {
-        iconClass: "border-status-warning/25 bg-status-warning/[0.08] text-status-warning",
-        label: "Pendente",
-      };
-
   return (
     <div
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/80 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/70 backdrop-blur-md sm:items-center sm:p-4"
     >
-      <div
+      <Glass
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="activity-modal-title"
         tabIndex={-1}
-        className="animate-scale-in flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-ink-850 shadow-2xl shadow-black/70 sm:max-h-[88vh] sm:rounded-3xl"
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-white/15 bg-ink-950/90 shadow-2xl backdrop-blur-2xl sm:max-h-[88vh] sm:rounded-3xl"
       >
         {/* Header */}
-        <div className="border-b border-white/[0.07] bg-white/[0.015] p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
+        <div className="border-b border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="chip chip-accent py-0.5 text-[9px]">
-                  {details?.course_name || "Disciplina"}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="chip chip-accent">
+                  {details?.course_name || "Disciplina IFNMG"}
                 </span>
-                <span className="rounded-md border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
+                <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
                   {details?.activity_type || details?.type || "Tarefa"}
                 </span>
                 {details && (
                   <span
-                    className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                    className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                       isLate
-                        ? "border-status-urgent/25 bg-status-urgent/[0.08] text-status-urgent"
+                        ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
                         : isSubmitted || isManualCompleted
-                        ? "border-accent/20 bg-accent/[0.06] text-accent"
-                        : "border-status-warning/20 bg-status-warning/[0.06] text-status-warning"
+                        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                        : "border-amber-400/30 bg-amber-500/10 text-amber-300"
                     }`}
                   >
-                    {statusTone.label}
+                    {isSubmitted ? "Entregue" : isManualCompleted ? "Grupo Entregou" : isLate ? "Atrasada" : "Pendente"}
                   </span>
                 )}
               </div>
+
               <h2
                 id="activity-modal-title"
-                className="mt-2 font-display text-lg font-semibold leading-snug tracking-tight text-white sm:text-xl"
+                className="mt-3 font-display text-xl font-bold tracking-tight text-white sm:text-2xl"
               >
                 {loading ? (
-                  <span className="inline-block h-5 w-2/3 animate-pulse rounded bg-white/[0.06]" />
+                  <span className="inline-block h-6 w-2/3 animate-pulse rounded bg-white/[0.06]" />
                 ) : (
                   details?.title
                 )}
@@ -272,62 +255,54 @@ export default function ActivityModal({
             <button
               ref={closeButtonRef}
               onClick={onClose}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
               aria-label="Fechar modal"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-zinc-400 sm:p-5">
+        <div className="flex-1 space-y-5 overflow-y-auto p-5 text-xs text-zinc-300 sm:p-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center gap-2.5 py-16">
-              <CogSpinner size={24} className="text-accent" />
-              <p className="text-[11px] text-zinc-500">Carregando detalhes...</p>
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+              <CogSpinner size={26} className="text-emerald-400" />
+              <p className="text-xs text-zinc-400">Carregando detalhes do Virtual2...</p>
             </div>
           ) : detailsError ? (
             <div role="alert" className="flex flex-col items-center justify-center gap-3 py-14 text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-status-urgent/10 text-status-urgent">
-                <AlertTriangle className="h-5 w-5" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-400">
+                <AlertTriangle className="h-6 w-6" />
               </span>
-              <p className="max-w-sm text-xs text-status-urgent">{detailsError}</p>
-              <button
-                type="button"
-                onClick={() => loadDetails(activityId)}
-                className="rounded-xl border border-white/10 px-3.5 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-white/[0.05]"
-              >
+              <p className="max-w-sm text-xs text-rose-300">{detailsError}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => loadDetails(activityId)}>
                 Tentar novamente
-              </button>
+              </Button>
             </div>
           ) : (
             <>
-              {/* Status */}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${statusTone.iconClass}`}>
-                    {isSubmitted || isManualCompleted ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Clock className="h-4 w-4" />
-                    )}
+              {/* Cards de Status, Prazo e Tempo */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Glass className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-md">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-400/30">
+                    <CheckCircle2 className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="eyebrow text-[8px]">Status</p>
-                    <p className="mt-0.5 truncate text-[11px] font-semibold text-white">
-                      {details?.status_text || statusTone.label}
+                    <p className="eyebrow text-[9px]">Situação</p>
+                    <p className="mt-0.5 truncate text-xs font-bold text-white">
+                      {details?.status_text || (isLate ? "Atrasado" : "Pendente")}
                     </p>
                   </div>
-                </div>
+                </Glass>
 
-                <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-accent/20 bg-accent/[0.07] text-accent">
-                    <Calendar className="h-4 w-4" />
+                <Glass className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-md">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-400/30">
+                    <Calendar className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="eyebrow text-[8px]">Prazo</p>
-                    <p className="mt-0.5 truncate text-[11px] font-semibold text-white">
+                    <p className="eyebrow text-[9px]">Data Limite</p>
+                    <p className="mt-0.5 truncate text-xs font-bold text-white">
                       {details?.due_date
                         ? new Date(details.due_date).toLocaleDateString("pt-BR", {
                             day: "2-digit",
@@ -335,182 +310,152 @@ export default function ActivityModal({
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "Sem prazo"}
+                        : "Sem prazo fixado"}
                     </p>
                   </div>
-                </div>
+                </Glass>
 
-                <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-zinc-500">
-                    <Clock className="h-4 w-4" />
+                <Glass className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-md">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] text-zinc-300 border border-white/10">
+                    <Clock className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="eyebrow text-[8px]">Tempo</p>
-                    <p className="mt-0.5 truncate text-[11px] font-semibold text-white">
+                    <p className="eyebrow text-[9px]">Tempo Restante</p>
+                    <p className="mt-0.5 truncate text-xs font-bold text-white">
                       {details?.time_remaining || "No prazo"}
                     </p>
                   </div>
-                </div>
+                </Glass>
               </div>
 
               {isManualCompleted && (
-                <div className="flex items-start gap-2.5 rounded-2xl border border-status-info/20 bg-status-info/[0.06] p-3.5">
-                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-status-info" />
+                <div className="flex items-start gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4">
+                  <Users className="h-5 w-5 shrink-0 text-sky-400" />
                   <div>
-                    <p className="text-[11px] font-semibold text-status-info">
-                      Entrega do grupo informada por você
+                    <p className="text-xs font-bold text-sky-300">
+                      Entrega realizada pelo grupo (marcada por você)
                     </p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-status-info/60">
-                      Ainda não é uma confirmação oficial do Virtual2.
+                    <p className="mt-0.5 text-[11px] text-sky-200/80">
+                      Esta alteração reflete no seu painel local enquanto o professor não corrige no Moodle.
                     </p>
-                    {details?.manual_completion_note && (
-                      <p className="mt-1 text-[10px] text-status-info/80">
-                        {details.manual_completion_note}
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
 
-              {statusError && (
-                <div
-                  role="alert"
-                  className="rounded-2xl border border-status-urgent/20 bg-status-urgent/[0.06] p-3 text-[11px] text-status-urgent"
-                >
-                  {statusError}
+              {/* Enunciado e Instruções */}
+              <section className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  <FileText className="h-4 w-4 text-emerald-400" />
+                  <span>Enunciado & Instruções</span>
                 </div>
-              )}
-
-              {/* Enunciado */}
-              <section>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <FileText className="h-3 w-3 text-zinc-600" />
-                  <h3 className="eyebrow text-[9px]">Enunciado</h3>
-                </div>
-                <div className="panel-soft whitespace-pre-wrap p-4 text-xs leading-relaxed text-zinc-300">
-                  {details?.description || "Nenhuma instrução cadastrada."}
-                </div>
+                <Glass className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] whitespace-pre-wrap leading-relaxed text-zinc-300 text-xs">
+                  {details?.description || "Nenhuma instrução em texto cadastrada para esta atividade."}
+                </Glass>
               </section>
 
-              {/* Arquivos */}
+              {/* Anexos */}
               {details?.files && details.files.length > 0 && (
-                <section>
-                  <div className="mb-1.5 flex items-center gap-1.5">
-                    <Paperclip className="h-3 w-3 text-zinc-600" />
-                    <h3 className="eyebrow text-[9px]">Arquivos</h3>
-                    <span className="rounded-full bg-white/[0.05] px-1.5 py-px text-[9px] text-zinc-600">
-                      {details.files.length}
-                    </span>
+                <section className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    <Paperclip className="h-4 w-4 text-emerald-400" />
+                    <span>Anexos da Atividade ({details.files.length})</span>
                   </div>
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {details.files.map((file: any, idx: number) => (
-                      <button
+                      <Glass
                         key={idx}
-                        type="button"
-                        onClick={() => handleDownloadFile(file, idx)}
-                        disabled={downloadingFile === idx}
-                        className="group flex items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] p-2.5 text-[11px] text-zinc-400 transition-colors hover:border-accent/25 hover:bg-accent/[0.04] hover:text-accent disabled:opacity-50"
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.03] hover:border-emerald-400/40 transition-colors"
                       >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-zinc-500 transition-colors group-hover:bg-accent/10 group-hover:text-accent">
-                            <FileText className="h-3 w-3" />
-                          </span>
-                          <span className="truncate">{file.name}</span>
-                        </span>
-                        {downloadingFile === idx ? (
-                          <CogSpinner size={12} />
-                        ) : (
-                          <Download className="h-3 w-3 shrink-0 opacity-60" />
-                        )}
-                      </button>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <span className="truncate text-xs font-medium text-white">{file.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadFile(file, idx)}
+                          disabled={downloadingFile === idx}
+                          className="h-8 px-2 text-emerald-400"
+                        >
+                          {downloadingFile === idx ? <CogSpinner size={12} /> : <Download className="h-3.5 w-3.5" />}
+                        </Button>
+                      </Glass>
                     ))}
                   </div>
                 </section>
               )}
 
-              {aiError && (
-                <div
-                  role="alert"
-                  className="rounded-2xl border border-status-urgent/20 bg-status-urgent/[0.06] p-3 text-[11px] text-status-urgent"
-                >
-                  {aiError}
-                </div>
-              )}
-
+              {/* Explicação da IA */}
               {explanation && (
-                <section className="animate-scale-in overflow-hidden rounded-3xl border border-accent/20 bg-accent/[0.04]">
-                  <div className="flex items-center justify-between gap-2 border-b border-accent/10 px-4 py-2.5">
-                    <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-accent">
-                      <Bot className="h-3.5 w-3.5" /> Explicação da IA
-                    </h3>
-                    <Sparkles className="h-3.5 w-3.5 text-accent/60" />
+                <Glass className="overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-500/[0.06] p-4 text-xs leading-relaxed text-zinc-200">
+                  <div className="flex items-center gap-2 font-bold text-emerald-300 mb-2">
+                    <Bot className="h-4 w-4" />
+                    Orientação do Tutor IA
                   </div>
-                  <div className="p-4 text-xs text-zinc-300">
-                    <Markdown content={explanation} />
-                  </div>
-                </section>
+                  <Markdown content={explanation} />
+                </Glass>
               )}
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/[0.07] bg-white/[0.015] p-3 sm:px-5 sm:py-3.5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 flex-wrap gap-2">
+        <div className="border-t border-white/[0.08] bg-white/[0.02] p-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               {!isSubmitted && details && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowCompletionDialog(true)}
-                  className={`flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold transition-colors ${
-                    isManualCompleted
-                      ? "border-status-info/25 bg-status-info/[0.07] text-status-info hover:bg-status-info/10"
-                      : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.06] hover:text-white"
-                  }`}
+                  className="text-xs gap-1.5"
                 >
-                  <Users className="h-3.5 w-3.5" />
-                  {isManualCompleted ? "Reabrir" : "Grupo entregou"}
-                </button>
+                  <Users className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>{isManualCompleted ? "Reabrir Tarefa" : "Marcar Grupo Entregou"}</span>
+                </Button>
               )}
 
               {canSubmitToMoodle && (
-                <button
+                <Button
                   type="button"
+                  variant="glass"
+                  size="sm"
                   onClick={() => setShowSubmissionDialog(true)}
-                  className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-accent/25 bg-accent/[0.08] px-3 text-[11px] font-semibold text-accent transition-colors hover:bg-accent/[0.12]"
+                  className="text-xs gap-1.5 border-emerald-400/30 text-emerald-300"
                 >
-                  <Send className="h-3.5 w-3.5" /> Enviar ao Virtual2
-                </button>
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Enviar ao Virtual2</span>
+                </Button>
               )}
 
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleExplain}
                 disabled={!details || explaining}
-                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold text-zinc-300 transition-colors hover:border-accent/25 hover:bg-accent/[0.06] hover:text-accent disabled:opacity-40 sm:flex-none"
+                className="text-xs gap-1.5 text-emerald-300 border-emerald-400/30"
               >
                 {explaining ? (
-                  <CogSpinner size={13} />
-                ) : explanation ? (
-                  <X className="h-3.5 w-3.5" />
+                  <CogSpinner size={12} className="text-emerald-400" />
                 ) : (
-                  <Bot className="h-3.5 w-3.5" />
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
                 )}
-                {explaining
-                  ? "Lendo anexos..."
-                  : explanation
-                  ? "Fechar explicação"
-                  : "Explicar com IA"}
-              </button>
+                <span>{explanation ? "Fechar IA" : "Explicar com IA"}</span>
+              </Button>
 
               {openChatWithContext && details && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={handleAskTutor}
-                  className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold text-zinc-400 transition-colors hover:border-accent/25 hover:bg-accent/[0.06] hover:text-accent"
+                  className="text-xs gap-1.5 text-zinc-300 hover:text-white"
                 >
-                  <MessageSquare className="h-3.5 w-3.5" /> Tutor
-                </button>
+                  <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Conversar</span>
+                </Button>
               )}
             </div>
 
@@ -519,14 +464,15 @@ export default function ActivityModal({
                 href={details.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-accent-gradient px-4 text-[11px] font-bold text-ink-950 shadow-glow-sm transition-all hover:shadow-glow"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 text-xs font-bold text-ink-950 shadow-md transition-all hover:brightness-110 active:scale-95"
               >
-                Abrir no Virtual2 <ExternalLink className="h-3 w-3" />
+                <span>Abrir no Moodle</span>
+                <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
           </div>
         </div>
-      </div>
+      </Glass>
 
       <ManualCompletionDialog
         open={showCompletionDialog}

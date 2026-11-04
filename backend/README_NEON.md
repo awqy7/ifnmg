@@ -82,7 +82,7 @@ npm install -g @railway/cli
 railway login
 
 # Inicializar
-cd /home/awqy/ifnmg-assistente
+cd /home/awqy/Projetos/01-ifnmg-academico/ifnmg-assistente
 railway init
 
 # Fazer deploy

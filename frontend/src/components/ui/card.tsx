@@ -1,15 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { Glass } from "glisse";
 import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div
+  <Glass
     ref={ref}
-    className={cn("panel panel-hover", className)}
+    className={cn(
+      "glass-panel glass-panel-hover p-6 rounded-2xl border border-white/10 text-white transition-all duration-200",
+      className
+    )}
     {...props}
   />
 ));
@@ -21,7 +25,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-5 sm:p-6", className)}
+    className={cn("flex flex-col space-y-1.5 pb-4", className)}
     {...props}
   />
 ));
@@ -48,7 +52,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-xs text-zinc-500 mt-1", className)}
+    className={cn("text-xs text-zinc-400 mt-1 leading-relaxed", className)}
     {...props}
   />
 ));
@@ -58,7 +62,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-5 pt-0 sm:p-6 sm:pt-0", className)} {...props} />
+  <div ref={ref} className={cn("pt-0", className)} {...props} />
 ));
 CardContent.displayName = "CardContent";
 
@@ -68,7 +72,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-5 pt-0 sm:p-6 sm:pt-0", className)}
+    className={cn("flex items-center pt-4 border-t border-white/[0.08]", className)}
     {...props}
   />
 ));
