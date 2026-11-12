@@ -62,7 +62,7 @@ export default function Sidebar({
           mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] -translate-x-full"
         } ${isOpen ? "lg:w-[260px]" : "lg:w-[76px]"}`}
       >
-        <Glass className="flex h-full w-full flex-col border-r border-white/10 bg-ink-950/80 backdrop-blur-2xl rounded-none shadow-2xl">
+        <Glass className="sidebar-panel flex h-full w-full flex-col border-r border-white/10 bg-ink-950/80 backdrop-blur-2xl rounded-none shadow-2xl">
           {/* Top Brand Header */}
           <div
             className={`flex h-16 shrink-0 items-center border-b border-white/[0.08] ${
@@ -75,7 +75,7 @@ export default function Sidebar({
               className="flex min-w-0 items-center gap-3 text-left group"
               aria-label="IFNMG Assistente — início"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-ink-950 shadow-[0_0_15px_rgba(69,255,156,0.3)] transition-transform duration-200 group-hover:scale-105">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-ink-950 shadow-[0_0_15px_rgba(185,232,106,0.3)] transition-transform duration-200 group-hover:scale-105">
                 <GraduationCap className="h-4 w-4" strokeWidth={2.4} />
               </span>
               {showFull && (
@@ -132,12 +132,12 @@ export default function Sidebar({
                     showFull ? "gap-3 px-3.5 py-2.5" : "justify-center px-0 py-2.5"
                   } ${
                     isActive
-                      ? "border border-emerald-400/30 bg-emerald-500/15 text-white shadow-[0_4px_16px_rgba(69,255,156,0.15)]"
+                      ? "border border-emerald-400/30 bg-emerald-500/15 text-white shadow-[0_4px_16px_rgba(185,232,106,0.15)]"
                       : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
                   {isActive && (
-                    <span className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(69,255,156,0.8)]" />
+                    <span className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(185,232,106,0.8)]" />
                   )}
                   <Icon
                     className={`relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-105 ${

@@ -10,9 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-semibold shadow-[0_4px_16px_rgba(69,255,156,0.3)] hover:brightness-110",
+          "bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-semibold shadow-[0_4px_16px_rgba(185,232,106,0.3)] hover:brightness-110",
         accent:
-          "bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-semibold shadow-[0_4px_16px_rgba(69,255,156,0.3)] hover:brightness-110",
+          "bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-semibold shadow-[0_4px_16px_rgba(185,232,106,0.3)] hover:brightness-110",
         destructive:
           "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-[0_4px_16px_rgba(244,63,94,0.3)] hover:brightness-110",
         outline:

@@ -92,7 +92,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-backdrop flex h-dvh overflow-hidden">
+    <div className="app-backdrop app-frame flex h-dvh overflow-hidden">
       <Sidebar
         currentView={currentView}
         onNavigate={handleNavigate}

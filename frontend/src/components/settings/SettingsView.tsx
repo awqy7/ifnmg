@@ -106,9 +106,9 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
+    <div className="view-page view-settings space-y-6">
+      <div className="view-heading">
+        <p className="view-kicker">Seu espaço, suas regras</p>
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">
           Configurações & Conexões
         </h1>
@@ -119,7 +119,7 @@ export default function SettingsView() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Seção 1: Credenciais do Virtual2 (Moodle) */}
-        <Glass className="p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
+        <Glass className="settings-panel p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
           <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
               <Lock className="h-5 w-5" />
@@ -197,7 +197,7 @@ export default function SettingsView() {
         </Glass>
 
         {/* Seção 2: Provedor de Inteligência Artificial */}
-        <Glass className="p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
+        <Glass className="settings-panel p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
           <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
               <Cpu className="h-5 w-5" />
@@ -270,7 +270,7 @@ export default function SettingsView() {
       </div>
 
       {/* Seção 3: Preferências de Notificações com Glisse Switch */}
-      <Glass className="p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
+      <Glass className="settings-panel p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-5">
         <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
             <Bell className="h-5 w-5" />
@@ -316,7 +316,7 @@ export default function SettingsView() {
           ].map((item) => (
             <Glass
               key={item.key}
-              className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.02]"
+              className="notification-pref flex items-center justify-between gap-4 p-4 rounded-xl border border-white/10 bg-white/[0.02]"
             >
               <div>
                 <p className="text-sm font-semibold text-white">{item.title}</p>

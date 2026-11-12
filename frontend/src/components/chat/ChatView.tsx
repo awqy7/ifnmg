@@ -190,7 +190,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
   };
 
   return (
-    <div className="relative flex h-[calc(100dvh-120px)] w-full overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] backdrop-blur-2xl shadow-2xl">
+    <div className="chat-workspace relative flex h-[calc(100dvh-120px)] w-full overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] backdrop-blur-2xl shadow-2xl">
       {/* Drawer de Sessões (Histórico) */}
       <div
         className={`absolute inset-y-0 left-0 z-20 flex w-72 flex-col border-r border-white/10 bg-ink-950/95 backdrop-blur-2xl transition-transform duration-300 lg:static lg:translate-x-0 ${
@@ -252,7 +252,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
       {/* Área Principal de Chat */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar do chat */}
-        <div className="flex h-14 items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4">
+        <div className="chat-header flex h-14 items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setHistoryOpen(!historyOpen)}
@@ -278,8 +278,8 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
           className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
         >
           {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 text-emerald-400 shadow-[0_0_30px_rgba(69,255,156,0.25)]">
+            <div className="chat-empty-state flex h-full flex-col items-center justify-center gap-4 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 text-emerald-400 shadow-[0_0_30px_rgba(185,232,106,0.25)]">
                 <Bot className="h-7 w-7" />
               </span>
               <div>
@@ -323,7 +323,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${
                       isUser
                         ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-300"
-                        : "border-white/15 bg-white/[0.08] text-emerald-400 shadow-[0_0_12px_rgba(69,255,156,0.2)]"
+                        : "border-white/15 bg-white/[0.08] text-emerald-400 shadow-[0_0_12px_rgba(185,232,106,0.2)]"
                     }`}
                   >
                     {isUser ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -375,7 +375,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
         </div>
 
         {/* Input Composer Flutuante em Glass */}
-        <div className="border-t border-white/[0.08] bg-white/[0.02] p-4">
+        <div className="chat-composer border-t border-white/[0.08] bg-white/[0.02] p-4">
           <form onSubmit={handleSend} className="relative flex items-end gap-2">
             <Glass className="relative flex-1 rounded-2xl border border-white/12 bg-white/[0.04] p-1.5 focus-within:border-emerald-400/50">
               <textarea
@@ -397,7 +397,7 @@ export default function ChatView({ initialPrompt, initialCourseId }: ChatViewPro
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-bold shadow-[0_0_15px_rgba(69,255,156,0.35)] transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-ink-950 font-bold shadow-[0_0_15px_rgba(185,232,106,0.35)] transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >
               {loading ? (
                 <CogSpinner size={16} className="text-ink-950" />

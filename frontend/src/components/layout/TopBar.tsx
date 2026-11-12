@@ -168,7 +168,7 @@ export default function TopBar({
           : "max-h-0 -translate-y-full opacity-0 pointer-events-none"
       }`}
     >
-      <Glass className="border-b border-white/10 bg-ink-950/70 backdrop-blur-2xl rounded-none shadow-sm">
+      <Glass className="topbar-panel border-b border-white/10 bg-ink-950/70 backdrop-blur-2xl rounded-none shadow-sm">
         <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -201,7 +201,7 @@ export default function TopBar({
               <div className="mt-0.5 flex items-center gap-2">
                 {user?.moodle_connected ? (
                   <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(69,255,156,0.8)]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(185,232,106,0.8)]" />
                     Virtual2 Sincronizado
                   </span>
                 ) : (
@@ -262,7 +262,7 @@ export default function TopBar({
               >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-400 px-1 text-[9px] font-bold text-ink-950 shadow-[0_0_8px_rgba(69,255,156,0.6)]">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-400 px-1 text-[9px] font-bold text-ink-950 shadow-[0_0_8px_rgba(185,232,106,0.6)]">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}

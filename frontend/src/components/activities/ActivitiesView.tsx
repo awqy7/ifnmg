@@ -164,10 +164,10 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header com Controles em Glass */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="view-page view-activities space-y-6">
+      <div className="view-heading flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          <p className="view-kicker">Sua semana acadêmica</p>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">
             Atividades & Prazos
           </h1>
@@ -189,6 +189,28 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
         </div>
       </div>
 
+      <section className="activity-summary" aria-label="Resumo de atividades">
+        <div className="activity-summary-total">
+          <span>Visão geral</span>
+          <strong>{counts.all} {counts.all === 1 ? "atividade" : "atividades"}</strong>
+        </div>
+        <div className="activity-summary-stat">
+          <span className="activity-summary-dot is-pending" />
+          <span>Pendentes</span>
+          <strong>{counts.pending}</strong>
+        </div>
+        <div className="activity-summary-stat">
+          <span className="activity-summary-dot is-late" />
+          <span>Atrasadas</span>
+          <strong>{counts.late}</strong>
+        </div>
+        <div className="activity-summary-stat">
+          <span className="activity-summary-dot is-done" />
+          <span>Concluídas</span>
+          <strong>{counts.done}</strong>
+        </div>
+      </section>
+
       {error && (
         <Glass
           role="alert"
@@ -201,8 +223,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
         </Glass>
       )}
 
-      {/* Barra de Filtros com SegmentedControl e SearchField do Glisse */}
-      <Glass className="flex flex-col gap-4 p-4 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between shadow-lg">
+      <Glass className="activity-filter-panel flex flex-col gap-4 p-4 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between shadow-lg">
         <div className="w-full sm:w-auto">
           <SegmentedControl
             items={[
@@ -248,7 +269,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
               <Glass
                 key={act.id}
                 onClick={() => openActivity?.(act.id)}
-                className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl transition-all duration-200 hover:border-emerald-400/40 hover:bg-white/[0.07] hover:shadow-xl sm:flex-row sm:items-center sm:justify-between"
+                className="activity-card group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl transition-all duration-200 hover:border-emerald-400/40 hover:bg-white/[0.07] hover:shadow-xl sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex items-start gap-3.5 min-w-0">
                   {/* Botão de Toggle de Conclusão Rápida */}
@@ -259,7 +280,7 @@ export default function ActivitiesView({ openActivity }: ActivitiesViewProps) {
                     title={act.status === "submitted" ? "Entregue no Moodle" : "Marcar como concluída"}
                     className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition-all ${
                       isDone
-                        ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-400 shadow-[0_0_8px_rgba(69,255,156,0.3)]"
+                        ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-400 shadow-[0_0_8px_rgba(185,232,106,0.3)]"
                         : "border-white/20 bg-white/[0.05] text-transparent hover:border-emerald-400 hover:text-emerald-400/50"
                     }`}
                   >

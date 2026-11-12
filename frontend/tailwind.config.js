@@ -10,35 +10,47 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        /* Grafite neutro + verde IFNMG (identidade) */
         ink: {
-          950: "#08090a",
-          900: "#0a0c0e",
-          850: "#0d0f11",
-          800: "#121417",
-          750: "#171a1e",
-          700: "#1b2026",
-          600: "#242a31",
+          950: "#090b17",
+          900: "#101426",
+          850: "#151a2d",
+          800: "#1b2238",
+          750: "#222b43",
+          700: "#2b3550",
+          600: "#394661",
         },
         accent: {
-          DEFAULT: "#45ff9c",
-          light: "#c8ffe0",
-          soft: "#8dffbe",
-          dark: "#16d96a",
-          deep: "#0a6c3a",
+          DEFAULT: "#b9e86a",
+          light: "#e3ffac",
+          soft: "#c9ef88",
+          dark: "#92c84b",
+          deep: "#49682d",
+        },
+        emerald: {
+          50: "#f2ffe0",
+          100: "#e5ffc1",
+          200: "#d1f89c",
+          300: "#c4ef7f",
+          400: "#b9e86a",
+          500: "#9ccc4c",
+          600: "#78a33b",
+          700: "#5c7d32",
+          800: "#405a2b",
+          900: "#2c4025",
+          950: "#1b2b1d",
         },
         status: {
-          urgent: "#f87171",
-          warning: "#fbbf24",
-          info: "#7dd3fc",
-          success: "#45ff9c",
+          urgent: "#ff917a",
+          warning: "#f4c767",
+          info: "#85d9e8",
+          success: "#b9e86a",
           neutral: "#9ca3af",
         },
       },
       fontFamily: {
         sans: [
           "var(--font-sans)",
-          "Inter",
+          "Nunito Sans Variable",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -47,8 +59,8 @@ module.exports = {
         ],
         display: [
           "var(--font-display)",
-          "Space Grotesk",
-          "Inter",
+          "Fredoka Variable",
+          "Nunito Sans",
           "-apple-system",
           "sans-serif",
         ],
@@ -64,8 +76,8 @@ module.exports = {
         panel: "0 16px 40px -24px rgba(0, 0, 0, 0.8)",
       },
       backgroundImage: {
-        "accent-gradient": "linear-gradient(180deg, #45ff9c 0%, #2ee884 100%)",
-        "panel-gradient": "none",
+        "accent-gradient": "linear-gradient(135deg, #d6ff92 0%, #a9dd5b 100%)",
+        "panel-gradient": "linear-gradient(145deg, #1d2540 0%, #141a2d 100%)",
       },
       animation: {
         "pulse-accent": "pulse-accent 2.4s ease-in-out infinite",
@@ -74,8 +86,8 @@ module.exports = {
       },
       keyframes: {
         "pulse-accent": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(69,255,156,0.28)" },
-          "50%": { boxShadow: "0 0 0 8px rgba(69,255,156,0)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(185,232,106,0.28)" },
+          "50%": { boxShadow: "0 0 0 8px rgba(185,232,106,0)" },
         },
         float: {
           "0%, 100%": { transform: "translate3d(0,0,0)" },

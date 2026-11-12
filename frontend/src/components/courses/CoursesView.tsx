@@ -125,10 +125,10 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header & Busca */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="view-page view-courses space-y-6">
+      <div className="view-heading flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          <p className="view-kicker">Seu acervo de matérias</p>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">
             Disciplinas & Materiais
           </h1>
@@ -183,7 +183,7 @@ export default function CoursesView({ openChat }: CoursesViewProps) {
             return (
               <Glass
                 key={course.id}
-                className="overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl transition-all duration-200 shadow-lg"
+                className="course-card overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl transition-all duration-200 shadow-lg"
               >
                 {/* Header da Disciplina */}
                 <div

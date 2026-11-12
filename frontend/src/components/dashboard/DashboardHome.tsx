@@ -144,7 +144,6 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
       icon: Timer,
       hint: "prazos urgentes",
       color: due24hCount > 0 ? "text-amber-400" : "text-zinc-400",
-      alert: due24hCount > 0,
     },
     {
       label: lateCount === 1 ? "Atrasada" : "Atrasadas",
@@ -152,7 +151,6 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
       icon: AlertTriangle,
       hint: lateCount === 1 ? "requer atenção" : "requerem atenção",
       color: lateCount > 0 ? "text-rose-400" : "text-zinc-400",
-      alert: lateCount > 0,
     },
     {
       label: courseCount === 1 ? "Disciplina" : "Disciplinas",
@@ -166,11 +164,13 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
   const heroPriority = briefing?.top_priority;
 
   return (
-    <div className="space-y-6">
+    <div className="view-page view-home space-y-6">
       {/* Header com Saudação & Botões de Ação */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="dashboard-welcome flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-zinc-400">
+            <span className="font-semibold uppercase tracking-[0.14em] text-emerald-300">Painel do estudante</span>
+            <span className="text-zinc-600">/</span>
             <span className="inline-flex items-center gap-1.5 font-medium">
               <CalendarDays className="h-4 w-4 text-emerald-400" />
               {today}
@@ -245,16 +245,14 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
           return (
             <Glass
               key={metric.label}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur-2xl transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07] hover:-translate-y-0.5"
+              className="dashboard-metric rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur-2xl transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07] hover:-translate-y-0.5"
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{metric.label}</p>
                 <Icon className={`h-4 w-4 ${metric.color}`} />
               </div>
               <p
-                className={`mt-3 font-display text-3xl font-extrabold tabular-nums tracking-tight ${
-                  metric.alert ? "text-rose-400" : "text-white"
-                }`}
+                className={`mt-3 font-display text-3xl font-extrabold tabular-nums tracking-tight ${metric.color}`}
               >
                 {loadingBriefing ? "—" : metric.value}
               </p>
@@ -362,7 +360,7 @@ export default function DashboardHome({ onNavigate, openChat, openActivity }: Da
                       className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                         act.status === "late"
                           ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
-                          : "bg-emerald-400 shadow-[0_0_6px_rgba(69,255,156,0.6)]"
+                          : "bg-emerald-400 shadow-[0_0_6px_rgba(185,232,106,0.6)]"
                       }`}
                     />
                     <div className="min-w-0 flex-1">

@@ -97,10 +97,10 @@ export default function StudyToolsView() {
   const canGenerate = Boolean(selectedCourse || customText.trim());
 
   return (
-    <div className="space-y-6">
-      {/* Header & Alternância de Ferramenta */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="view-page view-study space-y-6">
+      <div className="view-heading flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          <p className="view-kicker">Laboratório de aprendizagem</p>
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">
             Central de Estudos com IA
           </h1>
@@ -122,7 +122,7 @@ export default function StudyToolsView() {
       </div>
 
       {/* Painel de Configuração e Geração em Glass */}
-      <Glass className="p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-4">
+      <Glass className="study-generator p-6 rounded-2xl border border-white/12 bg-white/[0.04] backdrop-blur-2xl shadow-xl space-y-4">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
           <Sparkles className="h-4 w-4" />
           Gerador Inteligente por Matéria ou Tópico
@@ -205,29 +205,43 @@ export default function StudyToolsView() {
                 </span>
                 <span>Clique no cartão para virar</span>
               </div>
+              <div
+                className="study-progress"
+                role="progressbar"
+                aria-label="Progresso dos flashcards"
+                aria-valuemin={1}
+                aria-valuemax={flashcards.length}
+                aria-valuenow={cardIndex + 1}
+              >
+                <span style={{ width: `${((cardIndex + 1) / flashcards.length) * 100}%` }} />
+              </div>
 
               {/* 3D Flip Card */}
-              <div
-                onClick={() => setIsFlipped(!isFlipped)}
-                className="relative h-72 w-full cursor-pointer perspective-1000"
+              <button
+                type="button"
+                onClick={() => setIsFlipped((flipped) => !flipped)}
+                aria-label={isFlipped ? "Mostrar pergunta do flashcard" : "Mostrar resposta do flashcard"}
+                className={`flashcard-flip relative h-72 w-full text-left ${isFlipped ? "is-flipped" : ""}`}
               >
                 <Glass
-                  className={`flex h-full w-full flex-col items-center justify-center p-8 text-center rounded-3xl border border-white/15 bg-white/[0.05] shadow-2xl backdrop-blur-2xl transition-all duration-300 ${
+                  className={`flashcard-flip-card flashcard-surface flex h-full w-full flex-col items-center justify-center p-8 text-center rounded-3xl border border-white/15 bg-white/[0.05] shadow-2xl backdrop-blur-2xl ${
                     isFlipped
                       ? "border-emerald-400/40 bg-emerald-500/[0.08]"
                       : "hover:border-white/25 hover:bg-white/[0.08]"
                   }`}
                 >
-                  <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    <RotateCw className="h-3 w-3" />
-                    {isFlipped ? "Resposta / Explicação" : "Pergunta / Conceito"}
-                  </span>
+                  <div className="flashcard-content flex flex-col items-center">
+                    <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      <RotateCw className="h-3 w-3" />
+                      {isFlipped ? "Resposta / Explicação" : "Pergunta / Conceito"}
+                    </span>
 
-                  <p className="font-display text-lg font-bold leading-relaxed text-white">
-                    {isFlipped ? flashcards[cardIndex].back : flashcards[cardIndex].front}
-                  </p>
+                    <p className="font-display text-lg font-bold leading-relaxed text-white">
+                      {isFlipped ? flashcards[cardIndex].back : flashcards[cardIndex].front}
+                    </p>
+                  </div>
                 </Glass>
-              </div>
+              </button>
 
               {/* Controles de Navegação do Deck */}
               <div className="flex items-center justify-between pt-2">
@@ -339,21 +353,32 @@ export default function StudyToolsView() {
                 );
               })}
 
-              <div className="flex items-center justify-between pt-4">
+              <div className="quiz-footer flex flex-wrap items-center justify-between gap-3 pt-4">
                 <span className="text-xs text-zinc-400">
                   {answeredCount} de {quizQuestions.length} respondidas
                 </span>
+                <div
+                  className="study-progress order-last mx-0 h-1.5 max-w-none basis-full sm:order-none sm:mx-4 sm:max-w-40 sm:basis-auto sm:flex-1"
+                  role="progressbar"
+                  aria-label="Progresso do simulado"
+                  aria-valuemin={0}
+                  aria-valuemax={quizQuestions.length}
+                  aria-valuenow={answeredCount}
+                >
+                  <span style={{ width: `${(answeredCount / quizQuestions.length) * 100}%` }} />
+                </div>
 
                 {!showResults ? (
                   <Button
                     onClick={() => setShowResults(true)}
                     disabled={answeredCount === 0}
                     variant="default"
+                    className="w-full sm:w-auto"
                   >
                     Finalizar e Ver Resultado
                   </Button>
                 ) : (
-                  <div className="flex items-center gap-4">
+                  <div className="quiz-result-actions flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
                     <span className="text-sm font-bold text-emerald-400">
                       Pontuação: {score} / {quizQuestions.length} ({scorePercent}%)
                     </span>

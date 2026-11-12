@@ -38,13 +38,13 @@ export default function MobileBottomNav({
               type="button"
               onClick={() => onNavigate(item.id)}
               aria-current={active ? "page" : undefined}
-              className={`group relative flex h-13 flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 active:scale-95 ${
+              className={`group relative flex h-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 active:scale-95 ${
                 active ? "text-white" : "text-zinc-400 active:text-zinc-200"
               }`}
               title={item.label}
             >
               {active && (
-                <span className="absolute inset-0 rounded-xl bg-emerald-500/15 border border-emerald-400/30 shadow-[0_0_12px_rgba(69,255,156,0.2)]" />
+                <span className="absolute inset-0 rounded-xl bg-emerald-500/15 border border-emerald-400/30 shadow-[0_0_12px_rgba(185,232,106,0.2)]" />
               )}
               <Icon
                 className={`relative z-10 h-5 w-5 transition-transform group-hover:scale-105 ${
@@ -63,7 +63,7 @@ export default function MobileBottomNav({
         <button
           type="button"
           onClick={onOpenMenu}
-          className="flex h-13 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-zinc-400 transition-all duration-200 active:scale-95 hover:text-white"
+          className="flex h-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-zinc-400 transition-all duration-200 active:scale-95 hover:text-white"
           aria-label="Abrir todas as opções do menu"
           title="Mais Opções"
         >
