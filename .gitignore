@@ -12,6 +12,7 @@ backend/tests/**/__pycache__/
 
 frontend/node_modules/
 frontend/.next/
+node_modules/
 frontend/.env.local
 frontend/.env
 *.tsbuildinfo
@@ -25,6 +26,9 @@ frontend/tests/desktop_screenshot_*.png
 dist/
 build/
 .upuai/
+.agents/
+.oil-ui/
+.claude/
 
 # Segredos e configurações locais; mantenha apenas os modelos versionados.
 .env
